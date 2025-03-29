@@ -1,8 +1,8 @@
-
 interface Claude {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
   generateLessonContent: (subject: string, topic: string) => Promise<any>;
+  generateLessonTest: (subject: string, topic: string, numQuestions: number) => Promise<any>;
 }
 
 // Note: In a production environment, this should be stored securely in environment variables
@@ -147,6 +147,52 @@ class ClaudeService implements Claude {
         visualAids: [{ title: "Diagram", description: "A visual representation of the concept" }],
         activities: ["Activity 1 instructions", "Activity 2 instructions"],
         summary: "Summary of the key points covered in this lesson."
+      };
+    }
+  }
+
+  async generateLessonTest(subject: string, topic: string, numQuestions: number = 5): Promise<any> {
+    const prompt = `
+      Create a comprehensive test with ${numQuestions} multiple-choice questions about "${topic}" for a student studying ${subject}.
+      
+      Return a JSON object with:
+      - lessonTitle (string)
+      - questions (array of question objects with:
+        - question (string)
+        - options (array of 4 strings)
+        - correctAnswer (string, must be one of the options)
+        - explanation (string that explains the correct answer)
+      )
+      
+      The questions should thoroughly test understanding of the topic, ranging from basic recall to application and analysis.
+      Make them appropriate for school students.
+      
+      Return ONLY the JSON, with no additional text.
+    `;
+    
+    try {
+      const result = await this.callClaude(prompt);
+      const cleanedResult = this.cleanJsonResponse(result);
+      return JSON.parse(cleanedResult);
+    } catch (error) {
+      console.error("Error generating lesson test:", error);
+      // Return a fallback test if there's an error
+      return {
+        lessonTitle: topic,
+        questions: [
+          {
+            question: "What is the main purpose of studying " + topic + "?",
+            options: ["Entertainment", "Understanding natural phenomena", "Social status", "Physical exercise"],
+            correctAnswer: "Understanding natural phenomena",
+            explanation: "The main purpose of studying this topic is to understand natural phenomena and how things work in the world around us."
+          },
+          {
+            question: "Which of the following best describes the scientific method?",
+            options: ["A random approach to problem-solving", "A systematic approach involving observation, hypothesis, experimentation, and conclusion", "Memorizing facts and figures", "Following instructions without questioning"],
+            correctAnswer: "A systematic approach involving observation, hypothesis, experimentation, and conclusion",
+            explanation: "The scientific method is a systematic approach to understanding the world through observation, forming hypotheses, testing through experimentation, and drawing conclusions."
+          }
+        ]
       };
     }
   }

@@ -1,199 +1,295 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import StudyHeroHeader from '@/components/StudyHeroHeader';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  BarChart as BarChartIcon, 
-  PieChart, 
-  Calendar, 
-  Home, 
-  Map, 
-  Trophy, 
-  BarChart as BarChartLucide 
-} from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell
-} from 'recharts';
+import { StudyAIHeader } from '@/components/StudyAIHeader';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, BarChartHorizontal, LineChart, PieChart } from "@/components/ui/chart";
+import { Home, Map, Trophy, BarChart as BarChartIcon, TrendingUp, PieChart as PieChartIcon, Award, Clock } from "lucide-react";
+
+interface TestResult {
+  lessonId: string;
+  score: number;
+  total: number;
+  date: string;
+}
+
+interface StudySession {
+  date: string;
+  minutes: number;
+}
 
 const Analytics = () => {
-  const navigate = useNavigate();
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [studyPlan, setStudyPlan] = useState<any[]>([]);
-  
+  const [lessonNames, setLessonNames] = useState<Record<string, string>>({});
+
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
     { name: "Timeline", href: "/dashboard", icon: <Map className="h-4 w-4" /> },
     { name: "Achievements", href: "/achievements", icon: <Trophy className="h-4 w-4" /> },
-    { name: "Analytics", href: "/analytics", icon: <BarChartLucide className="h-4 w-4" /> },
+    { name: "Analytics", href: "/analytics", icon: <BarChartIcon className="h-4 w-4" /> },
   ];
 
   useEffect(() => {
-    // Check if profile exists in localStorage
-    const profile = localStorage.getItem('studyHeroProfile');
-    if (!profile) {
-      navigate('/');
-      return;
+    // Load test results
+    const savedResults = localStorage.getItem('testResults');
+    if (savedResults) {
+      setTestResults(JSON.parse(savedResults));
     }
 
-    // Get study plan
-    const storedStudyPlan = localStorage.getItem('studyPlan');
-    if (storedStudyPlan) {
-      setStudyPlan(JSON.parse(storedStudyPlan));
+    // Load study plan to get lesson names
+    const savedPlan = localStorage.getItem('studyPlan');
+    if (savedPlan) {
+      const plan = JSON.parse(savedPlan);
+      setStudyPlan(plan);
+      
+      // Create a mapping of lesson IDs to names
+      const names: Record<string, string> = {};
+      plan.forEach((item: any) => {
+        names[item.id] = item.title;
+      });
+      setLessonNames(names);
     }
-  }, [navigate]);
+  }, []);
 
-  // Prepare data for charts
-  const progressByTypeData = [
-    { 
-      name: 'Lessons', 
-      completed: studyPlan.filter(item => item.status === "completed" && item.type === "lesson").length,
-      total: studyPlan.filter(item => item.type === "lesson").length 
-    },
-    { 
-      name: 'Quizzes', 
-      completed: studyPlan.filter(item => item.status === "completed" && item.type === "quiz").length,
-      total: studyPlan.filter(item => item.type === "quiz").length 
-    },
-    { 
-      name: 'Practice', 
-      completed: studyPlan.filter(item => item.status === "completed" && item.type === "practice").length,
-      total: studyPlan.filter(item => item.type === "practice").length 
-    }
+  // Calculate progress statistics
+  const totalLessons = studyPlan.length;
+  const completedLessons = studyPlan.filter(item => item.status === 'completed').length;
+  const progressPercentage = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  // Format test results for chart
+  const testScoreData = testResults.map(result => ({
+    name: lessonNames[result.lessonId] || `Lesson ${result.lessonId}`,
+    score: Math.round((result.score / result.total) * 100)
+  }));
+
+  // Get average test score
+  const averageScore = testResults.length 
+    ? Math.round(testResults.reduce((sum, result) => sum + ((result.score / result.total) * 100), 0) / testResults.length) 
+    : 0;
+
+  // Mock data for study time chart - in a real app, you would track this data
+  const mockStudyTimeData = [
+    { name: "Mon", hours: 1.5 },
+    { name: "Tue", hours: 2.2 },
+    { name: "Wed", hours: 1.0 },
+    { name: "Thu", hours: 2.5 },
+    { name: "Fri", hours: 1.8 },
+    { name: "Sat", hours: 0.5 },
+    { name: "Sun", hours: 1.2 },
   ];
 
-  const overallProgressData = [
-    { 
-      name: 'Completed', 
-      value: studyPlan.filter(item => item.status === "completed").length
-    },
-    { 
-      name: 'In Progress', 
-      value: studyPlan.filter(item => item.status === "current").length
-    },
-    { 
-      name: 'Upcoming', 
-      value: studyPlan.filter(item => item.status === "future").length
-    }
-  ];
-
-  const COLORS = ['#10B981', '#3B82F6', '#F59E0B'];
-
-  // Prepare data for time spent per day (mock data for demo)
-  const timeSpentData = [
-    { day: 'Mon', minutes: 45 },
-    { day: 'Tue', minutes: 60 },
-    { day: 'Wed', minutes: 30 },
-    { day: 'Thu', minutes: 75 },
-    { day: 'Fri', minutes: 45 },
-    { day: 'Sat', minutes: 90 },
-    { day: 'Sun', minutes: 60 }
+  // Create topic distribution data
+  const topicDistribution = [
+    { name: "Physics", value: 35 },
+    { name: "Chemistry", value: 25 },
+    { name: "Biology", value: 20 },
+    { name: "Mathematics", value: 20 },
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <StudyHeroHeader 
-        userName="Student Hero" 
+      <StudyAIHeader 
+        userName="Student" 
         level={3} 
         xp={750}
         navigation={navigationItems}
       />
       
-      <main className="flex-1">
-        <div className="container py-6">
-          <h1 className="text-3xl font-display mb-6">Analytics</h1>
+      <main className="flex-1 container py-6">
+        <h1 className="text-3xl font-display mb-6">Analytics</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline justify-between">
+                <div className="text-3xl font-bold">{progressPercentage}%</div>
+                <div className="text-muted-foreground text-sm">{completedLessons}/{totalLessons} lessons</div>
+              </div>
+            </CardContent>
+          </Card>
           
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="study-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Progress by Type</CardTitle>
-                <BarChartIcon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart
-                    data={progressByTypeData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="total" fill="#8884d8" stackId="a" name="Total" />
-                    <Bar dataKey="completed" fill="#82ca9d" stackId="b" name="Completed" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card className="study-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Overall Progress</CardTitle>
-                <PieChart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <RechartsPieChart>
-                    <Pie
-                      data={overallProgressData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {overallProgressData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card className="study-card md:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Study Time per Day</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart
-                    data={timeSpentData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip />
-                    <Bar dataKey="minutes" fill="#8B5CF6" name="Minutes Studied" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Average Test Score</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline justify-between">
+                <div className="text-3xl font-bold">{averageScore}%</div>
+                <div className="text-muted-foreground text-sm">{testResults.length} tests taken</div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Study Time</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline justify-between">
+                <div className="text-3xl font-bold">10.7h</div>
+                <div className="text-muted-foreground text-sm">This week</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+        
+        <Tabs defaultValue="performance">
+          <TabsList className="mb-4">
+            <TabsTrigger value="performance" className="flex items-center">
+              <TrendingUp className="mr-2 h-4 w-4" /> Performance
+            </TabsTrigger>
+            <TabsTrigger value="time" className="flex items-center">
+              <Clock className="mr-2 h-4 w-4" /> Study Time
+            </TabsTrigger>
+            <TabsTrigger value="topics" className="flex items-center">
+              <PieChartIcon className="mr-2 h-4 w-4" /> Topics
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="performance" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Scores</CardTitle>
+                <CardDescription>Your performance in tests across different lessons</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {testScoreData.length > 0 ? (
+                  <div className="h-80">
+                    <BarChartHorizontal
+                      data={testScoreData}
+                      index="name"
+                      categories={["score"]}
+                      colors={["primary"]}
+                      valueFormatter={(value) => `${value}%`}
+                      showAnimation={true}
+                    />
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <p className="text-muted-foreground">No test data available yet. Complete lessons and take tests to see your performance.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Test History</CardTitle>
+                  <CardDescription>Recent test results</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {testResults.length > 0 ? (
+                    <div className="space-y-4">
+                      {testResults.slice().reverse().slice(0, 5).map((result, index) => (
+                        <div key={index} className="flex justify-between items-center border-b pb-2 last:border-b-0">
+                          <div>
+                            <p className="font-medium">{lessonNames[result.lessonId] || `Lesson ${result.lessonId}`}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(result.date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className={`px-2 py-1 rounded-full text-white text-sm ${
+                            (result.score / result.total) >= 0.8 ? 'bg-study-green' : 
+                            (result.score / result.total) >= 0.6 ? 'bg-amber-500' :
+                            'bg-destructive'
+                          }`}>
+                            {Math.round((result.score / result.total) * 100)}%
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="py-4 text-center text-muted-foreground">No test history yet</p>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance Insights</CardTitle>
+                  <CardDescription>Analysis of your test results</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {testResults.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <h4 className="font-medium mb-2">Strengths</h4>
+                        <p className="text-sm">
+                          You performed well in recent tests, with an average score of {averageScore}%. 
+                          Continue maintaining this level of understanding.
+                        </p>
+                      </div>
+                      
+                      {testResults.some(r => (r.score / r.total) < 0.7) && (
+                        <div className="p-4 rounded-lg bg-muted/50">
+                          <h4 className="font-medium mb-2">Areas for Improvement</h4>
+                          <p className="text-sm">
+                            Consider reviewing {
+                              testResults
+                                .filter(r => (r.score / r.total) < 0.7)
+                                .map(r => lessonNames[r.lessonId])
+                                .slice(0, 2)
+                                .join(" and ")
+                            } to strengthen your understanding.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="py-4 text-center text-muted-foreground">Complete tests to see insights</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="time">
+            <Card>
+              <CardHeader>
+                <CardTitle>Study Time Distribution</CardTitle>
+                <CardDescription>Hours spent studying this week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <BarChart
+                    data={mockStudyTimeData}
+                    index="name"
+                    categories={["hours"]}
+                    colors={["primary"]}
+                    valueFormatter={(value) => `${value}h`}
+                    showAnimation={true}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="topics">
+            <Card>
+              <CardHeader>
+                <CardTitle>Topic Distribution</CardTitle>
+                <CardDescription>Breakdown of your curriculum by subject area</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <PieChart
+                    data={topicDistribution}
+                    index="name"
+                    category="value"
+                    colors={["primary", "violet", "indigo", "cyan"]}
+                    valueFormatter={(value) => `${value}%`}
+                    showAnimation={true}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

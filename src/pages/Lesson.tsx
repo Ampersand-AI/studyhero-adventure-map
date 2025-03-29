@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { StudyAIHeader } from '@/components/StudyAIHeader';
-import { ArrowLeft, BookOpen, Home, Award, BarChart, Trophy, Map, CheckCircle } from "lucide-react";
+import { ArrowLeft, BookOpen, Home, Award, BarChart, Trophy, Map, CheckCircle, TestTube } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { claudeService } from '@/services/claudeService';
+import LessonTest from '@/components/LessonTest';
 
 interface LessonContent {
   title: string;
@@ -19,12 +20,22 @@ interface LessonContent {
   summary: string;
 }
 
+interface TestResult {
+  lessonId: string;
+  score: number;
+  total: number;
+  date: string;
+}
+
 const Lesson = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [lessonItem, setLessonItem] = useState<any>(null);
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
+  const [showTest, setShowTest] = useState(false);
+  const [testQuestions, setTestQuestions] = useState<any[]>([]);
+  const [isLoadingTest, setIsLoadingTest] = useState(false);
 
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -96,6 +107,65 @@ const Lesson = () => {
     }
   };
 
+  const startTest = async () => {
+    setIsLoadingTest(true);
+    try {
+      // Check if we already have cached test questions for this lesson
+      const cachedTest = localStorage.getItem(`lesson-test-${id}`);
+      if (cachedTest) {
+        setTestQuestions(JSON.parse(cachedTest).questions);
+        setShowTest(true);
+        setIsLoadingTest(false);
+        return;
+      }
+
+      const profile = localStorage.getItem('studyHeroProfile');
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+      
+      const { subject } = JSON.parse(profile);
+      const testData = await claudeService.generateLessonTest(subject, lessonItem.title, 5);
+      
+      setTestQuestions(testData.questions);
+      // Cache the test
+      localStorage.setItem(`lesson-test-${id}`, JSON.stringify(testData));
+      setShowTest(true);
+    } catch (error) {
+      console.error("Error loading test questions:", error);
+      toast({
+        title: "Error loading test questions",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingTest(false);
+    }
+  };
+
+  const handleTestComplete = (score: number, total: number) => {
+    // Save test result
+    const testResults = JSON.parse(localStorage.getItem('testResults') || '[]');
+    const newResult: TestResult = {
+      lessonId: id || '',
+      score,
+      total,
+      date: new Date().toISOString()
+    };
+    testResults.push(newResult);
+    localStorage.setItem('testResults', JSON.stringify(testResults));
+    
+    // Update XP
+    const xpGained = Math.round((score / total) * 100);
+    const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
+    localStorage.setItem('currentXp', (currentXp + xpGained).toString());
+    
+    toast({
+      title: `Test completed!`,
+      description: `You scored ${score}/${total} and earned ${xpGained} XP`,
+    });
+  };
+
   const markAsCompleted = () => {
     const studyPlan = localStorage.getItem('studyPlan');
     if (studyPlan && lessonItem) {
@@ -127,7 +197,16 @@ const Lesson = () => {
         description: "You've earned 50 XP",
       });
       
-      navigate('/dashboard');
+      // Add XP
+      const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
+      localStorage.setItem('currentXp', (currentXp + 50).toString());
+      
+      // If it's a completed lesson, offer test
+      if (lessonItem.status === "current") {
+        startTest();
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 
@@ -135,7 +214,7 @@ const Lesson = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <StudyAIHeader 
-          userName="Student Hero" 
+          userName="Student" 
           level={3} 
           xp={750}
           navigation={navigationItems}
@@ -147,10 +226,40 @@ const Lesson = () => {
     );
   }
 
+  if (showTest) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader 
+          userName="Student" 
+          level={3} 
+          xp={750}
+          navigation={navigationItems}
+        />
+        <main className="flex-1">
+          <div className="container py-6">
+            {isLoadingTest ? (
+              <div className="text-center py-12">
+                <p>Preparing your test...</p>
+              </div>
+            ) : (
+              <LessonTest 
+                lessonId={id || ''} 
+                lessonTitle={lessonItem.title}
+                questions={testQuestions}
+                onComplete={handleTestComplete}
+                onCancel={() => navigate('/dashboard')}
+              />
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <StudyAIHeader 
-        userName="Student Hero" 
+        userName="Student" 
         level={3} 
         xp={750}
         navigation={navigationItems}
@@ -174,9 +283,19 @@ const Lesson = () => {
               </p>
             </div>
             
-            <Button onClick={markAsCompleted}>
-              <CheckCircle className="mr-2 h-4 w-4" /> Mark as Completed
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={startTest}
+                disabled={isLoadingTest}
+              >
+                <TestTube className="h-4 w-4" /> Take Test
+              </Button>
+              <Button onClick={markAsCompleted}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Mark as Completed
+              </Button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -202,6 +321,7 @@ const Lesson = () => {
                       <Skeleton className="h-4 w-full" />
                     </div>
                   ) : lessonContent ? (
+                    
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Key Points</h3>
