@@ -298,3 +298,83 @@ export function PieChart({
     </ChartContainer>
   );
 }
+
+export interface DonutChartProps {
+  data: any[];
+  index: string;
+  category: string;
+  colors?: string[];
+  valueFormatter?: (value: number) => string;
+  showAnimation?: boolean;
+  showLegend?: boolean;
+  showTooltip?: boolean;
+  height?: number | string;
+  innerRadius?: number;
+  outerRadius?: number;
+}
+
+export function DonutChart({
+  data,
+  index,
+  category,
+  colors = ["primary", "destructive"],
+  valueFormatter = (value: number) => `${value}`,
+  showAnimation = true,
+  showLegend = true,
+  showTooltip = true,
+  height = "100%",
+  innerRadius = 60,
+  outerRadius = 80,
+}: DonutChartProps) {
+  const chartColors = colors.map((color) => `hsl(var(--${color}))`);
+  
+  const chartConfig = data.reduce((acc, item, i) => {
+    return {
+      ...acc,
+      [item[index]]: {
+        label: item[index],
+        color: chartColors[i % chartColors.length],
+      },
+    };
+  }, {});
+
+  return (
+    <ChartContainer 
+      config={chartConfig}
+      className="w-full"
+      style={{ height }}
+    >
+      <RechartsPieChart>
+        {showTooltip && (
+          <Tooltip
+            content={({ active, payload }) => (
+              <ChartTooltipContent
+                active={active}
+                payload={payload}
+                formatter={valueFormatter}
+              />
+            )}
+          />
+        )}
+        {showLegend && <Legend />}
+        <Pie
+          data={data}
+          dataKey={category}
+          nameKey={index}
+          cx="50%"
+          cy="50%"
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          animationDuration={showAnimation ? 1000 : 0}
+        >
+          {data.map((entry, i) => (
+            <Cell 
+              key={`cell-${i}`} 
+              fill={chartColors[i % chartColors.length]} 
+            />
+          ))}
+        </Pie>
+      </RechartsPieChart>
+    </ChartContainer>
+  );
+}

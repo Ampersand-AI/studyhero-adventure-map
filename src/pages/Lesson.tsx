@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ const Lesson = () => {
   const [showTest, setShowTest] = useState(false);
   const [testQuestions, setTestQuestions] = useState<any[]>([]);
   const [isLoadingTest, setIsLoadingTest] = useState(false);
+  const [visualDiagrams, setVisualDiagrams] = useState<Record<string, string>>({});
+  const [isLoadingDiagrams, setIsLoadingDiagrams] = useState(false);
 
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -66,9 +69,19 @@ const Lesson = () => {
         loadLessonContent(item.title);
       } else {
         navigate('/dashboard');
+        toast({
+          title: "Lesson not found",
+          description: "This lesson could not be found in your study plan",
+          variant: "destructive"
+        });
       }
     } else {
       navigate('/dashboard');
+      toast({
+        title: "No study plan found",
+        description: "Please set up your study plan first",
+        variant: "destructive"
+      });
     }
   }, [id, navigate]);
 
@@ -78,7 +91,16 @@ const Lesson = () => {
       // Check if we already have cached content for this lesson
       const cachedContent = localStorage.getItem(`lesson-content-${id}`);
       if (cachedContent) {
-        setLessonContent(JSON.parse(cachedContent));
+        const parsed = JSON.parse(cachedContent);
+        setLessonContent(parsed);
+        
+        // Still load diagrams if we don't have them
+        if (!localStorage.getItem(`lesson-diagrams-${id}`)) {
+          loadVisualDiagrams(topic, parsed.visualAids);
+        } else {
+          setVisualDiagrams(JSON.parse(localStorage.getItem(`lesson-diagrams-${id}`) || '{}'));
+        }
+        
         setIsLoading(false);
         return;
       }
@@ -95,6 +117,11 @@ const Lesson = () => {
       setLessonContent(content);
       // Cache the content
       localStorage.setItem(`lesson-content-${id}`, JSON.stringify(content));
+      
+      // Load visual diagrams
+      if (content.visualAids && content.visualAids.length > 0) {
+        loadVisualDiagrams(topic, content.visualAids);
+      }
     } catch (error) {
       console.error("Error loading lesson content:", error);
       toast({
@@ -104,6 +131,47 @@ const Lesson = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadVisualDiagrams = async (topic: string, visualAids: Array<{ title: string; description: string }>) => {
+    setIsLoadingDiagrams(true);
+    try {
+      // Check if we already have cached diagrams
+      const cachedDiagrams = localStorage.getItem(`lesson-diagrams-${id}`);
+      if (cachedDiagrams) {
+        setVisualDiagrams(JSON.parse(cachedDiagrams));
+        setIsLoadingDiagrams(false);
+        return;
+      }
+
+      // Get profile info to determine subject
+      const profile = localStorage.getItem('studyHeroProfile');
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+      
+      const { subject } = JSON.parse(profile);
+      const diagramsObj: Record<string, string> = {};
+      
+      // Generate diagrams for each visual aid
+      for (const aid of visualAids) {
+        const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
+        diagramsObj[aid.title] = diagramDescription;
+      }
+      
+      setVisualDiagrams(diagramsObj);
+      // Cache the diagrams
+      localStorage.setItem(`lesson-diagrams-${id}`, JSON.stringify(diagramsObj));
+    } catch (error) {
+      console.error("Error loading visual diagrams:", error);
+      toast({
+        title: "Error loading visual aids",
+        description: "Some visual aids may not display properly",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingDiagrams(false);
     }
   };
 
@@ -210,13 +278,17 @@ const Lesson = () => {
     }
   };
 
+  // Get user profile info
+  const profile = localStorage.getItem('studyHeroProfile');
+  const profileData = profile ? JSON.parse(profile) : { userName: "Student" };
+
   if (!lessonItem) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <StudyAIHeader 
-          userName="Student" 
-          level={3} 
-          xp={750}
+          userName={profileData.userName || "Student"} 
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
           navigation={navigationItems}
         />
         <div className="container py-12 flex justify-center">
@@ -230,9 +302,9 @@ const Lesson = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <StudyAIHeader 
-          userName="Student" 
-          level={3} 
-          xp={750}
+          userName={profileData.userName || "Student"} 
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
           navigation={navigationItems}
         />
         <main className="flex-1">
@@ -259,9 +331,9 @@ const Lesson = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <StudyAIHeader 
-        userName="Student" 
-        level={3} 
-        xp={750}
+        userName={profileData.userName || "Student"} 
+        level={parseInt(localStorage.getItem('currentLevel') || '1')}
+        xp={parseInt(localStorage.getItem('currentXp') || '0')}
         navigation={navigationItems}
       />
       
@@ -393,9 +465,19 @@ const Lesson = () => {
                       {lessonContent.visualAids.map((aid, index) => (
                         <div key={index} className="border rounded-md p-3">
                           <h4 className="font-medium mb-1">{aid.title}</h4>
-                          <p className="text-sm text-muted-foreground">{aid.description}</p>
-                          <div className="mt-2 bg-muted h-40 rounded-md flex items-center justify-center text-muted-foreground">
-                            [Visual representation]
+                          <p className="text-sm text-muted-foreground mb-2">{aid.description}</p>
+                          <div className="mt-2 bg-muted p-4 h-auto rounded-md">
+                            {isLoadingDiagrams ? (
+                              <Skeleton className="h-40 w-full" />
+                            ) : visualDiagrams[aid.title] ? (
+                              <div className="text-sm overflow-auto max-h-[200px]">
+                                <p className="whitespace-pre-wrap">{visualDiagrams[aid.title]}</p>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center h-40 text-muted-foreground">
+                                Diagram description not available
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

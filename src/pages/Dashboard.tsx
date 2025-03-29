@@ -6,12 +6,16 @@ import ProgressCard from '@/components/ProgressCard';
 import StudyTimeline from '@/components/StudyTimeline';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2 } from "lucide-react";
+import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { claudeService } from '@/services/claudeService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface StudyItem {
   id: string;
@@ -22,18 +26,33 @@ interface StudyItem {
   dueDate: string;
   content: string;
   estimatedTimeInMinutes: number;
+  subject?: string;
+}
+
+interface SubjectPlan {
+  subject: string;
+  items: StudyItem[];
 }
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [studyPlan, setStudyPlan] = useState<StudyItem[]>([]);
+  const [studyPlans, setStudyPlans] = useState<SubjectPlan[]>([]);
+  const [activeSubject, setActiveSubject] = useState<string>("");
   const [profileInfo, setProfileInfo] = useState<any>({
     board: '',
     className: '',
     subject: '',
+    userName: 'Student'
   });
+
+  // For new subject dialog
+  const [isAddingSubject, setIsAddingSubject] = useState(false);
+  const [newSubject, setNewSubject] = useState("");
+  const [newSubjectClass, setNewSubjectClass] = useState("");
+  const [newSubjectBoard, setNewSubjectBoard] = useState("");
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
 
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -53,24 +72,53 @@ const Dashboard = () => {
     const profileData = JSON.parse(profile);
     setProfileInfo(profileData);
 
-    // Fetch study plan
-    const storedStudyPlan = localStorage.getItem('studyPlan');
-    if (storedStudyPlan) {
-      try {
-        setStudyPlan(JSON.parse(storedStudyPlan));
-        setIsLoading(false);
-      } catch (e) {
-        console.error("Error parsing stored study plan:", e);
-        generateStudyPlan(profileData.board, profileData.className, profileData.subject);
-      }
-    } else {
-      generateStudyPlan(profileData.board, profileData.className, profileData.subject);
-    }
+    // Load all study plans
+    loadStudyPlans();
   }, [navigate]);
 
-  const generateStudyPlan = async (board: string, className: string, subject: string) => {
+  const loadStudyPlans = () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
+      // Get all study plans from localStorage
+      const plans = localStorage.getItem('studyPlans');
+      
+      if (plans) {
+        const parsedPlans = JSON.parse(plans) as SubjectPlan[];
+        setStudyPlans(parsedPlans);
+        
+        // Set active subject to the first one if not already set
+        if (parsedPlans.length > 0 && !activeSubject) {
+          setActiveSubject(parsedPlans[0].subject);
+        }
+      } else {
+        // If no plans exist yet, create one for the main subject from profile
+        const profile = localStorage.getItem('studyHeroProfile');
+        if (profile) {
+          const { subject, board, className } = JSON.parse(profile);
+          generateStudyPlan(board, className, subject)
+            .then(plan => {
+              if (plan) {
+                const newPlans = [{
+                  subject,
+                  items: plan
+                }];
+                setStudyPlans(newPlans);
+                setActiveSubject(subject);
+                localStorage.setItem('studyPlans', JSON.stringify(newPlans));
+              }
+            });
+        }
+      }
+    } catch (e) {
+      console.error("Error loading study plans:", e);
+      setError("Failed to load your study plans. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateStudyPlan = async (board: string, className: string, subject: string): Promise<StudyItem[] | null> => {
+    try {
       setError(null);
       
       const planData = await claudeService.generateStudyPlan(board, className, subject);
@@ -89,17 +137,12 @@ const Dashboard = () => {
           ...item,
           status: index === 0 ? "current" : "future",
           dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          type: item.type || ["lesson", "quiz", "practice"][index % 3]
+          type: item.type || ["lesson", "quiz", "practice"][index % 3],
+          subject
         };
       });
       
-      setStudyPlan(processedPlan);
-      localStorage.setItem('studyPlan', JSON.stringify(processedPlan));
-      
-      toast({
-        title: "Study plan generated!",
-        description: "Your personalized study plan is now ready",
-      });
+      return processedPlan;
     } catch (error) {
       console.error("Error generating study plan:", error);
       setError("Failed to generate your study plan. Please try again later.");
@@ -108,16 +151,19 @@ const Dashboard = () => {
         description: "Please try again later",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
+      return null;
     }
   };
 
   const handleStartItem = (id: string) => {
+    // Find the active subject plan
+    const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
+    if (!activePlan) return;
+    
     // Find the item in study plan
-    const item = studyPlan.find(item => item.id === id);
+    const item = activePlan.items.find(item => item.id === id);
     if (item) {
-      // Also save the current item to localStorage for the lesson/quiz page
+      // Save the current item to localStorage for the lesson/quiz page
       localStorage.setItem('currentStudyItem', JSON.stringify(item));
       
       if (item.type === 'quiz') {
@@ -129,20 +175,105 @@ const Dashboard = () => {
   };
 
   const handleRegeneratePlan = () => {
-    generateStudyPlan(profileInfo.board, profileInfo.className, profileInfo.subject);
+    // Regenerate only the active subject plan
+    setIsLoading(true);
+    generateStudyPlan(profileInfo.board, profileInfo.className, activeSubject)
+      .then(plan => {
+        if (plan) {
+          // Update just the active plan
+          const updatedPlans = studyPlans.map(p => 
+            p.subject === activeSubject ? { ...p, items: plan } : p
+          );
+          
+          setStudyPlans(updatedPlans);
+          localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+          
+          toast({
+            title: "Study plan regenerated!",
+            description: `Your ${activeSubject} study plan has been updated`,
+          });
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
-  // Calculate progress
-  const totalItems = studyPlan.length;
-  const completedItems = studyPlan.filter(item => item.status === "completed").length;
+  const handleAddSubject = async () => {
+    if (!newSubject || !newSubjectClass || !newSubjectBoard) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all fields for the new subject",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsGeneratingPlan(true);
+    
+    try {
+      // Check if subject already exists
+      if (studyPlans.some(plan => plan.subject.toLowerCase() === newSubject.toLowerCase())) {
+        toast({
+          title: "Subject already exists",
+          description: "This subject is already in your study plans",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Generate new plan
+      const newPlan = await generateStudyPlan(newSubjectBoard, newSubjectClass, newSubject);
+      
+      if (newPlan) {
+        // Add to existing plans
+        const updatedPlans = [...studyPlans, {
+          subject: newSubject,
+          items: newPlan
+        }];
+        
+        setStudyPlans(updatedPlans);
+        setActiveSubject(newSubject);
+        localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+        
+        // Clear the form
+        setNewSubject("");
+        setNewSubjectClass("");
+        setNewSubjectBoard("");
+        setIsAddingSubject(false);
+        
+        toast({
+          title: "Subject added!",
+          description: `Your ${newSubject} study plan is now ready`,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding subject:", error);
+      toast({
+        title: "Error adding subject",
+        description: "Failed to create study plan for this subject",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
+
+  // Get the current active plan
+  const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
+  const activeItems = activePlan?.items || [];
+
+  // Calculate progress for the active plan
+  const totalItems = activeItems.length;
+  const completedItems = activeItems.filter(item => item.status === "completed").length;
   const completionPercentage = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <StudyAIHeader 
-        userName="Student Hero" 
-        level={3} 
-        xp={750}
+        userName={profileInfo.userName || "Student"} 
+        level={parseInt(localStorage.getItem('currentLevel') || '1')}
+        xp={parseInt(localStorage.getItem('currentXp') || '0')}
         navigation={navigationItems}
       />
       
@@ -150,22 +281,116 @@ const Dashboard = () => {
         <div className="container py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
-              <h1 className="text-3xl font-display">{profileInfo.subject} Adventure</h1>
+              <h1 className="text-3xl font-display">
+                {activeSubject} Adventure
+              </h1>
               <p className="text-muted-foreground">
                 Class {profileInfo.className} • {profileInfo.board}
               </p>
             </div>
             
-            {error && (
-              <Button 
-                variant="outline" 
-                onClick={handleRegeneratePlan}
-                className="mt-2 md:mt-0"
-              >
-                Regenerate Study Plan
-              </Button>
-            )}
+            <div className="flex gap-2 mt-4 md:mt-0">
+              {error && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleRegeneratePlan}
+                >
+                  Regenerate Study Plan
+                </Button>
+              )}
+              
+              <Dialog open={isAddingSubject} onOpenChange={setIsAddingSubject}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4" /> Add Subject
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Subject</DialogTitle>
+                    <DialogDescription>
+                      Add a new subject to your study plan. This will generate a complete curriculum for the subject.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="subject" className="text-right">
+                        Subject
+                      </Label>
+                      <Input
+                        id="subject"
+                        value={newSubject}
+                        onChange={(e) => setNewSubject(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g. Mathematics, Physics, Biology"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="class" className="text-right">
+                        Class
+                      </Label>
+                      <Input
+                        id="class"
+                        value={newSubjectClass}
+                        onChange={(e) => setNewSubjectClass(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g. 8, 9, 10"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="board" className="text-right">
+                        Board
+                      </Label>
+                      <Input
+                        id="board"
+                        value={newSubjectBoard}
+                        onChange={(e) => setNewSubjectBoard(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g. CBSE, ICSE, State Board"
+                      />
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddingSubject(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddSubject} disabled={isGeneratingPlan}>
+                      {isGeneratingPlan ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating Plan...
+                        </>
+                      ) : (
+                        "Add Subject"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
+
+          {studyPlans.length > 1 && (
+            <div className="mb-6">
+              <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex w-max space-x-2 p-2">
+                  {studyPlans.map((plan, index) => (
+                    <Button
+                      key={index}
+                      variant={plan.subject === activeSubject ? "default" : "outline"}
+                      onClick={() => setActiveSubject(plan.subject)}
+                      className="flex-shrink-0"
+                    >
+                      {plan.subject}
+                    </Button>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </div>
+          )}
 
           {error ? (
             <Alert variant="destructive" className="my-4">
@@ -186,8 +411,16 @@ const Dashboard = () => {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p>Creating your personalized study plan...</p>
                   </div>
+                ) : activeItems.length > 0 ? (
+                  <StudyTimeline items={activeItems} onStartItem={handleStartItem} />
                 ) : (
-                  <StudyTimeline items={studyPlan} onStartItem={handleStartItem} />
+                  <div className="text-center py-12">
+                    <h3 className="text-lg font-medium">No study plan available</h3>
+                    <p className="text-muted-foreground mt-2">Click the Regenerate button to create a new study plan</p>
+                    <Button className="mt-4" onClick={handleRegeneratePlan}>
+                      Generate Study Plan
+                    </Button>
+                  </div>
                 )}
               </TabsContent>
               
@@ -201,22 +434,22 @@ const Dashboard = () => {
                   />
                   <ProgressCard 
                     title="Quizzes Completed" 
-                    percentage={Math.round((studyPlan.filter(item => item.status === "completed" && item.type === "quiz").length / 
-                      Math.max(1, studyPlan.filter(item => item.type === "quiz").length)) * 100)} 
+                    percentage={Math.round((activeItems.filter(item => item.status === "completed" && item.type === "quiz").length / 
+                      Math.max(1, activeItems.filter(item => item.type === "quiz").length)) * 100)} 
                     icon={<Award className="h-4 w-4" />}
                     color="purple"
                   />
                   <ProgressCard 
                     title="Lessons Studied" 
-                    percentage={Math.round((studyPlan.filter(item => item.status === "completed" && item.type === "lesson").length / 
-                      Math.max(1, studyPlan.filter(item => item.type === "lesson").length)) * 100)} 
+                    percentage={Math.round((activeItems.filter(item => item.status === "completed" && item.type === "lesson").length / 
+                      Math.max(1, activeItems.filter(item => item.type === "lesson").length)) * 100)} 
                     icon={<BookOpen className="h-4 w-4" />}
                     color="green"
                   />
                   <ProgressCard 
                     title="Practice Completed" 
-                    percentage={Math.round((studyPlan.filter(item => item.status === "completed" && item.type === "practice").length / 
-                      Math.max(1, studyPlan.filter(item => item.type === "practice").length)) * 100)} 
+                    percentage={Math.round((activeItems.filter(item => item.status === "completed" && item.type === "practice").length / 
+                      Math.max(1, activeItems.filter(item => item.type === "practice").length)) * 100)} 
                     icon={<BarChart className="h-4 w-4" />}
                     color="orange"
                   />
@@ -226,7 +459,7 @@ const Dashboard = () => {
               <TabsContent value="upcoming" className="mt-6">
                 <ScrollArea className="w-full whitespace-nowrap rounded-md border">
                   <div className="flex w-max space-x-4 p-4">
-                    {studyPlan
+                    {activeItems
                       .filter(item => item.status === "future")
                       .slice(0, 7)
                       .map(item => (

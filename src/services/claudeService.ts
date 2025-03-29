@@ -1,12 +1,14 @@
+
 interface Claude {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
   generateLessonContent: (subject: string, topic: string) => Promise<any>;
   generateLessonTest: (subject: string, topic: string, numQuestions: number) => Promise<any>;
+  generateDiagram: (subject: string, topic: string, diagramType: string) => Promise<string>;
 }
 
-// Note: In a production environment, this should be stored securely in environment variables
-const API_KEY = "sk-ant-api03-K2XrNBAD1J6Ub9GPfjDt3A-AAyQJ6i4yWCGeuOTjqm-lpKVpGM5Uk0ic1iufuQButw-2lYgpbiF_5FH9xS2K_w-3SBJgQAA";
+// API key should be moved to environment variables in production
+const API_KEY = "sk-ant-api03-sfAuD93gYCJtvmHkJXbj_g.0ykJbQTEfTzzDXaxMhLpMA";
 
 class ClaudeService implements Claude {
   private apiKey: string;
@@ -17,6 +19,8 @@ class ClaudeService implements Claude {
 
   private async callClaude(prompt: string): Promise<any> {
     try {
+      console.log("Calling Claude API with prompt:", prompt.substring(0, 100) + "...");
+      
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -80,8 +84,7 @@ class ClaudeService implements Claude {
       return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Error parsing study plan:", error);
-      // Return a fallback study plan if there's an error
-      return this.getFallbackStudyPlan(subject);
+      throw new Error("Failed to generate study plan. Please try again.");
     }
   }
 
@@ -106,12 +109,7 @@ class ClaudeService implements Claude {
       return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Error parsing quiz question:", error);
-      return {
-        question: "What is the main function of mitochondria in cells?",
-        options: ["Cell division", "Protein synthesis", "Energy production", "Waste removal"],
-        correctAnswer: "Energy production",
-        explanation: "Mitochondria are often called the powerhouse of the cell because they generate most of the cell's supply of ATP, which is used as a source of energy."
-      };
+      throw new Error("Failed to generate quiz question. Please try again.");
     }
   }
 
@@ -139,15 +137,7 @@ class ClaudeService implements Claude {
       return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Error generating lesson content:", error);
-      return {
-        title: topic,
-        keyPoints: ["Key concept 1", "Key concept 2", "Key concept 3"],
-        explanation: ["Detailed explanation paragraph 1.", "Detailed explanation paragraph 2."],
-        examples: [{ title: "Example 1", content: "Example content" }],
-        visualAids: [{ title: "Diagram", description: "A visual representation of the concept" }],
-        activities: ["Activity 1 instructions", "Activity 2 instructions"],
-        summary: "Summary of the key points covered in this lesson."
-      };
+      throw new Error("Failed to generate lesson content. Please try again.");
     }
   }
 
@@ -176,24 +166,28 @@ class ClaudeService implements Claude {
       return JSON.parse(cleanedResult);
     } catch (error) {
       console.error("Error generating lesson test:", error);
-      // Return a fallback test if there's an error
-      return {
-        lessonTitle: topic,
-        questions: [
-          {
-            question: "What is the main purpose of studying " + topic + "?",
-            options: ["Entertainment", "Understanding natural phenomena", "Social status", "Physical exercise"],
-            correctAnswer: "Understanding natural phenomena",
-            explanation: "The main purpose of studying this topic is to understand natural phenomena and how things work in the world around us."
-          },
-          {
-            question: "Which of the following best describes the scientific method?",
-            options: ["A random approach to problem-solving", "A systematic approach involving observation, hypothesis, experimentation, and conclusion", "Memorizing facts and figures", "Following instructions without questioning"],
-            correctAnswer: "A systematic approach involving observation, hypothesis, experimentation, and conclusion",
-            explanation: "The scientific method is a systematic approach to understanding the world through observation, forming hypotheses, testing through experimentation, and drawing conclusions."
-          }
-        ]
-      };
+      throw new Error("Failed to generate lesson test. Please try again.");
+    }
+  }
+
+  async generateDiagram(subject: string, topic: string, diagramType: string): Promise<string> {
+    const prompt = `
+      Create a detailed text description of a ${diagramType} diagram for "${topic}" in ${subject}.
+      
+      Provide a very detailed description that could help someone visualize or draw this diagram.
+      Include all necessary elements, labels, relationships, and any color recommendations.
+      
+      The description should be thorough enough that it could be used to create an actual visual representation.
+      
+      Return ONLY the description text, without any additional formatting.
+    `;
+    
+    try {
+      const result = await this.callClaude(prompt);
+      return result.trim();
+    } catch (error) {
+      console.error("Error generating diagram description:", error);
+      throw new Error("Failed to generate diagram description. Please try again.");
     }
   }
 
@@ -209,35 +203,6 @@ class ClaudeService implements Claude {
     }
     
     return cleanedResponse;
-  }
-
-  // Fallback study plan in case of API failures
-  private getFallbackStudyPlan(subject: string): any {
-    const topics = [
-      "Introduction to " + subject,
-      "Basic Concepts",
-      "Intermediate Topics",
-      "Advanced Applications",
-      "Problem Solving Techniques",
-      "Review and Assessment"
-    ];
-    
-    const types = ["lesson", "quiz", "practice"];
-    
-    return {
-      items: topics.map((topic, index) => ({
-        id: `topic-${index + 1}`,
-        title: topic,
-        description: `Learn about ${topic.toLowerCase()} and how to apply these concepts.`,
-        type: types[index % 3],
-        content: index % 3 === 0 ? 
-          "Key concepts to understand: 1) Basic principles 2) Common applications 3) Practical examples" : 
-          index % 3 === 1 ? 
-            "Quiz questions to test understanding of the topic" : 
-            "Practice exercises to reinforce learning",
-        estimatedTimeInMinutes: 30 + (index * 5)
-      }))
-    };
   }
 }
 

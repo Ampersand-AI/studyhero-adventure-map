@@ -1,7 +1,6 @@
 
 import React from 'react';
 import TimelineCard from "./TimelineCard";
-import { Separator } from "@/components/ui/separator";
 
 interface TimelineItem {
   id: string;
