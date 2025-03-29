@@ -577,7 +577,6 @@ const Dashboard = () => {
             </DialogContent>
           </Dialog>
         </div>
-      </main>
     </div>
   );
 };
