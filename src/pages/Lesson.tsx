@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -103,11 +104,20 @@ const Lesson = () => {
       if (cachedContent) {
         try {
           const parsed = JSON.parse(cachedContent);
+          
+          // Validate the parsed content has all required fields
+          if (!parsed || !parsed.keyPoints || !parsed.explanation || !parsed.examples || !parsed.summary) {
+            console.warn("Cached lesson content is missing required fields, loading fresh content");
+            localStorage.removeItem(`lesson-content-${id}`);
+            await fetchLessonContent(topic);
+            return;
+          }
+          
           setLessonContent(parsed);
           
           // Still load diagrams if we don't have them
           if (!localStorage.getItem(`lesson-diagrams-${id}`)) {
-            loadVisualDiagrams(topic, parsed.visualAids);
+            loadVisualDiagrams(topic, parsed.visualAids || []);
           } else {
             setVisualDiagrams(JSON.parse(localStorage.getItem(`lesson-diagrams-${id}`) || '{}'));
           }
@@ -146,23 +156,38 @@ const Lesson = () => {
       
       const content = await claudeService.generateLessonContent(subject, topic);
       
+      // Ensure the content has all required fields with fallbacks
+      const normalizedContent: LessonContent = {
+        title: content.title || topic,
+        keyPoints: content.keyPoints || [],
+        explanation: content.explanation || [],
+        examples: content.examples || [],
+        visualAids: content.visualAids || [],
+        activities: [],
+        summary: content.summary || ""
+      };
+      
       // Normalize activities if they're not in the expected format
       if (content.activities && Array.isArray(content.activities)) {
-        if (typeof content.activities[0] === 'string') {
-          content.activities = content.activities.map((activity: string) => ({
-            instructions: activity
-          }));
+        if (content.activities.length > 0) {
+          if (typeof content.activities[0] === 'string') {
+            normalizedContent.activities = content.activities.map((activity: string) => ({
+              instructions: activity
+            }));
+          } else {
+            normalizedContent.activities = content.activities;
+          }
         }
       }
       
-      setLessonContent(content);
+      setLessonContent(normalizedContent);
       
       // Cache the content
-      localStorage.setItem(`lesson-content-${id}`, JSON.stringify(content));
+      localStorage.setItem(`lesson-content-${id}`, JSON.stringify(normalizedContent));
       
       // Load visual diagrams
-      if (content.visualAids && content.visualAids.length > 0) {
-        loadVisualDiagrams(topic, content.visualAids);
+      if (normalizedContent.visualAids && normalizedContent.visualAids.length > 0) {
+        loadVisualDiagrams(topic, normalizedContent.visualAids);
       }
     } catch (error) {
       console.error("Error fetching lesson content:", error);
@@ -191,10 +216,12 @@ const Lesson = () => {
       const diagramsObj: Record<string, string> = {};
       
       // Generate diagrams for each visual aid
-      for (const aid of visualAids) {
-        console.log(`Generating diagram for ${aid.title}`);
-        const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
-        diagramsObj[aid.title] = diagramDescription;
+      if (visualAids && visualAids.length > 0) {
+        for (const aid of visualAids) {
+          console.log(`Generating diagram for ${aid.title}`);
+          const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
+          diagramsObj[aid.title] = diagramDescription;
+        }
       }
       
       setVisualDiagrams(diagramsObj);
@@ -478,9 +505,13 @@ const Lesson = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Key Points</h3>
                         <ul className="list-disc pl-5 space-y-1">
-                          {lessonContent.keyPoints.map((point, index) => (
-                            <li key={index}>{point}</li>
-                          ))}
+                          {lessonContent.keyPoints && lessonContent.keyPoints.length > 0 ? (
+                            lessonContent.keyPoints.map((point, index) => (
+                              <li key={index}>{point}</li>
+                            ))
+                          ) : (
+                            <li>No key points available for this lesson.</li>
+                          )}
                         </ul>
                       </div>
                       
@@ -489,9 +520,13 @@ const Lesson = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Explanation</h3>
                         <div className="space-y-3">
-                          {lessonContent.explanation.map((paragraph, index) => (
-                            <p key={index}>{paragraph}</p>
-                          ))}
+                          {lessonContent.explanation && lessonContent.explanation.length > 0 ? (
+                            lessonContent.explanation.map((paragraph, index) => (
+                              <p key={index}>{paragraph}</p>
+                            ))
+                          ) : (
+                            <p>No detailed explanation available for this lesson.</p>
+                          )}
                         </div>
                       </div>
                       
@@ -500,16 +535,20 @@ const Lesson = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Examples</h3>
                         <div className="space-y-4">
-                          {lessonContent.examples.map((example, index) => (
-                            <Card key={index} className="bg-muted/50">
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-base">{example.title}</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p>{example.content}</p>
-                              </CardContent>
-                            </Card>
-                          ))}
+                          {lessonContent.examples && lessonContent.examples.length > 0 ? (
+                            lessonContent.examples.map((example, index) => (
+                              <Card key={index} className="bg-muted/50">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-base">{example.title || `Example ${index + 1}`}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <p>{example.content}</p>
+                                </CardContent>
+                              </Card>
+                            ))
+                          ) : (
+                            <p>No examples available for this lesson.</p>
+                          )}
                         </div>
                       </div>
                       
@@ -517,7 +556,7 @@ const Lesson = () => {
                       
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Summary</h3>
-                        <p>{lessonContent.summary}</p>
+                        <p>{lessonContent.summary || "No summary available for this lesson."}</p>
                       </div>
                     </div>
                   ) : (
