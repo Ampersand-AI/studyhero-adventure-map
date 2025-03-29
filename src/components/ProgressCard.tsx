@@ -7,7 +7,7 @@ interface ProgressCardProps {
   title: string;
   percentage: number;
   icon: React.ReactNode;
-  color: string;
+  color: "purple" | "blue" | "green" | "yellow" | "pink" | "orange";
 }
 
 const ProgressCard = ({ title, percentage, icon, color }: ProgressCardProps) => {
@@ -15,7 +15,7 @@ const ProgressCard = ({ title, percentage, icon, color }: ProgressCardProps) => 
     <Card className="study-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`w-8 h-8 rounded-full bg-${color}/10 flex items-center justify-center text-${color}`}>
+        <div className={`w-8 h-8 rounded-full bg-study-${color}/10 flex items-center justify-center text-study-${color}`}>
           {icon}
         </div>
       </CardHeader>
