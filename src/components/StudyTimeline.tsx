@@ -24,20 +24,20 @@ const StudyTimeline = ({ items, onStartItem }: StudyTimelineProps) => {
           {items.map((item, index) => (
             <React.Fragment key={item.id}>
               <div
-                className={`milestone-node ${
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${
                   item.status === "completed"
-                    ? "milestone-completed"
+                    ? "bg-green-500"
                     : item.status === "current"
-                    ? "milestone-current"
-                    : "milestone-future"
+                    ? "bg-blue-500 animate-pulse"
+                    : "bg-gray-300"
                 }`}
               >
                 {index + 1}
               </div>
               {index < items.length - 1 && (
                 <div
-                  className={`milestone-line ${
-                    item.status === "completed" ? "milestone-line-completed" : ""
+                  className={`h-1 flex-grow mx-2 ${
+                    item.status === "completed" ? "bg-green-500" : "bg-gray-300"
                   }`}
                 />
               )}
