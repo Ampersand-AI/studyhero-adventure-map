@@ -1,5 +1,4 @@
-
-interface Claude {
+interface AI {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
   generateLessonContent: (subject: string, topic: string) => Promise<any>;
@@ -7,10 +6,10 @@ interface Claude {
   generateDiagram: (subject: string, topic: string, diagramType: string) => Promise<string>;
 }
 
-// API key should be moved to environment variables in production
-const API_KEY = "sk-ant-api03-sfAuD93gYCJtvmHkJXbj_g.0ykJbQTEfTzzDXaxMhLpMA";
+// Using OpenAI API key instead of Claude
+const API_KEY = "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";
 
-class ClaudeService implements Claude {
+class AIService implements AI {
   private apiKey: string;
   private retryCount: number = 3;
   private retryDelay: number = 1000;
@@ -19,42 +18,45 @@ class ClaudeService implements Claude {
     this.apiKey = apiKey;
   }
 
-  private async callClaude(prompt: string): Promise<any> {
+  private async callOpenAI(prompt: string): Promise<any> {
     let attempts = 0;
     
     while (attempts < this.retryCount) {
       try {
-        console.log("Calling Claude API with prompt:", prompt.substring(0, 100) + "...");
+        console.log("Calling OpenAI API with prompt:", prompt.substring(0, 100) + "...");
         
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": this.apiKey,
-            "anthropic-version": "2023-06-01"
+            "Authorization": `Bearer ${this.apiKey}`,
           },
           body: JSON.stringify({
-            model: "claude-3-opus-20240229",
-            max_tokens: 4000,
+            model: "gpt-4o",
             messages: [
+              {
+                role: "system",
+                content: "You are a helpful assistant that provides structured educational content in JSON format."
+              },
               {
                 role: "user",
                 content: prompt
               }
-            ]
+            ],
+            max_tokens: 4000,
           })
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          console.error("Claude API error:", errorData);
+          console.error("OpenAI API error:", errorData);
           throw new Error(`API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
         }
 
         const data = await response.json();
-        return data.content[0].text;
+        return data.choices[0].message.content;
       } catch (error) {
-        console.error(`Error calling Claude API (attempt ${attempts + 1}/${this.retryCount}):`, error);
+        console.error(`Error calling OpenAI API (attempt ${attempts + 1}/${this.retryCount}):`, error);
         attempts++;
         
         if (attempts >= this.retryCount) {
@@ -94,7 +96,7 @@ class ClaudeService implements Claude {
     `;
     
     try {
-      const result = await this.callClaude(prompt);
+      const result = await this.callOpenAI(prompt);
       const cleanedResult = this.cleanJsonResponse(result);
       return JSON.parse(cleanedResult);
     } catch (error) {
@@ -173,7 +175,7 @@ class ClaudeService implements Claude {
     `;
     
     try {
-      const result = await this.callClaude(prompt);
+      const result = await this.callOpenAI(prompt);
       const cleanedResult = this.cleanJsonResponse(result);
       return JSON.parse(cleanedResult);
     } catch (error) {
@@ -215,7 +217,7 @@ class ClaudeService implements Claude {
     `;
     
     try {
-      const result = await this.callClaude(prompt);
+      const result = await this.callOpenAI(prompt);
       const cleanedResult = this.cleanJsonResponse(result);
       return JSON.parse(cleanedResult);
     } catch (error) {
@@ -291,7 +293,7 @@ class ClaudeService implements Claude {
     `;
     
     try {
-      const result = await this.callClaude(prompt);
+      const result = await this.callOpenAI(prompt);
       const cleanedResult = this.cleanJsonResponse(result);
       return JSON.parse(cleanedResult);
     } catch (error) {
@@ -336,7 +338,7 @@ class ClaudeService implements Claude {
     `;
     
     try {
-      const result = await this.callClaude(prompt);
+      const result = await this.callOpenAI(prompt);
       return result.trim();
     } catch (error) {
       console.error("Error generating diagram description:", error);
@@ -364,7 +366,7 @@ class ClaudeService implements Claude {
     `.trim();
   }
 
-  // Helper function to clean JSON response from Claude
+  // Helper function to clean JSON response from API
   private cleanJsonResponse(response: string): string {
     // Remove markdown code blocks if present
     let cleanedResponse = response.replace(/```json\n|\n```|```\n|\n```/g, '');
@@ -379,4 +381,4 @@ class ClaudeService implements Claude {
   }
 }
 
-export const claudeService = new ClaudeService(API_KEY);
+export const claudeService = new AIService(API_KEY);
