@@ -20,8 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'display': ['Lilita One', 'cursive'],
-				'body': ['Quicksand', 'sans-serif'],
+				'display': ['Playfair Display', 'serif'],
+				'body': ['Inter', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

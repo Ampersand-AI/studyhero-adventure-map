@@ -34,7 +34,7 @@ const StudyHeroHeader = ({
             <SheetContent side="left" className="w-72">
               <div className="flex flex-col h-full">
                 <div className="px-2">
-                  <h2 className="text-lg font-display mb-2 text-center text-primary">StudyHero</h2>
+                  <h2 className="text-lg font-display mb-2 text-center text-primary">Study AI</h2>
                   <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={avatarUrl} alt={userName} />
@@ -65,7 +65,7 @@ const StudyHeroHeader = ({
             </SheetContent>
           </Sheet>
           <a href="/" className="hidden md:flex items-center gap-2">
-            <span className="font-display text-2xl text-primary">StudyHero</span>
+            <span className="font-display text-2xl text-primary">Study AI</span>
           </a>
         </div>
         <div className="hidden md:flex items-center gap-6">

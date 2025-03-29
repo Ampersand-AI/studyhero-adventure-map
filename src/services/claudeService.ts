@@ -46,14 +46,20 @@ class ClaudeService implements Claude {
     const prompt = `
       Create a detailed study plan for a student studying ${subject} in Class ${className} under the ${board} board. 
       
+      Break down the curriculum into logical teaching units. For each topic:
+      - Include key concepts that need to be taught
+      - Add practical exercises to reinforce learning
+      - Include quizzes to test understanding
+      
       Return a JSON format with an array of study items, where each item has:
       - id (string)
-      - title (string)
-      - description (string)
+      - title (string - the name of the topic)
+      - description (string - brief outline of what will be covered)
       - type: "lesson", "quiz", or "practice"
+      - content: (detailed teaching notes for lessons, questions for quizzes, tasks for practice)
       - estimatedTimeInMinutes (number)
       
-      Structure the topics in a logical learning sequence, including practice exercises and quizzes. Focus on key concepts that align with the curriculum.
+      Structure the topics in a logical learning sequence following the official curriculum.
       
       Return ONLY the JSON, with no additional text.
     `;
