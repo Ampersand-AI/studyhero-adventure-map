@@ -551,32 +551,31 @@ const Dashboard = () => {
             </Tabs>
           )}
         </div>
-      </main>
+      
 
-          {/* Add reset confirmation dialog */}
-          <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Reset All Data</DialogTitle>
-                <DialogDescription>
-                  This will clear all your study plans, progress, and achievements. This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <DialogFooter className="mt-4">
-                <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={confirmClearUserData}
-                >
-                  Reset All Data
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset All Data</DialogTitle>
+              <DialogDescription>
+                This will clear all your study plans, progress, and achievements. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmClearUserData}
+              >
+                Reset All Data
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </main>
     </div>
   );
 };
