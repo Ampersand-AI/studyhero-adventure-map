@@ -57,7 +57,7 @@ const TimelineCard = ({ item, onStart }: TimelineCardProps) => {
             disabled={item.status !== "current"}
             onClick={onStart}
           >
-            {item.status === "completed" ? "Completed" : "Start Now"}
+            {item.status === "current" ? "Start Now" : "Coming Soon"}
           </Button>
         )}
       </CardContent>

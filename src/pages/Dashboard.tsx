@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudyHeroHeader from '@/components/StudyHeroHeader';
@@ -147,28 +146,28 @@ const Dashboard = () => {
                   title="Overall Progress" 
                   percentage={completionPercentage} 
                   icon={<BookOpen className="h-4 w-4" />}
-                  color="study-blue"
+                  color="blue"
                 />
                 <ProgressCard 
                   title="Quizzes Completed" 
                   percentage={Math.round((studyPlan.filter(item => item.status === "completed" && item.type === "quiz").length / 
                     studyPlan.filter(item => item.type === "quiz").length) * 100) || 0} 
                   icon={<Award className="h-4 w-4" />}
-                  color="study-purple"
+                  color="purple"
                 />
                 <ProgressCard 
                   title="Lessons Studied" 
                   percentage={Math.round((studyPlan.filter(item => item.status === "completed" && item.type === "lesson").length / 
                     studyPlan.filter(item => item.type === "lesson").length) * 100) || 0} 
                   icon={<BookOpen className="h-4 w-4" />}
-                  color="study-green"
+                  color="green"
                 />
                 <ProgressCard 
                   title="Practice Completed" 
                   percentage={Math.round((studyPlan.filter(item => item.status === "completed" && item.type === "practice").length / 
                     studyPlan.filter(item => item.type === "practice").length) * 100) || 0} 
                   icon={<BarChart className="h-4 w-4" />}
-                  color="study-orange"
+                  color="orange"
                 />
               </div>
             </TabsContent>

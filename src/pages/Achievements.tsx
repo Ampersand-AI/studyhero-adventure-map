@@ -45,7 +45,7 @@ const Achievements = () => {
       id: "1",
       title: "First Step",
       description: "Complete your first study item",
-      type: "star",
+      type: "star" as const,
       color: "study-blue",
       earned: completedItems >= 1
     },
@@ -53,7 +53,7 @@ const Achievements = () => {
       id: "2",
       title: "Quiz Whiz",
       description: "Complete 3 quizzes with perfect scores",
-      type: "trophy",
+      type: "trophy" as const,
       color: "study-purple",
       earned: completedQuizzes >= 3
     },
@@ -61,7 +61,7 @@ const Achievements = () => {
       id: "3",
       title: "Knowledge Seeker",
       description: "Complete 5 lessons",
-      type: "medal",
+      type: "medal" as const,
       color: "study-green",
       earned: completedLessons >= 5
     },
@@ -69,7 +69,7 @@ const Achievements = () => {
       id: "4",
       title: "Halfway Hero",
       description: "Reach 50% completion of your study plan",
-      type: "award",
+      type: "award" as const,
       color: "study-yellow",
       earned: completionPercentage >= 50
     },
@@ -77,7 +77,7 @@ const Achievements = () => {
       id: "5",
       title: "Consistency King",
       description: "Study for 7 consecutive days",
-      type: "trophy",
+      type: "trophy" as const,
       color: "study-orange",
       earned: false
     },
@@ -85,7 +85,7 @@ const Achievements = () => {
       id: "6",
       title: "Perfect Scholar",
       description: "Complete the entire study plan",
-      type: "trophy",
+      type: "trophy" as const,
       color: "study-pink",
       earned: completionPercentage === 100
     }
