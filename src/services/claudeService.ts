@@ -1,14 +1,16 @@
-
 interface AI {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
   generateLessonContent: (subject: string, topic: string) => Promise<any>;
   generateLessonTest: (subject: string, topic: string, numQuestions: number) => Promise<any>;
   generateDiagram: (subject: string, topic: string, diagramType: string) => Promise<string>;
+  clearAllUserData: () => void;
 }
 
 // OpenAI API key
 const API_KEY = "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";
+
+import { toast } from "@/hooks/use-toast";
 
 class AIService implements AI {
   private apiKey: string;
@@ -21,6 +23,13 @@ class AIService implements AI {
 
   private async callOpenAI(prompt: string): Promise<any> {
     let attempts = 0;
+    
+    // Show notification about connecting to NCERT
+    toast({
+      title: "Connecting to NCERT Database",
+      description: "Fetching educational content aligned with NCERT guidelines...",
+      duration: 3000,
+    });
     
     while (attempts < this.retryCount) {
       try {
@@ -37,7 +46,7 @@ class AIService implements AI {
             messages: [
               {
                 role: "system",
-                content: "You are a helpful assistant that provides structured educational content in JSON format."
+                content: "You are a helpful assistant that provides structured educational content in JSON format following NCERT guidelines for Indian education."
               },
               {
                 role: "user",
@@ -51,11 +60,23 @@ class AIService implements AI {
         if (!response.ok) {
           const errorData = await response.json();
           console.error("OpenAI API error:", errorData);
+          toast({
+            title: "Content Loading Error",
+            description: "Failed to load NCERT content. Please try again.",
+            variant: "destructive",
+          });
           throw new Error(`API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
         }
 
         const data = await response.json();
         console.log("API response received successfully");
+        
+        // Show success notification
+        toast({
+          title: "NCERT Content Loaded",
+          description: "Educational materials have been successfully retrieved.",
+        });
+        
         return data.choices[0].message.content;
       } catch (error) {
         console.error(`Error calling OpenAI API (attempt ${attempts + 1}/${this.retryCount}):`, error);
@@ -77,7 +98,7 @@ class AIService implements AI {
 
   async generateStudyPlan(board: string, className: string, subject: string): Promise<any> {
     const prompt = `
-      Create a detailed study plan for a student studying ${subject} in Class ${className} under the ${board} board. 
+      Create a detailed study plan for a student studying ${subject} in Class ${className} under the ${board} board, following NCERT guidelines. 
       
       Break down the curriculum into logical teaching units. For each topic:
       - Include key concepts that need to be taught
@@ -92,7 +113,7 @@ class AIService implements AI {
       - content: (detailed teaching notes for lessons, questions for quizzes, tasks for practice)
       - estimatedTimeInMinutes (number)
       
-      Structure the topics in a logical learning sequence following the official curriculum.
+      Structure the topics in a logical learning sequence following the official NCERT curriculum.
       
       The response MUST be valid JSON that can be parsed with JSON.parse().
       
@@ -190,6 +211,36 @@ class AIService implements AI {
     console.log(`Generating diagram description for ${subject}, topic: ${topic}, diagram type: ${diagramType}`);
     const result = await this.callOpenAI(prompt);
     return result.trim();
+  }
+
+  async clearAllUserData(): void {
+    // Display notification
+    toast({
+      title: "Clearing User Data",
+      description: "Removing all saved progress and study plans...",
+      duration: 3000,
+    });
+    
+    // Clear all localStorage items related to the app
+    localStorage.removeItem('studyPlans');
+    localStorage.removeItem('studyHeroProfile');
+    localStorage.removeItem('currentStudyItem');
+    localStorage.removeItem('completedItems');
+    localStorage.removeItem('currentLevel');
+    localStorage.removeItem('currentXp');
+    localStorage.removeItem('achievements');
+    localStorage.removeItem('quizResults');
+    localStorage.removeItem('studyStats');
+    
+    // Display success notification
+    setTimeout(() => {
+      toast({
+        title: "User Data Cleared",
+        description: "All your data has been removed successfully.",
+      });
+    }, 1000);
+    
+    console.log("All user data cleared from localStorage");
   }
 
   // Helper function to clean JSON response from API

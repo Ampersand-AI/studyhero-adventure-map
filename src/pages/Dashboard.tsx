@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudyAIHeader } from '@/components/StudyAIHeader';
@@ -6,7 +5,7 @@ import ProgressCard from '@/components/ProgressCard';
 import StudyTimeline from '@/components/StudyTimeline';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2, PlusCircle } from "lucide-react";
+import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2, PlusCircle, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { claudeService } from '@/services/claudeService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -53,6 +52,9 @@ const Dashboard = () => {
   const [newSubjectClass, setNewSubjectClass] = useState("");
   const [newSubjectBoard, setNewSubjectBoard] = useState("");
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
+  // New dialog state for reset confirmation
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -276,6 +278,29 @@ const Dashboard = () => {
     }
   };
 
+  const handleClearUserData = () => {
+    setIsResetDialogOpen(true);
+  };
+
+  const confirmClearUserData = () => {
+    try {
+      // Call the service method to clear all data
+      claudeService.clearAllUserData();
+      
+      // After clearing data, redirect to onboarding or reload page
+      navigate('/onboarding');
+    } catch (error) {
+      console.error("Error clearing user data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear user data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsResetDialogOpen(false);
+    }
+  };
+
   // Get the current active plan
   const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
   const activeItems = activePlan?.items || [];
@@ -318,16 +343,23 @@ const Dashboard = () => {
                     Regenerating...
                   </>
                 ) : (
-                  <>Regenerate Study Plan</>
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Regenerate Plan
+                  </>
                 )}
               </Button>
               
+              <Button 
+                variant="outline" 
+                onClick={handleClearUserData}
+                className="border-destructive text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear Data
+              </Button>
+              
               <Dialog open={isAddingSubject} onOpenChange={setIsAddingSubject}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center gap-2">
-                    <PlusCircle className="h-4 w-4" /> Add Subject
-                  </Button>
-                </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add New Subject</DialogTitle>
@@ -518,6 +550,32 @@ const Dashboard = () => {
               </TabsContent>
             </Tabs>
           )}
+        </div>
+      </main>
+
+          {/* Add reset confirmation dialog */}
+          <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reset All Data</DialogTitle>
+                <DialogDescription>
+                  This will clear all your study plans, progress, and achievements. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={confirmClearUserData}
+                >
+                  Reset All Data
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>
