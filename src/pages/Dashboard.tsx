@@ -78,6 +78,8 @@ const Dashboard = () => {
 
   const loadStudyPlans = () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       // Get all study plans from localStorage
       const plans = localStorage.getItem('studyPlans');
@@ -106,6 +108,10 @@ const Dashboard = () => {
                 setActiveSubject(subject);
                 localStorage.setItem('studyPlans', JSON.stringify(newPlans));
               }
+            })
+            .catch(err => {
+              console.error("Error in initial study plan generation:", err);
+              setError("Failed to generate your study plan. Please try again later.");
             });
         }
       }
@@ -151,7 +157,7 @@ const Dashboard = () => {
         description: "Please try again later",
         variant: "destructive"
       });
-      return null;
+      throw error;
     }
   };
 
@@ -177,6 +183,8 @@ const Dashboard = () => {
   const handleRegeneratePlan = () => {
     // Regenerate only the active subject plan
     setIsLoading(true);
+    setError(null);
+    
     generateStudyPlan(profileInfo.board, profileInfo.className, activeSubject)
       .then(plan => {
         if (plan) {
@@ -194,6 +202,14 @@ const Dashboard = () => {
           });
         }
       })
+      .catch(err => {
+        console.error("Error regenerating study plan:", err);
+        toast({
+          title: "Failed to regenerate study plan",
+          description: "Please try again later",
+          variant: "destructive"
+        });
+      })
       .finally(() => {
         setIsLoading(false);
       });
@@ -210,6 +226,7 @@ const Dashboard = () => {
     }
     
     setIsGeneratingPlan(true);
+    setError(null);
     
     try {
       // Check if subject already exists
@@ -290,14 +307,20 @@ const Dashboard = () => {
             </div>
             
             <div className="flex gap-2 mt-4 md:mt-0">
-              {error && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleRegeneratePlan}
-                >
-                  Regenerate Study Plan
-                </Button>
-              )}
+              <Button 
+                variant="outline" 
+                onClick={handleRegeneratePlan}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>Regenerate Study Plan</>
+                )}
+              </Button>
               
               <Dialog open={isAddingSubject} onOpenChange={setIsAddingSubject}>
                 <DialogTrigger asChild>

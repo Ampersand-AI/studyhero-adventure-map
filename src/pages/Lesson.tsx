@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { StudyAIHeader } from '@/components/StudyAIHeader';
-import { ArrowLeft, BookOpen, Home, Award, BarChart, Trophy, Map, CheckCircle, TestTube } from "lucide-react";
+import { ArrowLeft, BookOpen, Home, Award, BarChart, Trophy, Map, CheckCircle, TestTube, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +16,7 @@ interface LessonContent {
   explanation: string[];
   examples: Array<{ title: string; content: string }>;
   visualAids: Array<{ title: string; description: string }>;
-  activities: string[];
+  activities: Array<{ title?: string; instructions: string }> | string[];
   summary: string;
 }
 
@@ -39,6 +38,7 @@ const Lesson = () => {
   const [isLoadingTest, setIsLoadingTest] = useState(false);
   const [visualDiagrams, setVisualDiagrams] = useState<Record<string, string>>({});
   const [isLoadingDiagrams, setIsLoadingDiagrams] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -60,26 +60,34 @@ const Lesson = () => {
     }
 
     // Otherwise, find the lesson in the study plan
-    const studyPlan = localStorage.getItem('studyPlan');
-    if (studyPlan) {
-      const items = JSON.parse(studyPlan);
-      const item = items.find((item: any) => item.id === id);
-      if (item) {
-        setLessonItem(item);
-        loadLessonContent(item.title);
-      } else {
+    const studyPlans = localStorage.getItem('studyPlans');
+    if (studyPlans) {
+      const plans = JSON.parse(studyPlans);
+      let found = false;
+      
+      for (const plan of plans) {
+        const item = plan.items.find((item: any) => item.id === id);
+        if (item) {
+          setLessonItem(item);
+          loadLessonContent(item.title);
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
         navigate('/dashboard');
         toast({
           title: "Lesson not found",
-          description: "This lesson could not be found in your study plan",
+          description: "This lesson could not be found in your study plans",
           variant: "destructive"
         });
       }
     } else {
       navigate('/dashboard');
       toast({
-        title: "No study plan found",
-        description: "Please set up your study plan first",
+        title: "No study plans found",
+        description: "Please set up your study plans first",
         variant: "destructive"
       });
     }
@@ -87,24 +95,46 @@ const Lesson = () => {
 
   const loadLessonContent = async (topic: string) => {
     setIsLoading(true);
+    setApiError(null);
+    
     try {
       // Check if we already have cached content for this lesson
       const cachedContent = localStorage.getItem(`lesson-content-${id}`);
       if (cachedContent) {
-        const parsed = JSON.parse(cachedContent);
-        setLessonContent(parsed);
-        
-        // Still load diagrams if we don't have them
-        if (!localStorage.getItem(`lesson-diagrams-${id}`)) {
-          loadVisualDiagrams(topic, parsed.visualAids);
-        } else {
-          setVisualDiagrams(JSON.parse(localStorage.getItem(`lesson-diagrams-${id}`) || '{}'));
+        try {
+          const parsed = JSON.parse(cachedContent);
+          setLessonContent(parsed);
+          
+          // Still load diagrams if we don't have them
+          if (!localStorage.getItem(`lesson-diagrams-${id}`)) {
+            loadVisualDiagrams(topic, parsed.visualAids);
+          } else {
+            setVisualDiagrams(JSON.parse(localStorage.getItem(`lesson-diagrams-${id}`) || '{}'));
+          }
+        } catch (e) {
+          console.error("Error parsing cached lesson content:", e);
+          // If cached content is invalid, remove it and load fresh content
+          localStorage.removeItem(`lesson-content-${id}`);
+          await fetchLessonContent(topic);
         }
-        
-        setIsLoading(false);
-        return;
+      } else {
+        await fetchLessonContent(topic);
       }
+    } catch (error) {
+      console.error("Error in loadLessonContent:", error);
+      setApiError("Failed to load lesson content. Please try again later.");
+      toast({
+        title: "Error loading lesson content",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  const fetchLessonContent = async (topic: string) => {
+    try {
       // Get profile info to determine subject
       const profile = localStorage.getItem('studyHeroProfile');
       if (!profile) {
@@ -112,9 +142,21 @@ const Lesson = () => {
       }
       
       const { subject } = JSON.parse(profile);
+      console.log(`Fetching lesson content for ${subject}, topic: ${topic}`);
+      
       const content = await claudeService.generateLessonContent(subject, topic);
       
+      // Normalize activities if they're not in the expected format
+      if (content.activities && Array.isArray(content.activities)) {
+        if (typeof content.activities[0] === 'string') {
+          content.activities = content.activities.map((activity: string) => ({
+            instructions: activity
+          }));
+        }
+      }
+      
       setLessonContent(content);
+      
       // Cache the content
       localStorage.setItem(`lesson-content-${id}`, JSON.stringify(content));
       
@@ -123,14 +165,8 @@ const Lesson = () => {
         loadVisualDiagrams(topic, content.visualAids);
       }
     } catch (error) {
-      console.error("Error loading lesson content:", error);
-      toast({
-        title: "Error loading lesson content",
-        description: "Please try again later",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+      console.error("Error fetching lesson content:", error);
+      throw error;
     }
   };
 
@@ -156,6 +192,7 @@ const Lesson = () => {
       
       // Generate diagrams for each visual aid
       for (const aid of visualAids) {
+        console.log(`Generating diagram for ${aid.title}`);
         const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
         diagramsObj[aid.title] = diagramDescription;
       }
@@ -193,6 +230,8 @@ const Lesson = () => {
       }
       
       const { subject } = JSON.parse(profile);
+      console.log(`Generating test for ${subject}, topic: ${lessonItem.title}`);
+      
       const testData = await claudeService.generateLessonTest(subject, lessonItem.title, 5);
       
       setTestQuestions(testData.questions);
@@ -235,30 +274,41 @@ const Lesson = () => {
   };
 
   const markAsCompleted = () => {
-    const studyPlan = localStorage.getItem('studyPlan');
-    if (studyPlan && lessonItem) {
-      const items = JSON.parse(studyPlan);
-      const updatedItems = items.map((item: any) => {
-        if (item.id === id) {
-          return { ...item, status: "completed" };
-        }
+    if (!lessonItem) return;
+    
+    const studyPlans = localStorage.getItem('studyPlans');
+    if (studyPlans) {
+      const plans = JSON.parse(studyPlans);
+      
+      const updatedPlans = plans.map((plan: any) => {
+        // Check if this lesson is in this plan
+        const itemIndex = plan.items.findIndex((item: any) => item.id === id);
         
-        // Mark the next item as "current" if this item is being completed
-        if (item.id !== id && item.status === "future" && lessonItem.status === "current") {
-          // Find the index of the current item
-          const currentIndex = items.findIndex((i: any) => i.id === id);
-          const thisIndex = items.findIndex((i: any) => i.id === item.id);
+        if (itemIndex >= 0) {
+          // Create a copy of items
+          const updatedItems = [...plan.items];
           
-          // If this is the next item in sequence, mark it as current
-          if (thisIndex === currentIndex + 1) {
-            return { ...item, status: "current" };
+          // Update the completed item
+          updatedItems[itemIndex] = { 
+            ...updatedItems[itemIndex], 
+            status: "completed" 
+          };
+          
+          // If this was a "current" item, make the next item "current"
+          if (updatedItems[itemIndex].status === "current" && itemIndex + 1 < updatedItems.length) {
+            updatedItems[itemIndex + 1] = {
+              ...updatedItems[itemIndex + 1],
+              status: "current"
+            };
           }
+          
+          return { ...plan, items: updatedItems };
         }
         
-        return item;
+        return plan;
       });
       
-      localStorage.setItem('studyPlan', JSON.stringify(updatedItems));
+      localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
       
       toast({
         title: "Lesson completed!",
@@ -269,8 +319,8 @@ const Lesson = () => {
       const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
       localStorage.setItem('currentXp', (currentXp + 50).toString());
       
-      // If it's a completed lesson, offer test
-      if (lessonItem.status === "current") {
+      // If it was a lesson (not a practice or quiz), offer test
+      if (lessonItem.type === "lesson") {
         startTest();
       } else {
         navigate('/dashboard');
@@ -292,7 +342,10 @@ const Lesson = () => {
           navigation={navigationItems}
         />
         <div className="container py-12 flex justify-center">
-          <p>Loading lesson...</p>
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <p>Loading lesson...</p>
+          </div>
         </div>
       </div>
     );
@@ -310,7 +363,8 @@ const Lesson = () => {
         <main className="flex-1">
           <div className="container py-6">
             {isLoadingTest ? (
-              <div className="text-center py-12">
+              <div className="text-center py-12 flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin" />
                 <p>Preparing your test...</p>
               </div>
             ) : (
@@ -351,24 +405,50 @@ const Lesson = () => {
             <div>
               <h1 className="text-3xl font-display">{lessonItem.title}</h1>
               <p className="text-muted-foreground">
-                {lessonItem.estimatedTimeInMinutes} min • Lesson
+                {lessonItem.estimatedTimeInMinutes} min • {lessonItem.type.charAt(0).toUpperCase() + lessonItem.type.slice(1)}
               </p>
             </div>
             
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2"
-                onClick={startTest}
-                disabled={isLoadingTest}
-              >
-                <TestTube className="h-4 w-4" /> Take Test
-              </Button>
+              {lessonItem.type === "lesson" && (
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={startTest}
+                  disabled={isLoadingTest}
+                >
+                  {isLoadingTest ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <TestTube className="h-4 w-4" />
+                  )} Take Test
+                </Button>
+              )}
               <Button onClick={markAsCompleted}>
                 <CheckCircle className="mr-2 h-4 w-4" /> Mark as Completed
               </Button>
             </div>
           </div>
+          
+          {apiError && (
+            <div className="mb-6">
+              <Card className="bg-destructive/10 border-destructive">
+                <CardHeader>
+                  <CardTitle>Error Loading Content</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>{apiError}</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => loadLessonContent(lessonItem.title)}
+                  >
+                    Retry
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
@@ -441,7 +521,15 @@ const Lesson = () => {
                       </div>
                     </div>
                   ) : (
-                    <p>Sorry, lesson content could not be loaded.</p>
+                    <div className="py-6 text-center">
+                      <p>Failed to load lesson content.</p>
+                      <Button 
+                        onClick={() => loadLessonContent(lessonItem.title)} 
+                        className="mt-4"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -460,7 +548,7 @@ const Lesson = () => {
                       <Skeleton className="h-4 w-3/4" />
                       <Skeleton className="h-40 w-full rounded-md" />
                     </div>
-                  ) : lessonContent ? (
+                  ) : lessonContent && lessonContent.visualAids && lessonContent.visualAids.length > 0 ? (
                     <div className="space-y-4">
                       {lessonContent.visualAids.map((aid, index) => (
                         <div key={index} className="border rounded-md p-3">
@@ -468,14 +556,24 @@ const Lesson = () => {
                           <p className="text-sm text-muted-foreground mb-2">{aid.description}</p>
                           <div className="mt-2 bg-muted p-4 h-auto rounded-md">
                             {isLoadingDiagrams ? (
-                              <Skeleton className="h-40 w-full" />
+                              <div className="flex items-center justify-center h-40">
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                              </div>
                             ) : visualDiagrams[aid.title] ? (
                               <div className="text-sm overflow-auto max-h-[200px]">
                                 <p className="whitespace-pre-wrap">{visualDiagrams[aid.title]}</p>
                               </div>
                             ) : (
                               <div className="flex items-center justify-center h-40 text-muted-foreground">
-                                Diagram description not available
+                                <p>Diagram description not available</p>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => loadVisualDiagrams(lessonItem.title, lessonContent.visualAids)}
+                                  className="ml-2"
+                                >
+                                  <Loader2 className="h-4 w-4 mr-1" /> Load
+                                </Button>
                               </div>
                             )}
                           </div>
@@ -483,7 +581,7 @@ const Lesson = () => {
                       ))}
                     </div>
                   ) : (
-                    <p>No visual aids available.</p>
+                    <p>No visual aids available for this lesson.</p>
                   )}
                 </CardContent>
               </Card>
@@ -500,13 +598,22 @@ const Lesson = () => {
                       <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-4 w-3/4" />
                     </div>
-                  ) : lessonContent ? (
+                  ) : lessonContent && lessonContent.activities ? (
                     <div className="space-y-3">
-                      {lessonContent.activities.map((activity, index) => (
-                        <div key={index} className="bg-muted/50 p-3 rounded-md">
-                          <p><span className="font-medium">Activity {index + 1}:</span> {activity}</p>
-                        </div>
-                      ))}
+                      {Array.isArray(lessonContent.activities) && lessonContent.activities.length > 0 ? (
+                        lessonContent.activities.map((activity, index) => (
+                          <div key={index} className="bg-muted/50 p-3 rounded-md">
+                            <p>
+                              <span className="font-medium">Activity {index + 1}: </span> 
+                              {typeof activity === 'string' 
+                                ? activity 
+                                : activity.instructions || (activity.title ? `${activity.title}` : 'Complete this activity')}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No specific activities available for this lesson.</p>
+                      )}
                     </div>
                   ) : (
                     <p>No activities available.</p>

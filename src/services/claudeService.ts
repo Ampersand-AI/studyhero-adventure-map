@@ -1,3 +1,4 @@
+
 interface AI {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
@@ -6,7 +7,7 @@ interface AI {
   generateDiagram: (subject: string, topic: string, diagramType: string) => Promise<string>;
 }
 
-// Using OpenAI API key instead of Claude
+// OpenAI API key
 const API_KEY = "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";
 
 class AIService implements AI {
@@ -54,6 +55,7 @@ class AIService implements AI {
         }
 
         const data = await response.json();
+        console.log("API response received successfully");
         return data.choices[0].message.content;
       } catch (error) {
         console.error(`Error calling OpenAI API (attempt ${attempts + 1}/${this.retryCount}):`, error);
@@ -69,6 +71,8 @@ class AIService implements AI {
         this.retryDelay *= 2;
       }
     }
+    
+    throw new Error("Failed to call OpenAI API after multiple attempts");
   }
 
   async generateStudyPlan(board: string, className: string, subject: string): Promise<any> {
@@ -95,68 +99,10 @@ class AIService implements AI {
       Return ONLY the JSON, with no additional text or markdown formatting.
     `;
     
-    try {
-      const result = await this.callOpenAI(prompt);
-      const cleanedResult = this.cleanJsonResponse(result);
-      return JSON.parse(cleanedResult);
-    } catch (error) {
-      console.error("Error parsing study plan:", error);
-      
-      // Return fallback content if API fails
-      return this.getFallbackStudyPlan(subject, className);
-    }
-  }
-
-  // Fallback study plan when API fails
-  private getFallbackStudyPlan(subject: string, className: string): any {
-    console.log("Using fallback study plan for", subject, "class", className);
-    
-    const fallbackPlan = {
-      items: [
-        {
-          id: "topic-1",
-          title: `Introduction to ${subject}`,
-          description: `Basic concepts and fundamentals of ${subject} for Class ${className}`,
-          type: "lesson",
-          content: `This lesson introduces the fundamental concepts of ${subject} for students in Class ${className}.`,
-          estimatedTimeInMinutes: 45
-        },
-        {
-          id: "topic-2",
-          title: `${subject} Fundamentals Quiz`,
-          description: "Test your understanding of the basic concepts",
-          type: "quiz",
-          content: `Multiple choice questions to test understanding of ${subject} fundamentals.`,
-          estimatedTimeInMinutes: 30
-        },
-        {
-          id: "topic-3",
-          title: `${subject} Practical Application`,
-          description: "Apply concepts learned in real-world scenarios",
-          type: "practice",
-          content: `Practice exercises to apply ${subject} concepts in practical situations.`,
-          estimatedTimeInMinutes: 60
-        },
-        {
-          id: "topic-4",
-          title: `Advanced ${subject} Concepts`,
-          description: `Deeper exploration of important ${subject} topics`,
-          type: "lesson",
-          content: `Advanced concepts in ${subject} for Class ${className} students.`,
-          estimatedTimeInMinutes: 45
-        },
-        {
-          id: "topic-5",
-          title: `${subject} Comprehensive Review`,
-          description: "Review and recap of all concepts learned",
-          type: "lesson",
-          content: `A comprehensive review of all ${subject} topics covered so far.`,
-          estimatedTimeInMinutes: 60
-        }
-      ]
-    };
-    
-    return fallbackPlan;
+    console.log(`Generating study plan for ${subject}, Class ${className}, ${board} board`);
+    const result = await this.callOpenAI(prompt);
+    const cleanedResult = this.cleanJsonResponse(result);
+    return JSON.parse(cleanedResult);
   }
 
   async generateQuizQuestion(subject: string, topic: string): Promise<any> {
@@ -174,28 +120,10 @@ class AIService implements AI {
       Return ONLY the JSON, with no additional text.
     `;
     
-    try {
-      const result = await this.callOpenAI(prompt);
-      const cleanedResult = this.cleanJsonResponse(result);
-      return JSON.parse(cleanedResult);
-    } catch (error) {
-      console.error("Error parsing quiz question:", error);
-      return this.getFallbackQuizQuestion(subject, topic);
-    }
-  }
-
-  private getFallbackQuizQuestion(subject: string, topic: string): any {
-    return {
-      question: `What is the main focus of ${topic} in ${subject}?`,
-      options: [
-        `Understanding the basic principles`,
-        `Memorizing formulas and equations`,
-        `Practical applications in daily life`,
-        `Historical development of the concept`
-      ],
-      correctAnswer: `Understanding the basic principles`,
-      explanation: `The main focus of ${topic} in ${subject} is to understand the basic principles, which forms the foundation for more advanced concepts.`
-    };
+    console.log(`Generating quiz question for ${subject}, topic: ${topic}`);
+    const result = await this.callOpenAI(prompt);
+    const cleanedResult = this.cleanJsonResponse(result);
+    return JSON.parse(cleanedResult);
   }
 
   async generateLessonContent(subject: string, topic: string): Promise<any> {
@@ -216,61 +144,10 @@ class AIService implements AI {
       Return ONLY the JSON, with no additional text.
     `;
     
-    try {
-      const result = await this.callOpenAI(prompt);
-      const cleanedResult = this.cleanJsonResponse(result);
-      return JSON.parse(cleanedResult);
-    } catch (error) {
-      console.error("Error generating lesson content:", error);
-      return this.getFallbackLessonContent(subject, topic);
-    }
-  }
-
-  private getFallbackLessonContent(subject: string, topic: string): any {
-    return {
-      title: topic,
-      keyPoints: [
-        `Understanding the core concepts of ${topic}`,
-        `How ${topic} relates to other areas of ${subject}`,
-        `Practical applications of ${topic}`
-      ],
-      explanation: [
-        `${topic} is a fundamental concept in ${subject} that helps us understand how the world works.`,
-        `Scientists have been studying ${topic} for centuries, and it remains an important area of research today.`,
-        `By understanding ${topic}, we can apply this knowledge to solve real-world problems.`
-      ],
-      examples: [
-        {
-          title: "Example 1",
-          content: `A simple example of ${topic} in action is when we observe everyday phenomena.`
-        },
-        {
-          title: "Example 2",
-          content: `Another example can be seen in laboratory experiments where we can control variables.`
-        }
-      ],
-      visualAids: [
-        {
-          title: `${topic} Process Diagram`,
-          description: `A flowchart showing the steps involved in the ${topic} process.`
-        },
-        {
-          title: `${topic} Structure`,
-          description: `A labeled diagram showing the key components of ${topic}.`
-        }
-      ],
-      activities: [
-        {
-          title: "Observation Activity",
-          instructions: `Observe and record examples of ${topic} in your daily life for one week.`
-        },
-        {
-          title: "Group Discussion",
-          instructions: `Form groups and discuss how ${topic} impacts various aspects of our world.`
-        }
-      ],
-      summary: `${topic} is an essential concept in ${subject} that helps us understand natural phenomena and solve problems. By mastering these concepts, students will build a strong foundation for advanced studies.`
-    };
+    console.log(`Generating lesson content for ${subject}, topic: ${topic}`);
+    const result = await this.callOpenAI(prompt);
+    const cleanedResult = this.cleanJsonResponse(result);
+    return JSON.parse(cleanedResult);
   }
 
   async generateLessonTest(subject: string, topic: string, numQuestions: number = 5): Promise<any> {
@@ -292,37 +169,10 @@ class AIService implements AI {
       Return ONLY the JSON, with no additional text.
     `;
     
-    try {
-      const result = await this.callOpenAI(prompt);
-      const cleanedResult = this.cleanJsonResponse(result);
-      return JSON.parse(cleanedResult);
-    } catch (error) {
-      console.error("Error generating lesson test:", error);
-      return this.getFallbackLessonTest(subject, topic, numQuestions);
-    }
-  }
-
-  private getFallbackLessonTest(subject: string, topic: string, numQuestions: number): any {
-    const questions = [];
-    
-    for (let i = 1; i <= numQuestions; i++) {
-      questions.push({
-        question: `Question ${i} about ${topic} in ${subject}?`,
-        options: [
-          `Answer option A for question ${i}`,
-          `Answer option B for question ${i}`,
-          `Answer option C for question ${i}`,
-          `Answer option D for question ${i}`
-        ],
-        correctAnswer: `Answer option A for question ${i}`,
-        explanation: `Explanation for why answer A is correct for question ${i}.`
-      });
-    }
-    
-    return {
-      lessonTitle: topic,
-      questions: questions
-    };
+    console.log(`Generating lesson test for ${subject}, topic: ${topic}, with ${numQuestions} questions`);
+    const result = await this.callOpenAI(prompt);
+    const cleanedResult = this.cleanJsonResponse(result);
+    return JSON.parse(cleanedResult);
   }
 
   async generateDiagram(subject: string, topic: string, diagramType: string): Promise<string> {
@@ -337,33 +187,9 @@ class AIService implements AI {
       Return ONLY the description text, without any additional formatting.
     `;
     
-    try {
-      const result = await this.callOpenAI(prompt);
-      return result.trim();
-    } catch (error) {
-      console.error("Error generating diagram description:", error);
-      return this.getFallbackDiagram(subject, topic, diagramType);
-    }
-  }
-
-  private getFallbackDiagram(subject: string, topic: string, diagramType: string): string {
-    return `
-      ${diagramType.toUpperCase()} DIAGRAM: ${topic} in ${subject}
-      
-      This diagram illustrates the key components and relationships in ${topic}.
-      
-      Main elements:
-      1. Central concept: ${topic} (placed in the center)
-      2. Related concepts (surrounding the central concept)
-      3. Connecting arrows showing relationships
-      
-      Color scheme:
-      - Main concept: Blue
-      - Secondary concepts: Green
-      - Relationships: Gray arrows
-      
-      Key labels include the main terminology associated with ${topic} and brief explanations of each connection.
-    `.trim();
+    console.log(`Generating diagram description for ${subject}, topic: ${topic}, diagram type: ${diagramType}`);
+    const result = await this.callOpenAI(prompt);
+    return result.trim();
   }
 
   // Helper function to clean JSON response from API
