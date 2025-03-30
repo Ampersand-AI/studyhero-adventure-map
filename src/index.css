@@ -1,6 +1,4 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,70 +6,48 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
-
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
-
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
-
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 10%;
-
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 10%;
-
-    --destructive: 0 0% 40%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 70%;
-
-    --radius: 0.3rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 25%;
-    --sidebar-primary: 0 0% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 95%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 0 0% 70%;
-
-    --study-blue: #4299e1;
-    --study-purple: #805ad5;
-    --study-green: #48bb78;
-    --study-orange: #ed8936;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+    --study-green: 142.1 76.2% 36.3%;
   }
 
   .dark {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 0 0% 95%;
-    --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 95%;
-    --destructive: 0 0% 40%;
-    --destructive-foreground: 0 0% 95%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 30%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 }
 
@@ -79,59 +55,19 @@
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', sans-serif;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-sans font-normal;
+    @apply bg-background text-foreground;
   }
 }
 
-@layer components {
-  .study-card {
-    @apply bg-white rounded-md shadow-sm p-4 border border-border transition-all duration-300 hover:shadow-md;
+/* Custom font setup */
+@layer base {
+  body {
+    @apply antialiased;
   }
-  
-  .gradient-button {
-    @apply relative inline-flex items-center justify-center px-4 py-2 overflow-hidden font-normal rounded-md shadow-sm;
-  }
-  
-  .gradient-button-bg {
-    @apply absolute inset-0 w-full h-full transition duration-300 ease-out opacity-90 bg-primary;
-  }
-  
-  .gradient-button-text {
-    @apply relative text-white transition duration-300 ease-out hover:translate-y-1;
-  }
-  
-  .achievement-badge {
-    @apply relative flex items-center justify-center w-12 h-12 rounded-full bg-secondary shadow-sm;
-  }
-  
-  .milestone-node {
-    @apply w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all cursor-pointer;
-  }
-  
-  .milestone-completed {
-    @apply bg-secondary text-secondary-foreground;
-  }
-  
-  .milestone-current {
-    @apply bg-primary text-primary-foreground;
-  }
-  
-  .milestone-future {
-    @apply bg-muted text-muted-foreground;
-  }
-  
-  .milestone-line {
-    @apply h-1 bg-muted flex-grow;
-  }
-  
-  .milestone-line-completed {
-    @apply bg-secondary;
+
+  .font-display {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-weight: 700;
   }
 }

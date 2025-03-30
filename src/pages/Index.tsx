@@ -1,211 +1,41 @@
 
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { 
-  BookOpen, 
-  Award, 
-  LineChart, 
-  Zap, 
-  Clock, 
-  CheckCircle 
-} from "lucide-react";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Index = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if user already has a profile, if so redirect to dashboard
-    const profile = localStorage.getItem('studyHeroProfile');
-    if (profile) {
-      const profileData = JSON.parse(profile);
-      if (profileData.board && profileData.className && profileData.subject) {
-        navigate('/dashboard');
-      }
-    }
-  }, [navigate]);
-
-  const startAdventure = () => {
-    navigate('/onboarding');
-  };
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="container mx-auto py-6 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span className="font-display text-2xl text-primary">StudyHero</span>
-        </div>
-        <Button variant="outline" onClick={startAdventure}>Get Started</Button>
-      </header>
-
-      <main className="flex-1">
-        <section className="py-20 px-4">
-          <div className="container mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-display mb-6 leading-tight">
-              Your <span className="text-primary">Adventure Map</span> to
-              <br /> Academic Success
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-              A personalized learning journey powered by AI to help you master your syllabus with interactive lessons, micro exams, and progress tracking.
-            </p>
-            <Button 
-              className="gradient-button text-lg px-8 py-6"
-              onClick={startAdventure}
-            >
-              <span className="gradient-button-bg"></span>
-              <span className="gradient-button-text">Start Your Learning Adventure</span>
-            </Button>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-center font-display text-3xl">Study AI</CardTitle>
+          <CardDescription className="text-center">Your personal AI-powered study assistant</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center text-center gap-4">
+          <p>Welcome to Study AI, where we help you master any subject with personalized study plans, interactive lessons, and adaptive quizzes.</p>
+          <div className="w-full max-w-[250px] h-[200px] bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <span className="text-5xl font-display text-primary">AI</span>
           </div>
-        </section>
-
-        <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-display text-center mb-12">How It Works</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-white rounded-2xl shadow-md p-6 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-display mb-2">Select Your Syllabus</h3>
-                <p className="text-muted-foreground">
-                  Choose your board, class, and subject to create a personalized learning path
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-2xl shadow-md p-6 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-display mb-2">Follow Your Timeline</h3>
-                <p className="text-muted-foreground">
-                  Track your progress with an interactive timeline of lessons and quizzes
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-2xl shadow-md p-6 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Award className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-display mb-2">Earn Achievements</h3>
-                <p className="text-muted-foreground">
-                  Collect badges and level up as you master concepts and complete challenges
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-display text-center mb-12">Features</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="flex gap-4 items-start">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Zap className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display mb-2">AI-Powered Learning</h3>
-                  <p className="text-muted-foreground">
-                    Personalized content generated by Claude AI based on your learning needs
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 items-start">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display mb-2">Micro Exams</h3>
-                  <p className="text-muted-foreground">
-                    Test your knowledge with topic-specific quizzes and immediate feedback
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 items-start">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <LineChart className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display mb-2">Progress Analytics</h3>
-                  <p className="text-muted-foreground">
-                    Visual insights into your study habits and performance
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 items-start">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Award className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display mb-2">Achievement System</h3>
-                  <p className="text-muted-foreground">
-                    Earn badges and rewards to stay motivated throughout your journey
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 items-start">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display mb-2">Study Timeline</h3>
-                  <p className="text-muted-foreground">
-                    Visualize your learning path with interactive checkpoints
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 items-start">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <BookOpen className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display mb-2">Curriculum Aligned</h3>
-                  <p className="text-muted-foreground">
-                    Content mapped to your specific board and syllabus requirements
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 bg-primary/5">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-display mb-6">Ready to Begin Your Learning Adventure?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              Join thousands of students who have transformed their study experience with StudyHero
-            </p>
-            <Button 
-              className="gradient-button text-lg px-8 py-6"
-              onClick={startAdventure}
-            >
-              <span className="gradient-button-bg"></span>
-              <span className="gradient-button-text">Start Your Journey Now</span>
-            </Button>
-          </div>
-        </section>
-      </main>
-
-      <footer className="py-8 border-t">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-muted-foreground text-sm">
-              © 2023 StudyHero. All rights reserved.
-            </p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link>
-              <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link>
-              <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Contact Us</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+        </CardContent>
+        <CardFooter className="flex flex-col gap-2">
+          <Button 
+            className="w-full" 
+            onClick={() => navigate('/onboarding')}
+          >
+            Get Started
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={() => navigate('/dashboard')}
+          >
+            I Already Have an Account
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
