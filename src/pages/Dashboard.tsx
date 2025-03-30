@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, User } from '@/services/userService';
 import { studyPlanService } from '@/services/studyPlanService';
+import { claudeService } from '@/services/claudeService';
 import StudyAIHeader from '@/components/StudyAIHeader';
 import WeeklyPlanView from '@/components/WeeklyPlanView';
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [testScores, setTestScores] = useState<Record<string, number>>({});
+  const [subjects, setSubjects] = useState<string[]>([]);
   
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -87,22 +89,68 @@ const Dashboard = () => {
       try {
         // Load user data
         const userData = await userService.getUserProfile();
-        setUser(userData); // This line should now have proper typing
+        setUser(userData);
+        
+        // Get user profile from localStorage
+        const profileData = localStorage.getItem('studyHeroProfile');
+        if (!profileData) {
+          // If no profile exists, redirect to onboarding
+          navigate('/onboarding');
+          return;
+        }
+        
+        const profile = JSON.parse(profileData);
+        const userSubjects = profile.subjects || [];
+        setSubjects(userSubjects);
         
         // Load study plans
         const savedPlans = localStorage.getItem('studyPlans');
+        let existingPlans: StudyPlan[] = [];
+        
         if (savedPlans) {
-          setStudyPlans(JSON.parse(savedPlans));
-        } else {
-          const fetchedPlans = await studyPlanService.getStudyPlans();
-          setStudyPlans(fetchedPlans);
-          localStorage.setItem('studyPlans', JSON.stringify(fetchedPlans));
+          existingPlans = JSON.parse(savedPlans);
+          setStudyPlans(existingPlans);
         }
         
-        // Load weekly plans
+        // Check if we need to generate plans for subjects that don't have one
+        const existingSubjects = existingPlans.map(plan => plan.subject);
+        const subjectsToGenerate = userSubjects.filter(subject => !existingSubjects.includes(subject));
+        
+        // Generate new study plans for each missing subject
+        if (subjectsToGenerate.length > 0) {
+          toast({
+            title: "Generating Study Plans",
+            description: `Creating plans for ${subjectsToGenerate.length} subjects...`,
+          });
+          
+          const newPlans: StudyPlan[] = [];
+          
+          for (const subject of subjectsToGenerate) {
+            try {
+              const plan = await studyPlanService.createStudyPlan(subject);
+              newPlans.push(plan);
+            } catch (err) {
+              console.error(`Error generating plan for ${subject}:`, err);
+            }
+          }
+          
+          const updatedPlans = [...existingPlans, ...newPlans];
+          setStudyPlans(updatedPlans);
+          localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+        }
+        
+        // Load or generate weekly plans
         const savedWeeklyPlans = localStorage.getItem('weeklyPlans');
+        
         if (savedWeeklyPlans) {
           setWeeklyPlans(JSON.parse(savedWeeklyPlans));
+        } else {
+          // Generate new weekly plans using the study items from all subjects
+          const allStudyItems = studyPlans.flatMap(plan => plan.items);
+          const { weeklyPlans: newWeeklyPlans } = await studyPlanService.getWeeklyPlans();
+          
+          setWeeklyPlans(newWeeklyPlans);
+          localStorage.setItem('weeklyPlans', JSON.stringify(newWeeklyPlans));
         }
         
         // Load test scores
@@ -130,7 +178,7 @@ const Dashboard = () => {
     };
     
     loadDashboardData();
-  }, []);
+  }, [navigate]);
   
   const handleStartItem = (itemId: string) => {
     // Find the item in the study plan
@@ -248,6 +296,15 @@ const Dashboard = () => {
           <div className="mb-4 md:mb-0">
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back! Let's continue your learning journey.</p>
+            {subjects.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {subjects.map(subject => (
+                  <span key={subject} className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    {subject}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <Button onClick={handleGenerateStudyPlan}>
             <PlusCircle className="mr-2 h-4 w-4" />

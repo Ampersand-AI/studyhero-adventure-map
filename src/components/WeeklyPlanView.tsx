@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, BookOpen, Award } from "lucide-react";
+import { Calendar, BookOpen, Award, BookType } from "lucide-react";
 
 interface DailyActivity {
   date: string;
@@ -62,6 +62,24 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
     }
   };
   
+  const getSubjectColor = (subject: string) => {
+    const colors: Record<string, string> = {
+      'Mathematics': 'bg-green-100 text-green-800',
+      'Physics': 'bg-blue-100 text-blue-800',
+      'Chemistry': 'bg-purple-100 text-purple-800',
+      'Biology': 'bg-teal-100 text-teal-800',
+      'English': 'bg-yellow-100 text-yellow-800',
+      'History': 'bg-orange-100 text-orange-800',
+      'Geography': 'bg-indigo-100 text-indigo-800',
+      'Economics': 'bg-red-100 text-red-800',
+      'Computer Science': 'bg-cyan-100 text-cyan-800',
+      'Science': 'bg-emerald-100 text-emerald-800',
+      'Social Studies': 'bg-amber-100 text-amber-800'
+    };
+    
+    return colors[subject] || 'bg-gray-100 text-gray-800';
+  };
+  
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -106,36 +124,47 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
                 <CardHeader className="pb-2 pt-4">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2" />
-                    <CardTitle className="text-base">{day.date}</CardTitle>
+                    <CardTitle className="text-base">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  {day.items.map(item => (
-                    <div key={item.id} className="mb-3 last:mb-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center">
-                          {item.type === 'lesson' ? (
-                            <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
-                          ) : (
-                            <Award className="h-4 w-4 mr-2 text-purple-500" />
-                          )}
-                          <span className="font-medium">{item.title}</span>
+                  {day.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No activities scheduled for this day.</p>
+                  ) : (
+                    day.items.map(item => (
+                      <div key={item.id} className="mb-3 last:mb-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center">
+                            {item.type === 'lesson' ? (
+                              <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
+                            ) : (
+                              <Award className="h-4 w-4 mr-2 text-purple-500" />
+                            )}
+                            <span className="font-medium">{item.title}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            {item.subject && (
+                              <Badge className={getSubjectColor(item.subject)}>
+                                {item.subject}
+                              </Badge>
+                            )}
+                            <Badge className={getTypeColor(item.type)}>
+                              {item.type}
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge className={getTypeColor(item.type)}>
-                          {item.type}
-                        </Badge>
+                        <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={() => onStartItem(item.id)}
+                        >
+                          Start
+                        </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => onStartItem(item.id)}
-                      >
-                        Start
-                      </Button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
             ))}

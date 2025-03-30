@@ -47,72 +47,31 @@ interface WeeklyPlan {
   weeklyTest: WeeklyTest;
 }
 
-// Sample data for demonstration
-const generateMockStudyPlans = (): StudyPlan[] => {
-  return [
-    {
-      id: uuidv4(),
-      subject: "Mathematics",
-      items: [
-        {
-          id: uuidv4(),
-          title: "Algebra Basics",
-          description: "Introduction to algebraic expressions and equations",
-          type: "lesson",
-          status: "current",
-          dueDate: "2023-05-15",
-          content: "Algebra is a branch of mathematics dealing with symbols and the rules for manipulating these symbols.",
-          estimatedTimeInMinutes: 45,
-          subject: "Mathematics"
-        },
-        {
-          id: uuidv4(),
-          title: "Solving Linear Equations",
-          description: "Learn how to solve basic linear equations",
-          type: "practice",
-          status: "future",
-          dueDate: "2023-05-16",
-          content: "Linear equations are equations with variables raised to the power of 1.",
-          estimatedTimeInMinutes: 30,
-          subject: "Mathematics"
-        }
-      ]
-    },
-    {
-      id: uuidv4(),
-      subject: "Physics",
-      items: [
-        {
-          id: uuidv4(),
-          title: "Laws of Motion",
-          description: "Understanding Newton's laws of motion",
-          type: "lesson",
-          status: "future",
-          dueDate: "2023-05-18",
-          content: "Newton's laws of motion describe the relationship between a body and the forces acting upon it.",
-          estimatedTimeInMinutes: 60,
-          subject: "Physics"
-        },
-        {
-          id: uuidv4(),
-          title: "Motion Quiz",
-          description: "Test your understanding of Newton's laws",
-          type: "quiz",
-          status: "future",
-          dueDate: "2023-05-20",
-          content: "Quiz content about Newton's laws of motion",
-          estimatedTimeInMinutes: 20,
-          subject: "Physics"
-        }
-      ]
-    }
-  ];
-};
+interface TestScore {
+  id: string;
+  subject: string;
+  weekNumber: number;
+  score: number;
+  date: string;
+}
 
-// Generate a weekly plan with a test
+// Generate a weekly plan with a test for each subject
 const generateWeeklyPlans = (): WeeklyPlan[] => {
   const now = new Date();
   const weeklyPlans: WeeklyPlan[] = [];
+  
+  // Get all subjects from localStorage
+  const profileData = localStorage.getItem('studyHeroProfile');
+  let subjects: string[] = [];
+  
+  if (profileData) {
+    const profile = JSON.parse(profileData);
+    subjects = profile.subjects || [];
+  }
+  
+  if (subjects.length === 0) {
+    subjects = ['Mathematics', 'Science', 'English', 'Social Studies'];
+  }
   
   // Create 4 weeks of plans
   for (let week = 1; week <= 4; week++) {
@@ -129,34 +88,41 @@ const generateWeeklyPlans = (): WeeklyPlan[] => {
       const activityDate = new Date(startDate);
       activityDate.setDate(startDate.getDate() + day);
       
-      const items: StudyItem[] = [
-        {
-          id: uuidv4(),
-          title: `Day ${day + 1} Study: ${['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]}`,
-          description: `Study session for ${['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]}`,
-          type: "lesson",
-          status: "future",
-          dueDate: activityDate.toISOString().split('T')[0],
-          content: `Lesson content for ${['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]}`,
-          estimatedTimeInMinutes: 30 + Math.floor(Math.random() * 30),
-          subject: ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]
-        }
-      ];
+      // Generate lessons for each subject on this day
+      const items: StudyItem[] = [];
       
-      // Add a quiz for some days
-      if (day % 2 === 0) {
-        items.push({
-          id: uuidv4(),
-          title: `${['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]} Quiz`,
-          description: `Quick quiz on ${['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]} concepts`,
-          type: "quiz",
-          status: "future",
-          dueDate: activityDate.toISOString().split('T')[0],
-          content: `Quiz content for ${['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]}`,
-          estimatedTimeInMinutes: 15,
-          subject: ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History'][day]
-        });
-      }
+      // Rotate subjects through days of the week
+      subjects.forEach((subject, subjectIndex) => {
+        // Only include 1-2 subjects per day to avoid overloading
+        if ((subjectIndex + day) % 5 === 0 || (subjectIndex + day) % 5 === 1) {
+          items.push({
+            id: uuidv4(),
+            title: `${subject} Lesson ${week}.${day + 1}`,
+            description: `Study session for ${subject}`,
+            type: "lesson",
+            status: "future",
+            dueDate: activityDate.toISOString().split('T')[0],
+            content: `Lesson content for ${subject}`,
+            estimatedTimeInMinutes: 30 + Math.floor(Math.random() * 30),
+            subject: subject
+          });
+          
+          // Add a quiz for some days and subjects
+          if ((subjectIndex + day) % 3 === 0) {
+            items.push({
+              id: uuidv4(),
+              title: `${subject} Practice Quiz`,
+              description: `Quick practice quiz on ${subject} concepts`,
+              type: "quiz",
+              status: "future",
+              dueDate: activityDate.toISOString().split('T')[0],
+              content: `Quiz content for ${subject}`,
+              estimatedTimeInMinutes: 15,
+              subject: subject
+            });
+          }
+        }
+      });
       
       dailyActivities.push({
         date: activityDate.toISOString().split('T')[0],
@@ -164,7 +130,7 @@ const generateWeeklyPlans = (): WeeklyPlan[] => {
       });
     }
     
-    // Create weekly test
+    // Create weekly comprehensive test that covers all subjects
     const weeklyTest: WeeklyTest = {
       id: uuidv4(),
       title: `Week ${week} Comprehensive Test`,
@@ -190,12 +156,92 @@ const generateWeeklyPlans = (): WeeklyPlan[] => {
   return weeklyPlans;
 };
 
+// Sample data for demonstration - now updated to be more subject-specific
+const generateMockStudyPlans = (subjects: string[] = []): StudyPlan[] => {
+  if (subjects.length === 0) {
+    subjects = ['Mathematics', 'Physics'];
+  }
+  
+  return subjects.map(subject => {
+    const items = generateItemsForSubject(subject);
+    
+    return {
+      id: uuidv4(),
+      subject,
+      items
+    };
+  });
+};
+
+// Generate study items specific to each subject
+const generateItemsForSubject = (subject: string): StudyItem[] => {
+  const topics = getTopicsForSubject(subject);
+  const now = new Date();
+  
+  return topics.map((topic, index) => {
+    const dueDate = new Date(now);
+    dueDate.setDate(now.getDate() + index * 2);
+    
+    const types: ("lesson" | "quiz" | "practice")[] = ["lesson", "quiz", "practice"];
+    
+    return {
+      id: uuidv4(),
+      title: topic,
+      description: `Learn about ${topic} in ${subject}`,
+      type: types[index % 3],
+      status: index === 0 ? "current" : "future",
+      dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      content: `This is sample content for ${topic} in ${subject}`,
+      estimatedTimeInMinutes: 30 + (index * 10),
+      subject
+    };
+  });
+};
+
+// Get topics based on subject
+const getTopicsForSubject = (subject: string): string[] => {
+  switch(subject.toLowerCase()) {
+    case 'mathematics':
+      return ['Algebra', 'Geometry', 'Calculus', 'Statistics', 'Trigonometry', 'Number Theory'];
+    case 'science':
+      return ['Physics', 'Chemistry', 'Biology', 'Astronomy', 'Earth Science', 'Ecology'];
+    case 'english':
+      return ['Grammar', 'Literature', 'Writing', 'Comprehension', 'Poetry', 'Vocabulary'];
+    case 'social studies':
+      return ['History', 'Geography', 'Civics', 'Economics', 'Sociology', 'Political Science'];
+    case 'physics':
+      return ['Mechanics', 'Electromagnetism', 'Thermodynamics', 'Optics', 'Modern Physics', 'Waves'];
+    case 'chemistry':
+      return ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry', 'Analytical Chemistry', 'Biochemistry', 'Nuclear Chemistry'];
+    case 'biology':
+      return ['Cell Biology', 'Genetics', 'Ecology', 'Evolution', 'Human Physiology', 'Microbiology'];
+    case 'history':
+      return ['Ancient Civilizations', 'Medieval Period', 'Renaissance', 'Industrial Revolution', 'World Wars', 'Modern History'];
+    case 'geography':
+      return ['Physical Geography', 'Human Geography', 'Cartography', 'Climate', 'Natural Resources', 'Population Studies'];
+    case 'economics':
+      return ['Microeconomics', 'Macroeconomics', 'International Trade', 'Economic Systems', 'Financial Markets', 'Development Economics'];
+    case 'computer science':
+      return ['Programming', 'Data Structures', 'Algorithms', 'Computer Systems', 'Networking', 'Databases'];
+    default:
+      return ['Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Topic 5', 'Topic 6'];
+  }
+};
+
 export const studyPlanService = {
   /**
    * Get study plans for the current user
    */
   getStudyPlans: async () => {
-    // In a real application, this would call an API
+    // Get subjects from profile
+    const profileData = localStorage.getItem('studyHeroProfile');
+    let subjects: string[] = [];
+    
+    if (profileData) {
+      const profile = JSON.parse(profileData);
+      subjects = profile.subjects || [];
+    }
+    
     toast({
       title: "Loading study plans",
       description: "Fetching your personalized study plans...",
@@ -203,7 +249,7 @@ export const studyPlanService = {
     
     return new Promise<StudyPlan[]>((resolve) => {
       setTimeout(() => {
-        const plans = generateMockStudyPlans();
+        const plans = generateMockStudyPlans(subjects);
         
         toast({
           title: "Study plans loaded",
@@ -216,26 +262,25 @@ export const studyPlanService = {
   },
   
   /**
-   * Get weekly study plans
+   * Get weekly study plans with subject integration
    */
   getWeeklyPlans: async () => {
-    // In a real application, this would call an API
     toast({
       title: "Generating weekly schedule",
       description: "Creating your optimized weekly study plan...",
     });
     
-    return new Promise<WeeklyPlan[]>((resolve) => {
+    return new Promise<{weeklyPlans: WeeklyPlan[]}>(resolve => {
       setTimeout(() => {
         const weeklyPlans = generateWeeklyPlans();
         
         toast({
           title: "Weekly plan ready",
-          description: `Successfully created a ${weeklyPlans.length}-week study plan.`,
+          description: `Successfully created a ${weeklyPlans.length}-week study plan with all your subjects.`,
         });
         
         localStorage.setItem('weeklyPlans', JSON.stringify(weeklyPlans));
-        resolve(weeklyPlans);
+        resolve({weeklyPlans});
       }, 1500);
     });
   },
@@ -244,7 +289,6 @@ export const studyPlanService = {
    * Create a new study plan for a subject
    */
   createStudyPlan: async (subject: string) => {
-    // In a real application, this would call an API
     toast({
       title: "Connecting to NCERT",
       description: `Extracting ${subject} curriculum data...`,
@@ -252,33 +296,12 @@ export const studyPlanService = {
     
     return new Promise<StudyPlan>((resolve) => {
       setTimeout(() => {
+        const items = generateItemsForSubject(subject);
+        
         const newPlan: StudyPlan = {
           id: uuidv4(),
           subject,
-          items: [
-            {
-              id: uuidv4(),
-              title: `${subject} Fundamentals`,
-              description: `Introduction to ${subject} basics`,
-              type: "lesson",
-              status: "current",
-              dueDate: new Date().toISOString().split('T')[0],
-              content: `This is the introductory content for ${subject}.`,
-              estimatedTimeInMinutes: 45,
-              subject
-            },
-            {
-              id: uuidv4(),
-              title: `${subject} Practice`,
-              description: `Practice exercises for ${subject}`,
-              type: "practice",
-              status: "future",
-              dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-              content: `Practice exercises for ${subject}.`,
-              estimatedTimeInMinutes: 30,
-              subject
-            }
-          ]
+          items
         };
         
         toast({
@@ -289,5 +312,41 @@ export const studyPlanService = {
         resolve(newPlan);
       }, 2000);
     });
+  },
+  
+  /**
+   * Save a test score
+   */
+  saveTestScore: async (testId: string, subject: string, weekNumber: number, score: number) => {
+    const newScore: TestScore = {
+      id: uuidv4(),
+      subject,
+      weekNumber,
+      score,
+      date: new Date().toISOString()
+    };
+    
+    // Get existing scores or initialize new array
+    const savedScores = localStorage.getItem('weeklyTestScores');
+    let scores: TestScore[] = [];
+    
+    if (savedScores) {
+      scores = JSON.parse(savedScores);
+    }
+    
+    // Add new score
+    scores.push(newScore);
+    localStorage.setItem('weeklyTestScores', JSON.stringify(scores));
+    
+    // Update XP based on score
+    const xpGained = Math.round(score * 10); // 10 XP per 1% score
+    await userService.updateUserXP(xpGained);
+    
+    toast({
+      title: "Test Completed",
+      description: `You scored ${score}% and earned ${xpGained} XP!`,
+    });
+    
+    return newScore;
   }
 };
