@@ -43,7 +43,7 @@ const Dashboard = () => {
   const [profileInfo, setProfileInfo] = useState<any>({
     board: '',
     className: '',
-    subject: '',
+    subjects: [],
     userName: 'Student'
   });
 
@@ -68,7 +68,7 @@ const Dashboard = () => {
     // Check if profile exists in localStorage
     const profile = localStorage.getItem('studyHeroProfile');
     if (!profile) {
-      navigate('/');
+      navigate('/onboarding');
       return;
     }
 
@@ -79,7 +79,7 @@ const Dashboard = () => {
     loadStudyPlans();
   }, [navigate]);
 
-  const loadStudyPlans = () => {
+  const loadStudyPlans = async () => {
     setIsLoading(true);
     setError(null);
     
@@ -95,33 +95,47 @@ const Dashboard = () => {
         if (parsedPlans.length > 0 && !activeSubject) {
           setActiveSubject(parsedPlans[0].subject);
         }
+        setIsLoading(false);
       } else {
-        // If no plans exist yet, create one for the main subject from profile
+        // If no plans exist yet, create plans for all selected subjects from profile
         const profile = localStorage.getItem('studyHeroProfile');
         if (profile) {
-          const { subject, board, className } = JSON.parse(profile);
-          generateStudyPlan(board, className, subject)
-            .then(plan => {
-              if (plan) {
-                const newPlans = [{
-                  subject,
-                  items: plan
-                }];
-                setStudyPlans(newPlans);
-                setActiveSubject(subject);
-                localStorage.setItem('studyPlans', JSON.stringify(newPlans));
+          const { subjects, board, className } = JSON.parse(profile);
+          
+          if (subjects && Array.isArray(subjects) && subjects.length > 0) {
+            const newPlans: SubjectPlan[] = [];
+            
+            // Initialize with loading state
+            setStudyPlans(subjects.map(subject => ({ subject, items: [] })));
+            setActiveSubject(subjects[0]);
+            
+            // Generate study plans for each subject
+            for (const subject of subjects) {
+              try {
+                const plan = await generateStudyPlan(board, className, subject);
+                if (plan) {
+                  newPlans.push({
+                    subject,
+                    items: plan
+                  });
+                }
+              } catch (err) {
+                console.error(`Error generating study plan for ${subject}:`, err);
               }
-            })
-            .catch(err => {
-              console.error("Error in initial study plan generation:", err);
-              setError("Failed to generate your study plan. Please try again later.");
-            });
+            }
+            
+            setStudyPlans(newPlans);
+            if (newPlans.length > 0 && !activeSubject) {
+              setActiveSubject(newPlans[0].subject);
+            }
+            localStorage.setItem('studyPlans', JSON.stringify(newPlans));
+          }
         }
+        setIsLoading(false);
       }
     } catch (e) {
       console.error("Error loading study plans:", e);
       setError("Failed to load your study plans. Please try again later.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -136,22 +150,8 @@ const Dashboard = () => {
         throw new Error("Invalid study plan data received");
       }
       
-      // Process the data to add status and due dates
-      const today = new Date();
-      const processedPlan = planData.items.map((item: any, index: number) => {
-        const dueDate = new Date(today);
-        dueDate.setDate(today.getDate() + index * 2); // Every 2 days
-        
-        return {
-          ...item,
-          status: index === 0 ? "current" : "future",
-          dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          type: item.type || ["lesson", "quiz", "practice"][index % 3],
-          subject
-        };
-      });
-      
-      return processedPlan;
+      // Use the items from the response directly
+      return planData.items;
     } catch (error) {
       console.error("Error generating study plan:", error);
       setError("Failed to generate your study plan. Please try again later.");
@@ -186,39 +186,38 @@ const Dashboard = () => {
     }
   };
 
-  const handleRegeneratePlan = () => {
+  const handleRegeneratePlan = async () => {
     // Regenerate only the active subject plan
     setIsLoading(true);
     setError(null);
     
-    generateStudyPlan(profileInfo.board, profileInfo.className, activeSubject)
-      .then(plan => {
-        if (plan) {
-          // Update just the active plan
-          const updatedPlans = studyPlans.map(p => 
-            p.subject === activeSubject ? { ...p, items: plan } : p
-          );
-          
-          setStudyPlans(updatedPlans);
-          localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
-          
-          toast({
-            title: "Study plan regenerated!",
-            description: `Your ${activeSubject} study plan has been updated`,
-          });
-        }
-      })
-      .catch(err => {
-        console.error("Error regenerating study plan:", err);
+    try {
+      const plan = await generateStudyPlan(profileInfo.board, profileInfo.className, activeSubject);
+      
+      if (plan) {
+        // Update just the active plan
+        const updatedPlans = studyPlans.map(p => 
+          p.subject === activeSubject ? { ...p, items: plan } : p
+        );
+        
+        setStudyPlans(updatedPlans);
+        localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+        
         toast({
-          title: "Failed to regenerate study plan",
-          description: "Please try again later",
-          variant: "destructive"
+          title: "Study plan regenerated!",
+          description: `Your ${activeSubject} study plan has been updated`,
         });
-      })
-      .finally(() => {
-        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Error regenerating study plan:", err);
+      toast({
+        title: "Failed to regenerate study plan",
+        description: "Please try again later",
+        variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAddSubject = async () => {
@@ -260,6 +259,14 @@ const Dashboard = () => {
         setActiveSubject(newSubject);
         localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
         
+        // Update profile subjects
+        const updatedProfile = {
+          ...profileInfo,
+          subjects: [...new Set([...profileInfo.subjects, newSubject])]
+        };
+        setProfileInfo(updatedProfile);
+        localStorage.setItem('studyHeroProfile', JSON.stringify(updatedProfile));
+        
         // Clear the form
         setNewSubject("");
         setNewSubjectClass("");
@@ -292,7 +299,7 @@ const Dashboard = () => {
       // Call the service method to clear all data
       claudeService.clearAllUserData();
       
-      // After clearing data, redirect to onboarding or reload page
+      // After clearing data, redirect to onboarding
       navigate('/onboarding');
     } catch (error) {
       console.error("Error clearing user data:", error);
@@ -563,7 +570,6 @@ const Dashboard = () => {
           )}
         </div>
       
-
         <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
           <DialogContent>
             <DialogHeader>

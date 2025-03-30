@@ -15,7 +15,14 @@ import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 // Create a new query client
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => {
   return (
