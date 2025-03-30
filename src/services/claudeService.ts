@@ -1,7 +1,9 @@
+
 // src/services/claudeService.ts
 
 import axios from 'axios';
 import { toast } from "@/hooks/use-toast";
+import * as openaiService from './openaiService';
 
 // Vite uses import.meta.env instead of process.env
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -15,7 +17,7 @@ interface ClaudeService {
   clearAllUserData: () => void;
 }
 
-// Mock data for development - will be replaced with actual API calls
+// Mock data for fallback when API calls fail
 const createMockData = (subject: string) => {
   // Create a unique set of items based on the subject
   const getTopics = (subject: string) => {
@@ -71,26 +73,17 @@ export const claudeService: ClaudeService = {
         description: "Extracting curriculum data for your study plan...",
       });
       
-      // In a production environment, uncomment this to use the actual API
-      // const response = await axios.post(`${API_BASE_URL}/api/claude/studyplan`, {
-      //   board,
-      //   className,
-      //   subject
-      // });
-      // return response.data;
+      // Use OpenAI to generate the study plan
+      const studyPlan = await openaiService.generateStudyPlan(board, className, subject);
       
-      // For now, use mock data
-      const mockItems = createMockData(subject);
+      // If OpenAI returns null (error occurred), fall back to mock data
+      if (!studyPlan) {
+        console.log("Using fallback mock data for study plan");
+        const mockItems = createMockData(subject);
+        return { items: mockItems };
+      }
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast({
-        title: "Study Plan Created",
-        description: `Successfully generated NCERT-aligned study plan for ${subject}`,
-      });
-      
-      return { items: mockItems };
+      return studyPlan;
     } catch (error) {
       console.error("Error generating study plan:", error);
       
@@ -112,62 +105,60 @@ export const claudeService: ClaudeService = {
         description: "Fetching NCERT-aligned lesson content...",
       });
       
-      // In a production environment, uncomment this to use the actual API
-      // const response = await axios.post(`${API_BASE_URL}/api/claude/lesson`, {
-      //   subject,
-      //   topic
-      // });
-      // return response.data;
+      // Use OpenAI to generate the lesson content
+      const lessonContent = await openaiService.generateLessonContent(subject, topic);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Return properly formatted mock lesson content that matches the interface in Lesson.tsx
-      const lessonContent = {
-        title: topic,
-        keyPoints: [
-          `Key point 1 about ${topic} in ${subject} from NCERT`,
-          `Key point 2 about ${topic} in ${subject} from NCERT`,
-          `Key point 3 about ${topic} in ${subject} from NCERT`,
-          `Key point 4 about ${topic} in ${subject} from NCERT`
-        ],
-        explanation: [
-          `${topic} is an important concept in ${subject}. This paragraph provides an overview of the topic based on NCERT curriculum.`,
-          `This paragraph explains the theoretical foundations of ${topic} and its significance in ${subject} as per NCERT guidelines.`,
-          `Here we discuss practical applications of ${topic} in real-world scenarios following the NCERT approach.`
-        ],
-        examples: [
-          {
-            title: `Example 1: Basic ${topic}`,
-            content: `This is a basic example of ${topic} in ${subject} from NCERT textbooks.`
-          },
-          {
-            title: `Example 2: Advanced ${topic}`,
-            content: `This is a more advanced example showing how ${topic} works in complex scenarios as taught in NCERT curriculum.`
-          }
-        ],
-        visualAids: [
-          {
-            title: `${topic} Diagram`,
-            description: `This diagram illustrates the main components of ${topic} as shown in NCERT books.`
-          },
-          {
-            title: `${topic} Process Flow`,
-            description: `This visual aid shows the step-by-step process of ${topic} according to NCERT guidelines.`
-          }
-        ],
-        activities: [
-          {
-            title: `Practice Activity 1`,
-            instructions: `Complete this NCERT-style exercise to practice the basic concepts of ${topic}.`
-          },
-          {
-            title: `Practice Activity 2`,
-            instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`
-          }
-        ],
-        summary: `In this lesson, you learned about ${topic} in ${subject} following the NCERT curriculum, including its key concepts, practical applications, and importance in the field.`
-      };
+      // If OpenAI returns null (error occurred), fall back to mock data
+      if (!lessonContent) {
+        console.log("Using fallback mock data for lesson content");
+        
+        // Return properly formatted mock lesson content that matches the interface in Lesson.tsx
+        return {
+          title: topic,
+          keyPoints: [
+            `Key point 1 about ${topic} in ${subject} from NCERT`,
+            `Key point 2 about ${topic} in ${subject} from NCERT`,
+            `Key point 3 about ${topic} in ${subject} from NCERT`,
+            `Key point 4 about ${topic} in ${subject} from NCERT`
+          ],
+          explanation: [
+            `${topic} is an important concept in ${subject}. This paragraph provides an overview of the topic based on NCERT curriculum.`,
+            `This paragraph explains the theoretical foundations of ${topic} and its significance in ${subject} as per NCERT guidelines.`,
+            `Here we discuss practical applications of ${topic} in real-world scenarios following the NCERT approach.`
+          ],
+          examples: [
+            {
+              title: `Example 1: Basic ${topic}`,
+              content: `This is a basic example of ${topic} in ${subject} from NCERT textbooks.`
+            },
+            {
+              title: `Example 2: Advanced ${topic}`,
+              content: `This is a more advanced example showing how ${topic} works in complex scenarios as taught in NCERT curriculum.`
+            }
+          ],
+          visualAids: [
+            {
+              title: `${topic} Diagram`,
+              description: `This diagram illustrates the main components of ${topic} as shown in NCERT books.`
+            },
+            {
+              title: `${topic} Process Flow`,
+              description: `This visual aid shows the step-by-step process of ${topic} according to NCERT guidelines.`
+            }
+          ],
+          activities: [
+            {
+              title: `Practice Activity 1`,
+              instructions: `Complete this NCERT-style exercise to practice the basic concepts of ${topic}.`
+            },
+            {
+              title: `Practice Activity 2`,
+              instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`
+            }
+          ],
+          summary: `In this lesson, you learned about ${topic} in ${subject} following the NCERT curriculum, including its key concepts, practical applications, and importance in the field.`
+        };
+      }
       
       return lessonContent;
     } catch (error) {
@@ -218,21 +209,28 @@ export const claudeService: ClaudeService = {
         description: "Generating NCERT-aligned quiz question...",
       });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Use OpenAI to generate the quiz question
+      const quizQuestion = await openaiService.generateQuizQuestion(subject, topic);
       
-      // Return mock quiz question
-      return {
-        question: `What is the main concept behind ${topic} in ${subject} according to NCERT?`,
-        options: [
-          "The correct answer for this topic",
-          "An incorrect but plausible answer",
-          "Another wrong answer",
-          "Yet another wrong answer"
-        ],
-        correctIndex: 0,
-        explanation: `The main concept of ${topic} in ${subject} is explained here in detail as per NCERT curriculum.`
-      };
+      // If OpenAI returns null (error occurred), fall back to mock data
+      if (!quizQuestion) {
+        console.log("Using fallback mock data for quiz question");
+        
+        // Return mock quiz question
+        return {
+          question: `What is the main concept behind ${topic} in ${subject} according to NCERT?`,
+          options: [
+            "The correct answer for this topic",
+            "An incorrect but plausible answer",
+            "Another wrong answer",
+            "Yet another wrong answer"
+          ],
+          correctIndex: 0,
+          explanation: `The main concept of ${topic} in ${subject} is explained here in detail as per NCERT curriculum.`
+        };
+      }
+      
+      return quizQuestion;
     } catch (error) {
       console.error("Error generating quiz question:", error);
       toast({
@@ -263,24 +261,31 @@ export const claudeService: ClaudeService = {
         description: `Creating a ${questionCount}-question NCERT-aligned test for ${topic}...`,
       });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Use OpenAI to generate the lesson test
+      const lessonTest = await openaiService.generateLessonTest(subject, topic, questionCount);
       
-      // Generate mock test questions
-      const questions = Array.from({ length: questionCount }, (_, i) => ({
-        id: `q-${i + 1}`,
-        question: `Question ${i + 1} about ${topic} in ${subject} based on NCERT curriculum?`,
-        options: [
-          "The correct answer",
-          "Wrong answer 1",
-          "Wrong answer 2",
-          "Wrong answer 3"
-        ],
-        correctAnswer: "The correct answer",
-        explanation: `Explanation for question ${i + 1} about ${topic} as per NCERT guidelines.`
-      }));
+      // If OpenAI returns null (error occurred), fall back to mock data
+      if (!lessonTest) {
+        console.log("Using fallback mock data for lesson test");
+        
+        // Generate mock test questions
+        const questions = Array.from({ length: questionCount }, (_, i) => ({
+          id: `q-${i + 1}`,
+          question: `Question ${i + 1} about ${topic} in ${subject} based on NCERT curriculum?`,
+          options: [
+            "The correct answer",
+            "Wrong answer 1",
+            "Wrong answer 2",
+            "Wrong answer 3"
+          ],
+          correctAnswer: "The correct answer",
+          explanation: `Explanation for question ${i + 1} about ${topic} as per NCERT guidelines.`
+        }));
+        
+        return { questions };
+      }
       
-      return { questions };
+      return lessonTest;
     } catch (error) {
       console.error("Error generating lesson test:", error);
       toast({
@@ -314,79 +319,86 @@ export const claudeService: ClaudeService = {
         description: "Creating weekly schedule for your NCERT curriculum...",
       });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Use OpenAI to generate the weekly plan
+      const weeklyPlan = await openaiService.generateWeeklyPlan(subject, items);
       
-      // Generate mock weekly plan
-      const now = new Date();
-      let currentDay = new Date(now);
-      
-      // Create 12 weeks of study plan
-      const weeklyPlans = Array.from({ length: 12 }, (_, weekIndex) => {
-        const weekStart = new Date(currentDay);
+      // If OpenAI returns null (error occurred), fall back to mock data
+      if (!weeklyPlan) {
+        console.log("Using fallback mock data for weekly plan");
         
-        // Create daily activities for the week
-        const dailyActivities = Array.from({ length: 5 }, (_, dayIndex) => {
-          const day = new Date(currentDay);
-          currentDay.setDate(currentDay.getDate() + 1);
+        // Generate mock weekly plan
+        const now = new Date();
+        let currentDay = new Date(now);
+        
+        // Create 12 weeks of study plan
+        const weeklyPlans = Array.from({ length: 12 }, (_, weekIndex) => {
+          const weekStart = new Date(currentDay);
           
-          // Skip weekends
-          if (day.getDay() === 0 || day.getDay() === 6) {
+          // Create daily activities for the week
+          const dailyActivities = Array.from({ length: 5 }, (_, dayIndex) => {
+            const day = new Date(currentDay);
+            currentDay.setDate(currentDay.getDate() + 1);
+            
+            // Skip weekends
+            if (day.getDay() === 0 || day.getDay() === 6) {
+              currentDay.setDate(currentDay.getDate() + 1);
+            }
+            
+            // Assign lessons/quizzes from the original items to days
+            const itemIndex = (weekIndex * 5 + dayIndex) % items.length;
+            const item = items[itemIndex];
+            
+            return {
+              date: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' }),
+              items: [
+                {
+                  ...item,
+                  dueDate: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                }
+              ]
+            };
+          });
+          
+          // Add a weekly test at the end of the week
+          const testDay = new Date(currentDay);
+          testDay.setDate(testDay.getDate() - 1); // Last day of the "week"
+          
+          const weeklyTest = {
+            id: `test-week-${weekIndex + 1}`,
+            title: `Week ${weekIndex + 1} Review Test`,
+            description: `NCERT-aligned test covering all topics from week ${weekIndex + 1}`,
+            type: "quiz",
+            status: weekIndex === 0 ? "current" : "future",
+            dueDate: testDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            estimatedTimeInMinutes: 45,
+            subject,
+            isWeeklyTest: true,
+            weekNumber: weekIndex + 1
+          };
+          
+          // Skip to next week (add days until Monday)
+          while (currentDay.getDay() !== 1) {
             currentDay.setDate(currentDay.getDate() + 1);
           }
           
-          // Assign lessons/quizzes from the original items to days
-          const itemIndex = (weekIndex * 5 + dayIndex) % items.length;
-          const item = items[itemIndex];
-          
           return {
-            date: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' }),
-            items: [
-              {
-                ...item,
-                dueDate: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              }
-            ]
+            weekNumber: weekIndex + 1,
+            startDate: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            endDate: new Date(currentDay.getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dailyActivities,
+            weeklyTest
           };
         });
         
-        // Add a weekly test at the end of the week
-        const testDay = new Date(currentDay);
-        testDay.setDate(testDay.getDate() - 1); // Last day of the "week"
+        toast({
+          title: "Weekly Plan Created",
+          description: `Your ${subject} NCERT curriculum is now organized into a weekly schedule`,
+        });
         
-        const weeklyTest = {
-          id: `test-week-${weekIndex + 1}`,
-          title: `Week ${weekIndex + 1} Review Test`,
-          description: `NCERT-aligned test covering all topics from week ${weekIndex + 1}`,
-          type: "quiz",
-          status: weekIndex === 0 ? "current" : "future",
-          dueDate: testDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          estimatedTimeInMinutes: 45,
-          subject,
-          isWeeklyTest: true,
-          weekNumber: weekIndex + 1
-        };
-        
-        // Skip to next week (add days until Monday)
-        while (currentDay.getDay() !== 1) {
-          currentDay.setDate(currentDay.getDate() + 1);
-        }
-        
-        return {
-          weekNumber: weekIndex + 1,
-          startDate: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          endDate: new Date(currentDay.getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          dailyActivities,
-          weeklyTest
-        };
-      });
+        return { weeklyPlans };
+      }
       
-      toast({
-        title: "Weekly Plan Created",
-        description: `Your ${subject} NCERT curriculum is now organized into a weekly schedule`,
-      });
-      
-      return { weeklyPlans };
+      return weeklyPlan;
     } catch (error) {
       console.error("Error generating weekly plan:", error);
       toast({
