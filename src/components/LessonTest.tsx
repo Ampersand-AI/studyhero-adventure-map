@@ -8,6 +8,7 @@ import { CheckCircle, XCircle, Medal } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface TestQuestion {
+  id: string;
   question: string;
   options: string[];
   correctAnswer: string;

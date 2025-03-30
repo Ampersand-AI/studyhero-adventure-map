@@ -1,4 +1,3 @@
-
 // src/services/claudeService.ts
 
 import axios from 'axios';
@@ -123,26 +122,51 @@ export const claudeService: ClaudeService = {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Return mock lesson content
+      // Return properly formatted mock lesson content that matches the interface in Lesson.tsx
       return {
         title: topic,
-        subject: subject,
-        introduction: `Welcome to this lesson on ${topic} in ${subject}.`,
-        sections: [
+        keyPoints: [
+          `Key point 1 about ${topic} in ${subject}`,
+          `Key point 2 about ${topic} in ${subject}`,
+          `Key point 3 about ${topic} in ${subject}`,
+          `Key point 4 about ${topic} in ${subject}`
+        ],
+        explanation: [
+          `${topic} is an important concept in ${subject}. This paragraph provides an overview of the topic.`,
+          `This paragraph explains the theoretical foundations of ${topic} and its significance in ${subject}.`,
+          `Here we discuss practical applications of ${topic} in real-world scenarios.`
+        ],
+        examples: [
           {
-            title: "Key Concepts",
-            content: `${topic} involves several key concepts that are fundamental to ${subject}.`
+            title: `Example 1: Basic ${topic}`,
+            content: `This is a basic example of ${topic} in ${subject}.`
           },
           {
-            title: "Examples",
-            content: "Here are some examples to help illustrate these concepts."
-          },
-          {
-            title: "Practice Problems",
-            content: "Try these practice problems to test your understanding."
+            title: `Example 2: Advanced ${topic}`,
+            content: `This is a more advanced example showing how ${topic} works in complex scenarios.`
           }
         ],
-        summary: `In this lesson, you learned about the fundamental concepts of ${topic} in ${subject}.`
+        visualAids: [
+          {
+            title: `${topic} Diagram`,
+            description: `This diagram illustrates the main components of ${topic}.`
+          },
+          {
+            title: `${topic} Process Flow`,
+            description: `This visual aid shows the step-by-step process of ${topic}.`
+          }
+        ],
+        activities: [
+          {
+            title: `Practice Activity 1`,
+            instructions: `Complete this exercise to practice the basic concepts of ${topic}.`
+          },
+          {
+            title: `Practice Activity 2`,
+            instructions: `This advanced activity will help you master ${topic}.`
+          }
+        ],
+        summary: `In this lesson, you learned about ${topic} in ${subject}, including its key concepts, practical applications, and importance in the field.`
       };
     } catch (error) {
       console.error("Error generating lesson content:", error);
@@ -152,18 +176,35 @@ export const claudeService: ClaudeService = {
         variant: "destructive"
       });
       
-      // Fallback content
+      // Fallback content with the same structure
       return {
         title: topic,
-        subject: subject,
-        introduction: `Welcome to this lesson on ${topic} in ${subject}.`,
-        sections: [
+        keyPoints: [
+          `Key point 1 about ${topic} in ${subject}`,
+          `Key point 2 about ${topic} in ${subject}`
+        ],
+        explanation: [
+          `${topic} is an important concept in ${subject}.`
+        ],
+        examples: [
           {
-            title: "Key Concepts",
-            content: `${topic} involves several key concepts that are fundamental to ${subject}.`
+            title: `Example of ${topic}`,
+            content: `This is a simple example of ${topic}.`
           }
         ],
-        summary: `In this lesson, you learned about the fundamental concepts of ${topic} in ${subject}.`
+        visualAids: [
+          {
+            title: `${topic} Visual Aid`,
+            description: `A visual representation of ${topic}.`
+          }
+        ],
+        activities: [
+          {
+            title: `Practice Activity`,
+            instructions: `Complete this exercise to practice ${topic}.`
+          }
+        ],
+        summary: `In this lesson, you learned the basics of ${topic} in ${subject}.`
       };
     }
   },
@@ -248,7 +289,7 @@ export const claudeService: ClaudeService = {
           "Wrong answer 2",
           "Wrong answer 3"
         ],
-        correctIndex: 0,
+        correctAnswer: "The correct answer",
         explanation: `Explanation for question ${i + 1} about ${topic}.`
       }));
       
@@ -271,7 +312,7 @@ export const claudeService: ClaudeService = {
           "Wrong answer 2",
           "Wrong answer 3"
         ],
-        correctIndex: 0,
+        correctAnswer: "The correct answer",
         explanation: `Sample explanation for question ${i + 1}.`
       }));
       
