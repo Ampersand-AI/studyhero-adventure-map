@@ -20,29 +20,27 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <React.StrictMode>
-      <ThemeProvider attribute="class" defaultTheme="light">
-        <ToastProvider>
-          <QueryClientProvider client={queryClient}>
-            <TooltipProvider>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/quiz/:id" element={<Quiz />} />
-                  <Route path="/lesson/:id" element={<Lesson />} />
-                  <Route path="/achievements" element={<Achievements />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
-              </BrowserRouter>
-            </TooltipProvider>
-          </QueryClientProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    </React.StrictMode>
+    <ThemeProvider attribute="class" defaultTheme="light">
+      <ToastProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/quiz/:id" element={<Quiz />} />
+                <Route path="/lesson/:id" element={<Lesson />} />
+                <Route path="/achievements" element={<Achievements />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 };
 
