@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { claudeService } from '@/services/claudeService';
-import { QuizCard } from '@/components/QuizCard';
+import QuizCard from '@/components/QuizCard'; // Fixed import statement
 import StudyAIHeader from '@/components/StudyAIHeader';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -393,10 +392,16 @@ const Quiz = () => {
           <QuizCard
             question={currentQuestion.question}
             options={currentQuestion.options}
-            selectedOption={selectedOption}
-            correctIndex={isAnswerSubmitted ? currentQuestion.correctIndex : undefined}
-            explanation={isAnswerSubmitted ? currentQuestion.explanation : undefined}
-            onSelectOption={handleOptionSelect}
+            selectedAnswer={selectedOption !== null ? currentQuestion.options[selectedOption] : null}
+            correctAnswer={isAnswerSubmitted ? currentQuestion.options[currentQuestion.correctIndex] : null}
+            onSelectAnswer={(answer) => {
+              const index = currentQuestion.options.indexOf(answer);
+              if (index !== -1) {
+                handleOptionSelect(index);
+              }
+            }}
+            onSubmitAnswer={isAnswerSubmitted ? handleNextQuestion : handleSubmitAnswer}
+            isAnswered={isAnswerSubmitted}
           />
         )}
         

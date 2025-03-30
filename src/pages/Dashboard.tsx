@@ -1,22 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { userService } from '@/services/userService';
+import { studyPlanService } from '@/services/studyPlanService';
 import StudyAIHeader from '@/components/StudyAIHeader';
-import ProgressCard from '@/components/ProgressCard';
-import StudyTimeline from '@/components/StudyTimeline';
 import WeeklyPlanView from '@/components/WeeklyPlanView';
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2, PlusCircle, Trash2, RefreshCw, Clock } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { claudeService } from '@/services/claudeService';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Home, Trophy, BarChart, PlusCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  level: number;
+  xp: number;
+}
 
 interface StudyItem {
   id: string;
@@ -25,9 +25,17 @@ interface StudyItem {
   type: "lesson" | "quiz" | "practice";
   status: "completed" | "current" | "future";
   dueDate: string;
-  content: string;
+  content?: string; // Make content optional
   estimatedTimeInMinutes: number;
   subject?: string;
+  isWeeklyTest?: boolean;
+  weekNumber?: number;
+}
+
+interface StudyPlan {
+  id: string;
+  subject: string;
+  items: StudyItem[];
 }
 
 interface WeeklyTest {
@@ -56,12 +64,6 @@ interface WeeklyPlan {
   weeklyTest: WeeklyTest;
 }
 
-interface SubjectPlan {
-  subject: string;
-  items: StudyItem[];
-  weeklyPlans?: WeeklyPlan[];
-}
-
 interface TestScore {
   id: string;
   subject: string;
@@ -72,790 +74,206 @@ interface TestScore {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
+  const [weeklyPlans, setWeeklyPlans] = useState<WeeklyPlan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [studyPlans, setStudyPlans] = useState<SubjectPlan[]>([]);
-  const [activeSubject, setActiveSubject] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"timeline" | "weekly">("timeline");
   const [testScores, setTestScores] = useState<Record<string, number>>({});
-  const [profileInfo, setProfileInfo] = useState<any>({
-    board: '',
-    className: '',
-    subjects: [],
-    userName: 'Student'
-  });
-
-  // For new subject dialog
-  const [isAddingSubject, setIsAddingSubject] = useState(false);
-  const [newSubject, setNewSubject] = useState("");
-  const [newSubjectClass, setNewSubjectClass] = useState("");
-  const [newSubjectBoard, setNewSubjectBoard] = useState("");
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-
-  // New dialog state for reset confirmation
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [isGeneratingWeeklyPlan, setIsGeneratingWeeklyPlan] = useState(false);
-
+  
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
-    { name: "Timeline", href: "/dashboard", icon: <Map className="h-4 w-4" /> },
     { name: "Achievements", href: "/achievements", icon: <Trophy className="h-4 w-4" /> },
     { name: "Analytics", href: "/analytics", icon: <BarChart className="h-4 w-4" /> },
   ];
-
+  
   useEffect(() => {
-    // Check if profile exists in localStorage
-    const profile = localStorage.getItem('studyHeroProfile');
-    if (!profile) {
-      navigate('/onboarding');
-      return;
-    }
-
-    const profileData = JSON.parse(profile);
-    setProfileInfo(profileData);
-
-    // Load all study plans
-    loadStudyPlans();
-    
-    // Load test scores
-    loadTestScores();
-  }, [navigate]);
-
-  const loadTestScores = () => {
-    const savedScores = localStorage.getItem('weeklyTestScores');
-    if (savedScores) {
-      try {
-        const scores = JSON.parse(savedScores);
-        // Convert array to record
-        const scoreRecord: Record<string, number> = {};
-        scores.forEach((score: TestScore) => {
-          scoreRecord[score.id] = score.score;
-        });
-        setTestScores(scoreRecord);
-      } catch (e) {
-        console.error("Error loading test scores:", e);
-      }
-    }
-  };
-
-  const loadStudyPlans = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Get all study plans from localStorage
-      const plans = localStorage.getItem('studyPlans');
-      
-      if (plans) {
-        const parsedPlans = JSON.parse(plans) as SubjectPlan[];
-        setStudyPlans(parsedPlans);
-        
-        // Set active subject to the first one if not already set
-        if (parsedPlans.length > 0 && !activeSubject) {
-          setActiveSubject(parsedPlans[0].subject);
-        }
-        
-        // Generate weekly plans for subjects that don't have them
-        for (const plan of parsedPlans) {
-          if (!plan.weeklyPlans || plan.weeklyPlans.length === 0) {
-            await generateWeeklyPlan(plan.subject, plan.items);
-          }
-        }
-        
-        setIsLoading(false);
-      } else {
-        // If no plans exist yet, create plans for all selected subjects from profile
-        const profile = localStorage.getItem('studyHeroProfile');
-        if (profile) {
-          const { subjects, board, className } = JSON.parse(profile);
-          
-          if (subjects && Array.isArray(subjects) && subjects.length > 0) {
-            const newPlans: SubjectPlan[] = [];
-            
-            // Initialize with loading state
-            setStudyPlans(subjects.map(subject => ({ subject, items: [] })));
-            setActiveSubject(subjects[0]);
-            
-            // Generate study plans for each subject
-            for (const subject of subjects) {
-              try {
-                const plan = await generateStudyPlan(board, className, subject);
-                if (plan) {
-                  // Generate weekly plan
-                  const weeklyData = await generateWeeklyPlan(subject, plan);
-                  
-                  newPlans.push({
-                    subject,
-                    items: plan,
-                    weeklyPlans: weeklyData
-                  });
-                  
-                  toast({
-                    title: "Subject Plan Created",
-                    description: `Successfully loaded ${subject} into your dashboard`,
-                  });
-                }
-              } catch (err) {
-                console.error(`Error generating study plan for ${subject}:`, err);
-              }
-            }
-            
-            setStudyPlans(newPlans);
-            if (newPlans.length > 0 && !activeSubject) {
-              setActiveSubject(newPlans[0].subject);
-            }
-            localStorage.setItem('studyPlans', JSON.stringify(newPlans));
-          }
-        }
-        setIsLoading(false);
-      }
-    } catch (e) {
-      console.error("Error loading study plans:", e);
-      setError("Failed to load your study plans. Please try again later.");
-      setIsLoading(false);
-    }
-  };
-
-  const generateStudyPlan = async (board: string, className: string, subject: string): Promise<StudyItem[] | null> => {
-    try {
+    const loadDashboardData = async () => {
+      setLoading(true);
       setError(null);
       
-      toast({
-        title: "Connecting to NCERT",
-        description: `Extracting curriculum data for ${subject}...`,
-      });
-      
-      const planData = await claudeService.generateStudyPlan(board, className, subject);
-      
-      if (!planData || !planData.items || !Array.isArray(planData.items) || planData.items.length === 0) {
-        throw new Error("Invalid study plan data received");
+      try {
+        // Load user data
+        const userData = await userService.getUserProfile();
+        setUser(userData);
+        
+        // Load study plans
+        const savedPlans = localStorage.getItem('studyPlans');
+        if (savedPlans) {
+          setStudyPlans(JSON.parse(savedPlans));
+        } else {
+          const fetchedPlans = await studyPlanService.getStudyPlans();
+          setStudyPlans(fetchedPlans);
+          localStorage.setItem('studyPlans', JSON.stringify(fetchedPlans));
+        }
+        
+        // Load weekly plans
+        const savedWeeklyPlans = localStorage.getItem('weeklyPlans');
+        if (savedWeeklyPlans) {
+          setWeeklyPlans(JSON.parse(savedWeeklyPlans));
+        }
+        
+        // Load test scores
+        const savedScores = localStorage.getItem('weeklyTestScores');
+        if (savedScores) {
+          const scores: TestScore[] = JSON.parse(savedScores);
+          const scoresMap: Record<string, number> = {};
+          scores.forEach(score => {
+            scoresMap[`test-week-${score.weekNumber}`] = score.score;
+          });
+          setTestScores(scoresMap);
+        }
+        
+      } catch (err: any) {
+        console.error("Error loading dashboard data:", err);
+        setError(err.message || "Failed to load dashboard data.");
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      toast({
-        title: "Study Plan Created",
-        description: `Successfully generated curriculum for ${subject}`,
-      });
-      
-      // Use the items from the response directly
-      return planData.items;
-    } catch (error) {
-      console.error("Error generating study plan:", error);
-      setError("Failed to generate your study plan. Please try again later.");
-      toast({
-        title: "Error generating study plan",
-        description: "Please try again later",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
-
-  const generateWeeklyPlan = async (subject: string, items: StudyItem[]): Promise<WeeklyPlan[] | undefined> => {
-    try {
-      setIsGeneratingWeeklyPlan(true);
-      
-      const response = await claudeService.generateWeeklyPlan(subject, items);
-      
-      if (!response || !response.weeklyPlans) {
-        throw new Error("Invalid weekly plan data received");
+    };
+    
+    loadDashboardData();
+  }, []);
+  
+  const handleStartItem = (itemId: string) => {
+    // Find the item in the study plan
+    let foundItem: StudyItem | null = null;
+    
+    // First check in regular study items
+    for (const plan of studyPlans) {
+      const item = plan.items.find(item => item.id === itemId);
+      if (item) {
+        foundItem = item;
+        break;
       }
-      
-      // Update the study plans in state
-      setStudyPlans(prevPlans => 
-        prevPlans.map(plan => 
-          plan.subject === subject 
-            ? { ...plan, weeklyPlans: response.weeklyPlans } 
-            : plan
-        )
-      );
-      
-      // Update localStorage
-      const updatedPlans = studyPlans.map(plan => 
-        plan.subject === subject 
-          ? { ...plan, weeklyPlans: response.weeklyPlans } 
-          : plan
-      );
-      localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
-      
-      toast({
-        title: "Weekly Plan Created",
-        description: `Your ${subject} curriculum is now organized into a daily study schedule`,
-      });
-      
-      return response.weeklyPlans;
-    } catch (error) {
-      console.error("Error generating weekly plan:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create weekly plan",
-        variant: "destructive"
-      });
-      return undefined;
-    } finally {
-      setIsGeneratingWeeklyPlan(false);
     }
-  };
-
-  const handleStartItem = (id: string) => {
-    // Find the active subject plan
-    const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
-    if (!activePlan) return;
     
-    // Try to find the item in regular study plan
-    let item = activePlan.items.find(item => item.id === id);
-    
-    // If not found, check weekly tests
-    if (!item && activePlan.weeklyPlans) {
-      for (const week of activePlan.weeklyPlans) {
-        if (week.weeklyTest.id === id) {
-          item = week.weeklyTest as StudyItem;
+    // Then check in weekly tests if not found
+    if (!foundItem) {
+      for (const weeklyPlan of weeklyPlans) {
+        if (weeklyPlan.weeklyTest.id === itemId) {
+          // Convert WeeklyTest to StudyItem with explicit type casting and adding content property
+          foundItem = {
+            ...weeklyPlan.weeklyTest,
+            content: "", // Add empty content property to satisfy the StudyItem interface
+          } as StudyItem;
           break;
         }
-      }
-    }
-    
-    // If still not found, check in daily activities
-    if (!item && activePlan.weeklyPlans) {
-      for (const week of activePlan.weeklyPlans) {
-        for (const day of week.dailyActivities) {
-          const foundItem = day.items.find(dayItem => dayItem.id === id);
-          if (foundItem) {
-            item = foundItem;
+        
+        // Also check in daily activities
+        for (const day of weeklyPlan.dailyActivities) {
+          const item = day.items.find(item => item.id === itemId);
+          if (item) {
+            foundItem = item;
             break;
           }
         }
-        if (item) break;
+        if (foundItem) break;
       }
     }
     
-    if (item) {
-      // Save the current item to localStorage for the lesson/quiz page
-      localStorage.setItem('currentStudyItem', JSON.stringify(item));
+    if (foundItem) {
+      // Save the current study item
+      localStorage.setItem('currentStudyItem', JSON.stringify(foundItem));
       
-      // Update the studyPlans with all subjects
-      localStorage.setItem('studyPlans', JSON.stringify(studyPlans));
-      
-      if (item.type === 'quiz') {
-        navigate(`/quiz/${id}`);
-      } else {
-        navigate(`/lesson/${id}`);
+      // Navigate based on item type
+      if (foundItem.type === 'quiz' || foundItem.isWeeklyTest) {
+        navigate(`/quiz/${foundItem.id}`);
+      } else if (foundItem.type === 'lesson') {
+        navigate(`/lesson/${foundItem.id}`);
       }
-    }
-  };
-
-  const handleRegeneratePlan = async () => {
-    // Regenerate only the active subject plan
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const plan = await generateStudyPlan(profileInfo.board, profileInfo.className, activeSubject);
-      
-      if (plan) {
-        // Generate weekly plan for the new study plan
-        const weeklyPlans = await generateWeeklyPlan(activeSubject, plan);
-        
-        // Update just the active plan
-        const updatedPlans = studyPlans.map(p => 
-          p.subject === activeSubject ? { ...p, items: plan, weeklyPlans } : p
-        );
-        
-        setStudyPlans(updatedPlans);
-        localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
-        
-        toast({
-          title: "Study plan regenerated!",
-          description: `Your ${activeSubject} study plan has been updated with a new daily schedule`,
-        });
-      }
-    } catch (err) {
-      console.error("Error regenerating study plan:", err);
+    } else {
       toast({
-        title: "Failed to regenerate study plan",
-        description: "Please try again later",
+        title: "Item Not Found",
+        description: "Unable to find the selected study item.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  const handleAddSubject = async () => {
-    if (!newSubject || !newSubjectClass || !newSubjectBoard) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all fields for the new subject",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsGeneratingPlan(true);
-    setError(null);
-    
-    try {
-      // Check if subject already exists
-      if (studyPlans.some(plan => plan.subject.toLowerCase() === newSubject.toLowerCase())) {
-        toast({
-          title: "Subject already exists",
-          description: "This subject is already in your study plans",
-          variant: "destructive"
-        });
-        setIsGeneratingPlan(false);
-        return;
-      }
-      
-      toast({
-        title: "Adding New Subject",
-        description: `Connecting to NCERT for ${newSubject} curriculum...`,
-      });
-      
-      // Generate new plan
-      const newPlan = await generateStudyPlan(newSubjectBoard, newSubjectClass, newSubject);
-      
-      if (newPlan) {
-        // Generate weekly plan
-        const weeklyPlans = await generateWeeklyPlan(newSubject, newPlan);
-        
-        // Add to existing plans
-        const updatedPlans = [...studyPlans, {
-          subject: newSubject,
-          items: newPlan,
-          weeklyPlans
-        }];
-        
-        setStudyPlans(updatedPlans);
-        setActiveSubject(newSubject);
-        localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
-        
-        // Update profile subjects
-        const updatedProfile = {
-          ...profileInfo,
-          subjects: [...new Set([...profileInfo.subjects, newSubject])]
-        };
-        setProfileInfo(updatedProfile);
-        localStorage.setItem('studyHeroProfile', JSON.stringify(updatedProfile));
-        
-        // Clear the form
-        setNewSubject("");
-        setNewSubjectClass("");
-        setNewSubjectBoard("");
-        setIsAddingSubject(false);
-        
-        toast({
-          title: "Subject added!",
-          description: `Your ${newSubject} study plan is now ready with a daily schedule`,
-        });
-      }
-    } catch (error) {
-      console.error("Error adding subject:", error);
-      toast({
-        title: "Error adding subject",
-        description: "Failed to create study plan for this subject",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGeneratingPlan(false);
-    }
+  
+  const handleGenerateStudyPlan = () => {
+    navigate('/onboarding');
   };
-
-  const handleClearUserData = () => {
-    setIsResetDialogOpen(true);
-  };
-
-  const confirmClearUserData = () => {
-    try {
-      // Call the service method to clear all data
-      claudeService.clearAllUserData();
-      
-      // After clearing data, redirect to onboarding
-      navigate('/onboarding');
-    } catch (error) {
-      console.error("Error clearing user data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to clear user data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsResetDialogOpen(false);
-    }
-  };
-
-  // Get the current active plan
-  const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
-  const activeItems = activePlan?.items || [];
-  const activeWeeklyPlans = activePlan?.weeklyPlans || [];
-
-  // Calculate progress for the active plan
-  const totalItems = activeItems.length;
-  const completedItems = activeItems.filter(item => item.status === "completed").length;
-  const completionPercentage = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
-
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
+        <main className="flex-1 container py-6">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Loading Dashboard</CardTitle>
+              <CardDescription>Fetching your study plans and progress...</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+              </div>
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
+        <main className="flex-1 container py-6">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Error Loading Dashboard</CardTitle>
+              <CardDescription>{error}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <StudyAIHeader 
-        userName={profileInfo.userName || "Student"} 
-        level={parseInt(localStorage.getItem('currentLevel') || '1')}
-        xp={parseInt(localStorage.getItem('currentXp') || '0')}
+      <StudyAIHeader
+        userName={user?.name || "Student"}
+        level={user?.level || 1}
+        xp={user?.xp || 0}
         navigation={navigationItems}
       />
-      
-      <main className="flex-1">
-        <div className="container py-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-display">
-                {activeSubject} Adventure
-              </h1>
-              <p className="text-muted-foreground">
-                Class {profileInfo.className} • {profileInfo.board}
-              </p>
-            </div>
-            
-            <div className="flex gap-2 mt-4 md:mt-0">
-              <Dialog open={isAddingSubject} onOpenChange={setIsAddingSubject}>
-                <DialogTrigger asChild>
-                  <Button variant="default">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Subject
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Subject</DialogTitle>
-                    <DialogDescription>
-                      Add a new subject to your study plan. This will generate a complete curriculum for the subject.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="subject" className="text-right">
-                        Subject
-                      </Label>
-                      <Input
-                        id="subject"
-                        value={newSubject}
-                        onChange={(e) => setNewSubject(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g. Mathematics, Physics, Biology"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="class" className="text-right">
-                        Class
-                      </Label>
-                      <Input
-                        id="class"
-                        value={newSubjectClass}
-                        onChange={(e) => setNewSubjectClass(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g. 8, 9, 10"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="board" className="text-right">
-                        Board
-                      </Label>
-                      <Input
-                        id="board"
-                        value={newSubjectBoard}
-                        onChange={(e) => setNewSubjectBoard(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g. CBSE, ICSE, State Board"
-                      />
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddingSubject(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddSubject} disabled={isGeneratingPlan}>
-                      {isGeneratingPlan ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating Plan...
-                        </>
-                      ) : (
-                        "Add Subject"
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              
-              <Button 
-                variant="outline" 
-                onClick={handleRegeneratePlan}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Regenerate Plan
-                  </>
-                )}
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={handleClearUserData}
-                className="border-destructive text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Data
-              </Button>
-            </div>
+      <main className="flex-1 container py-6">
+        <div className="md:flex md:items-center md:justify-between">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back! Let's continue your learning journey.</p>
           </div>
-
-          {studyPlans.length > 1 && (
-            <div className="mb-6">
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex w-max space-x-2 p-2">
-                  {studyPlans.map((plan, index) => (
-                    <Button
-                      key={index}
-                      variant={plan.subject === activeSubject ? "default" : "outline"}
-                      onClick={() => setActiveSubject(plan.subject)}
-                      className="flex-shrink-0"
-                    >
-                      {plan.subject}
-                    </Button>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </div>
-          )}
-
-          {error ? (
-            <Alert variant="destructive" className="my-4">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          <Button onClick={handleGenerateStudyPlan}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Generate New Study Plan
+          </Button>
+        </div>
+        
+        <div className="mt-4">
+          {weeklyPlans && weeklyPlans.length > 0 ? (
+            <WeeklyPlanView weeklyPlans={weeklyPlans} onStartItem={handleStartItem} testScores={testScores} />
           ) : (
-            <Tabs defaultValue="timeline" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-4">
-                <TabsTrigger 
-                  value="timeline" 
-                  onClick={() => setViewMode("timeline")}
-                >
-                  Timeline
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="daily"
-                  onClick={() => setViewMode("weekly")}
-                >
-                  Daily Plan
-                </TabsTrigger>
-                <TabsTrigger value="progress">Progress</TabsTrigger>
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="timeline" className="mt-6">
-                {isLoading ? (
-                  <div className="flex flex-col justify-center items-center h-64 space-y-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p>Creating your personalized study plan...</p>
-                  </div>
-                ) : activeItems.length > 0 ? (
-                  <StudyTimeline items={activeItems} onStartItem={handleStartItem} />
-                ) : (
-                  <div className="text-center py-12">
-                    <h3 className="text-lg font-medium">No study plan available</h3>
-                    <p className="text-muted-foreground mt-2">Click the Regenerate button to create a new study plan</p>
-                    <Button className="mt-4" onClick={handleRegeneratePlan}>
-                      Generate Study Plan
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="daily" className="mt-6">
-                {isLoading || isGeneratingWeeklyPlan ? (
-                  <div className="flex flex-col justify-center items-center h-64 space-y-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p>Organizing your daily study schedule...</p>
-                  </div>
-                ) : activeWeeklyPlans.length > 0 ? (
-                  <WeeklyPlanView 
-                    weeklyPlans={activeWeeklyPlans} 
-                    onStartItem={handleStartItem}
-                    testScores={testScores}
-                  />
-                ) : (
-                  <div className="text-center py-12">
-                    <h3 className="text-lg font-medium">No daily plan available</h3>
-                    <p className="text-muted-foreground mt-2">We need to generate a daily study schedule for you</p>
-                    <Button 
-                      className="mt-4" 
-                      onClick={() => generateWeeklyPlan(activeSubject, activeItems)}
-                      disabled={isGeneratingWeeklyPlan}
-                    >
-                      {isGeneratingWeeklyPlan ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="mr-2 h-4 w-4" />
-                          Create Daily Schedule
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="progress" className="mt-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <ProgressCard 
-                    title="Overall Progress" 
-                    percentage={completionPercentage} 
-                    icon={<BookOpen className="h-4 w-4" />}
-                    color="blue"
-                  />
-                  <ProgressCard 
-                    title="Quizzes Completed" 
-                    percentage={Math.round((activeItems.filter(item => item.status === "completed" && item.type === "quiz").length / 
-                      Math.max(1, activeItems.filter(item => item.type === "quiz").length)) * 100)} 
-                    icon={<Award className="h-4 w-4" />}
-                    color="purple"
-                  />
-                  <ProgressCard 
-                    title="Lessons Studied" 
-                    percentage={Math.round((activeItems.filter(item => item.status === "completed" && item.type === "lesson").length / 
-                      Math.max(1, activeItems.filter(item => item.type === "lesson").length)) * 100)} 
-                    icon={<BookOpen className="h-4 w-4" />}
-                    color="green"
-                  />
-                  <ProgressCard 
-                    title="Practice Completed" 
-                    percentage={Math.round((activeItems.filter(item => item.status === "completed" && item.type === "practice").length / 
-                      Math.max(1, activeItems.filter(item => item.type === "practice").length)) * 100)} 
-                    icon={<BarChart className="h-4 w-4" />}
-                    color="orange"
-                  />
-                </div>
-                
-                {Object.keys(testScores).length > 0 && (
-                  <Card className="mt-6">
-                    <CardHeader>
-                      <CardTitle>Weekly Test Scores</CardTitle>
-                      <CardDescription>Your performance on weekly assessment tests</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                        {Object.entries(testScores)
-                          .filter(([id]) => id.startsWith('test-week-'))
-                          .sort((a, b) => {
-                            const weekA = parseInt(a[0].split('-').pop() || '0');
-                            const weekB = parseInt(b[0].split('-').pop() || '0');
-                            return weekA - weekB;
-                          })
-                          .map(([id, score]) => {
-                            const weekNumber = id.split('-').pop();
-                            return (
-                              <Card key={id} className="border">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-base">Week {weekNumber} Test</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="text-3xl font-bold text-center my-2">
-                                    {score}%
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div 
-                                      className={`h-2.5 rounded-full ${
-                                        score >= 80 ? 'bg-green-500' : 
-                                        score >= 60 ? 'bg-yellow-500' : 
-                                        'bg-red-500'
-                                      }`}
-                                      style={{ width: `${score}%` }}
-                                    ></div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })
-                        }
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="upcoming" className="mt-6">
-                <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                  <div className="flex w-max space-x-4 p-4">
-                    {activeItems
-                      .filter(item => item.status === "future")
-                      .slice(0, 7)
-                      .map(item => (
-                        <Card key={item.id} className="w-[250px] shrink-0">
-                          <CardHeader className="p-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium">{item.dueDate}</span>
-                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                item.type === 'lesson' ? 'bg-blue-100 text-blue-800' : 
-                                item.type === 'quiz' ? 'bg-purple-100 text-purple-800' : 
-                                'bg-orange-100 text-orange-800'
-                              }`}>
-                                {item.type}
-                              </span>
-                            </div>
-                            <CardTitle className="text-base mt-2">{item.title}</CardTitle>
-                            <CardDescription className="mt-1 line-clamp-2">{item.description}</CardDescription>
-                          </CardHeader>
-                          <CardContent className="pb-4 pt-0">
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleStartItem(item.id)} 
-                              className="w-full"
-                            >
-                              Start Topic
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
+            <Card className="w-full">
+              <CardContent className="pt-6 text-center">
+                <p className="text-muted-foreground">No weekly plan available yet. Generate a study plan to get started.</p>
+              </CardContent>
+            </Card>
           )}
         </div>
-      
-        <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reset All Data</DialogTitle>
-              <DialogDescription>
-                This will clear all your study plans, progress, and achievements. This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={confirmClearUserData}
-              >
-                Reset All Data
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </main>
     </div>
   );
