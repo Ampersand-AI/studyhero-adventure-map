@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { StudyAIHeader } from '@/components/StudyAIHeader';
+import StudyAIHeader from '@/components/StudyAIHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, BarChartHorizontal, LineChart, PieChart } from "@/components/ui/charts";

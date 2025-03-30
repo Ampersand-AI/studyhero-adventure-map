@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StudyAIHeader } from '@/components/StudyAIHeader';
+import StudyAIHeader from '@/components/StudyAIHeader';
 import ProgressCard from '@/components/ProgressCard';
 import StudyTimeline from '@/components/StudyTimeline';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
