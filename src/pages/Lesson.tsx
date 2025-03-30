@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
@@ -42,6 +41,7 @@ const Lesson = () => {
   const [lessonCompleted, setLessonCompleted] = useState(false);
   const [currentSection, setCurrentSection] = useState('content'); // 'content' or 'test'
   const [testContent, setTestContent] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Get the current study item from localStorage
   const currentStudyItem = JSON.parse(localStorage.getItem('currentStudyItem') || '{}');
@@ -49,6 +49,7 @@ const Lesson = () => {
   useEffect(() => {
     const loadLessonContent = async () => {
       setIsLoading(true);
+      setError(null);
       
       try {
         if (!currentStudyItem || !currentStudyItem.subject || !currentStudyItem.title) {
@@ -58,7 +59,20 @@ const Lesson = () => {
         // Check if we already have content for this lesson
         const cachedContent = localStorage.getItem(`lesson_${id}_content`);
         if (cachedContent) {
-          setLessonContent(JSON.parse(cachedContent));
+          const parsedContent = JSON.parse(cachedContent);
+          // Check if the cached content has all required fields
+          if (parsedContent && 
+              parsedContent.keyPoints && 
+              parsedContent.explanation && 
+              parsedContent.examples && 
+              parsedContent.visualAids && 
+              parsedContent.activities && 
+              parsedContent.summary) {
+            setLessonContent(parsedContent);
+          } else {
+            // If cached content is missing fields, regenerate it
+            throw new Error("Cached lesson content is incomplete");
+          }
         } else {
           // Generate content
           const content = await claudeService.generateLessonContent(
@@ -66,9 +80,17 @@ const Lesson = () => {
             currentStudyItem.title
           );
           
-          if (content) {
+          if (content && 
+              content.keyPoints && 
+              content.explanation && 
+              content.examples && 
+              content.visualAids && 
+              content.activities && 
+              content.summary) {
             setLessonContent(content);
             localStorage.setItem(`lesson_${id}_content`, JSON.stringify(content));
+          } else {
+            throw new Error("Generated lesson content is incomplete");
           }
         }
         
@@ -81,6 +103,7 @@ const Lesson = () => {
         }
       } catch (error) {
         console.error("Error loading lesson content:", error);
+        setError("Failed to load lesson content. Please try again.");
         toast({
           title: "Error",
           description: "Failed to load lesson content. Please try again.",
@@ -201,7 +224,7 @@ const Lesson = () => {
     { name: "Dashboard", href: "/dashboard", icon: <ChevronLeft className="h-4 w-4" /> },
   ];
   
-  if (isLoading || !lessonContent) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <StudyAIHeader 
@@ -215,6 +238,39 @@ const Lesson = () => {
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
             <p>Loading lesson content...</p>
           </div>
+        </main>
+      </div>
+    );
+  }
+  
+  if (error || !lessonContent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader 
+          userName="Student"
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
+          navigation={navigationItems}
+        />
+        <main className="flex-1 container py-12 flex items-center justify-center">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle>Error Loading Lesson</CardTitle>
+              <CardDescription>We couldn't load the lesson content</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>{error || "Something went wrong while loading this lesson."}</p>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={() => navigate('/dashboard')}>
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
+              <Button className="ml-2" onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </CardFooter>
+          </Card>
         </main>
       </div>
     );
@@ -274,7 +330,7 @@ const Lesson = () => {
             <section>
               <h3 className="text-xl font-semibold mb-4">Key Points</h3>
               <ul className="list-disc pl-6 space-y-2">
-                {lessonContent.keyPoints.map((point, index) => (
+                {lessonContent.keyPoints && lessonContent.keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>
                 ))}
               </ul>
@@ -284,7 +340,7 @@ const Lesson = () => {
             <section>
               <h3 className="text-xl font-semibold mb-4">Explanation</h3>
               <div className="space-y-4">
-                {lessonContent.explanation.map((paragraph, index) => (
+                {lessonContent.explanation && lessonContent.explanation.map((paragraph, index) => (
                   <p key={index}>{paragraph}</p>
                 ))}
               </div>
@@ -294,7 +350,7 @@ const Lesson = () => {
             <section>
               <h3 className="text-xl font-semibold mb-4">Examples</h3>
               <div className="space-y-4">
-                {lessonContent.examples.map((example, index) => (
+                {lessonContent.examples && lessonContent.examples.map((example, index) => (
                   <div key={index} className="p-4 border rounded-lg">
                     <h4 className="font-medium mb-2">{example.title}</h4>
                     <p>{example.content}</p>
@@ -307,7 +363,7 @@ const Lesson = () => {
             <section>
               <h3 className="text-xl font-semibold mb-4">Visual Aids</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {lessonContent.visualAids.map((aid, index) => (
+                {lessonContent.visualAids && lessonContent.visualAids.map((aid, index) => (
                   <div key={index} className="p-4 border rounded-lg bg-muted/50">
                     <h4 className="font-medium mb-2">{aid.title}</h4>
                     <p>{aid.description}</p>
@@ -320,7 +376,7 @@ const Lesson = () => {
             <section>
               <h3 className="text-xl font-semibold mb-4">Activities</h3>
               <div className="space-y-4">
-                {lessonContent.activities.map((activity, index) => (
+                {lessonContent.activities && lessonContent.activities.map((activity, index) => (
                   <div key={index} className="p-4 border rounded-lg bg-primary/5">
                     <h4 className="font-medium mb-2">{activity.title}</h4>
                     <p>{activity.instructions}</p>
