@@ -104,7 +104,7 @@ const SubjectCardGrid: React.FC<SubjectCardGridProps> = ({ subjects, onSelectSub
     } else if (subjectLower.includes('economics')) {
       return 'Learn about markets, resources, and economic systems.';
     } else if (subjectLower.includes('geography')) {
-      return 'Explore Earth's landscapes, environments, and human interactions.';
+      return "Explore Earth's landscapes, environments, and human interactions.";
     } else if (subjectLower.includes('computer')) {
       return 'Learn programming, algorithms, and computational thinking.';
     } else if (subjectLower.includes('biology')) {
