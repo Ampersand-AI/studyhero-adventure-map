@@ -157,9 +157,7 @@ const LessonTest = ({
         }
         
         // Otherwise, try to fetch questions from Claude service
-        toast.loading("Preparing test questions...", {
-          description: `Creating questions for ${topicName}`,
-        });
+        toast.loading("Preparing test questions... Creating questions for " + topicName);
         
         try {
           // Fetch questions from Claude service
@@ -178,9 +176,7 @@ const LessonTest = ({
             setQuestions(processedQuestions);
             setSelectedAnswers(Array(processedQuestions.length).fill(''));
             
-            toast.success("Test ready", {
-              description: `${processedQuestions.length} questions prepared for ${topicName}`,
-            });
+            toast.success("Test ready - " + processedQuestions.length + " questions prepared for " + topicName);
           } else {
             throw new Error("Failed to load quiz questions");
           }
@@ -188,9 +184,7 @@ const LessonTest = ({
           console.error("API Error:", apiError);
           
           // Use sample questions as fallback
-          toast({
-            description: "Using example questions for this test",
-          });
+          toast("Using example questions for this test");
           
           // Use subject-specific sample questions if available in the future
           setQuestions(sampleQuestions);
@@ -198,9 +192,7 @@ const LessonTest = ({
         }
       } catch (error) {
         console.error("Error loading questions:", error);
-        toast.error("Error", {
-          description: "Failed to load quiz questions. Using sample questions.",
-        });
+        toast.error("Failed to load quiz questions. Using sample questions.");
         
         // Use sample questions as fallback
         setQuestions(sampleQuestions);

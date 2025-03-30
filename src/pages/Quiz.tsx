@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import StudyAIHeader from '@/components/StudyAIHeader';
 import { claudeService } from '@/services/claudeService';
+import { ChevronLeft } from 'lucide-react';
 
 const Quiz = () => {
   const { id } = useParams();
@@ -36,9 +37,7 @@ const Quiz = () => {
         setStudyItem(parsedStudyItem);
         
         // Show toast for quiz loading
-        toast({
-          description: `Loading quiz for ${parsedStudyItem.title}...`,
-        });
+        toast("Loading quiz for " + parsedStudyItem.title + "...");
         
         // Get quiz from Claude API
         const result = await claudeService.getQuizQuestions(
@@ -67,11 +66,7 @@ const Quiz = () => {
             ]
           });
           
-          toast({
-            title: "Using demo questions",
-            description: "Couldn't load specific questions for this topic.",
-            variant: "destructive"
-          });
+          toast("Using demo questions - Couldn't load specific questions for this topic.");
         }
       } catch (error) {
         console.error("Error loading quiz:", error);
@@ -90,11 +85,7 @@ const Quiz = () => {
           ]
         });
         
-        toast({
-          title: "Error",
-          description: "There was a problem loading this quiz. Using sample questions.",
-          variant: "destructive"
-        });
+        toast("Error - There was a problem loading this quiz. Using sample questions.");
       } finally {
         setLoading(false);
       }
@@ -134,7 +125,7 @@ const Quiz = () => {
   };
   
   const navigationItems = [
-    { name: "Back to Dashboard", href: "/dashboard" },
+    { name: "Back to Dashboard", href: "/dashboard", icon: <ChevronLeft className="h-4 w-4" /> },
   ];
   
   if (loading) {
