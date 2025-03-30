@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -52,35 +51,49 @@ const Lesson = () => {
     // First try to get the lesson item from the currentStudyItem in localStorage
     const currentItem = localStorage.getItem('currentStudyItem');
     if (currentItem) {
-      const parsedItem = JSON.parse(currentItem);
-      if (parsedItem.id === id) {
-        setLessonItem(parsedItem);
-        loadLessonContent(parsedItem.title);
-        return;
+      try {
+        const parsedItem = JSON.parse(currentItem);
+        if (parsedItem.id === id) {
+          setLessonItem(parsedItem);
+          loadLessonContent(parsedItem.title);
+          return;
+        }
+      } catch (e) {
+        console.error("Error parsing currentStudyItem:", e);
       }
     }
 
     // Otherwise, find the lesson in the study plan
     const studyPlans = localStorage.getItem('studyPlans');
     if (studyPlans) {
-      const plans = JSON.parse(studyPlans);
-      let found = false;
-      
-      for (const plan of plans) {
-        const item = plan.items.find((item: any) => item.id === id);
-        if (item) {
-          setLessonItem(item);
-          loadLessonContent(item.title);
-          found = true;
-          break;
+      try {
+        const plans = JSON.parse(studyPlans);
+        let found = false;
+        
+        for (const plan of plans) {
+          const item = plan.items.find((item: any) => item.id === id);
+          if (item) {
+            setLessonItem(item);
+            loadLessonContent(item.title);
+            found = true;
+            break;
+          }
         }
-      }
-      
-      if (!found) {
+        
+        if (!found) {
+          navigate('/dashboard');
+          toast({
+            title: "Lesson not found",
+            description: "This lesson could not be found in your study plans",
+            variant: "destructive"
+          });
+        }
+      } catch (e) {
+        console.error("Error parsing study plans:", e);
         navigate('/dashboard');
         toast({
-          title: "Lesson not found",
-          description: "This lesson could not be found in your study plans",
+          title: "Error loading lesson data",
+          description: "Failed to parse study plan data",
           variant: "destructive"
         });
       }
@@ -158,17 +171,17 @@ const Lesson = () => {
       
       // Ensure the content has all required fields with fallbacks
       const normalizedContent: LessonContent = {
-        title: content.title || topic,
-        keyPoints: content.keyPoints || [],
-        explanation: content.explanation || [],
-        examples: content.examples || [],
-        visualAids: content.visualAids || [],
+        title: content?.title || topic,
+        keyPoints: Array.isArray(content?.keyPoints) ? content.keyPoints : [],
+        explanation: Array.isArray(content?.explanation) ? content.explanation : [],
+        examples: Array.isArray(content?.examples) ? content.examples : [],
+        visualAids: Array.isArray(content?.visualAids) ? content.visualAids : [],
         activities: [],
-        summary: content.summary || ""
+        summary: content?.summary || ""
       };
       
       // Normalize activities if they're not in the expected format
-      if (content.activities && Array.isArray(content.activities)) {
+      if (content?.activities && Array.isArray(content.activities)) {
         if (content.activities.length > 0) {
           if (typeof content.activities[0] === 'string') {
             normalizedContent.activities = content.activities.map((activity: string) => ({
@@ -189,8 +202,22 @@ const Lesson = () => {
       if (normalizedContent.visualAids && normalizedContent.visualAids.length > 0) {
         loadVisualDiagrams(topic, normalizedContent.visualAids);
       }
+
+      return normalizedContent;
     } catch (error) {
       console.error("Error fetching lesson content:", error);
+      // Set a default lesson content structure to prevent rendering errors
+      const defaultContent: LessonContent = {
+        title: topic || "Lesson",
+        keyPoints: ["Key concepts in this lesson"],
+        explanation: ["This lesson covers important educational material."],
+        examples: [{ title: "Example", content: "An example would be shown here." }],
+        visualAids: [],
+        activities: [],
+        summary: "A summary of the lesson concepts."
+      };
+      
+      setLessonContent(defaultContent);
       throw error;
     }
   };
@@ -218,9 +245,11 @@ const Lesson = () => {
       // Generate diagrams for each visual aid
       if (visualAids && visualAids.length > 0) {
         for (const aid of visualAids) {
-          console.log(`Generating diagram for ${aid.title}`);
-          const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
-          diagramsObj[aid.title] = diagramDescription;
+          if (aid?.title) {
+            console.log(`Generating diagram for ${aid.title}`);
+            const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
+            diagramsObj[aid.title] = diagramDescription;
+          }
         }
       }
       
@@ -505,7 +534,7 @@ const Lesson = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Key Points</h3>
                         <ul className="list-disc pl-5 space-y-1">
-                          {lessonContent.keyPoints && lessonContent.keyPoints.length > 0 ? (
+                          {lessonContent.keyPoints && Array.isArray(lessonContent.keyPoints) && lessonContent.keyPoints.length > 0 ? (
                             lessonContent.keyPoints.map((point, index) => (
                               <li key={index}>{point}</li>
                             ))
@@ -520,7 +549,7 @@ const Lesson = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Explanation</h3>
                         <div className="space-y-3">
-                          {lessonContent.explanation && lessonContent.explanation.length > 0 ? (
+                          {lessonContent.explanation && Array.isArray(lessonContent.explanation) && lessonContent.explanation.length > 0 ? (
                             lessonContent.explanation.map((paragraph, index) => (
                               <p key={index}>{paragraph}</p>
                             ))
@@ -535,7 +564,7 @@ const Lesson = () => {
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Examples</h3>
                         <div className="space-y-4">
-                          {lessonContent.examples && lessonContent.examples.length > 0 ? (
+                          {lessonContent.examples && Array.isArray(lessonContent.examples) && lessonContent.examples.length > 0 ? (
                             lessonContent.examples.map((example, index) => (
                               <Card key={index} className="bg-muted/50">
                                 <CardHeader className="pb-2">
@@ -587,18 +616,18 @@ const Lesson = () => {
                       <Skeleton className="h-4 w-3/4" />
                       <Skeleton className="h-40 w-full rounded-md" />
                     </div>
-                  ) : lessonContent && lessonContent.visualAids && lessonContent.visualAids.length > 0 ? (
+                  ) : lessonContent && lessonContent.visualAids && Array.isArray(lessonContent.visualAids) && lessonContent.visualAids.length > 0 ? (
                     <div className="space-y-4">
                       {lessonContent.visualAids.map((aid, index) => (
                         <div key={index} className="border rounded-md p-3">
-                          <h4 className="font-medium mb-1">{aid.title}</h4>
-                          <p className="text-sm text-muted-foreground mb-2">{aid.description}</p>
+                          <h4 className="font-medium mb-1">{aid.title || `Visual Aid ${index+1}`}</h4>
+                          <p className="text-sm text-muted-foreground mb-2">{aid.description || "Visual representation of concept"}</p>
                           <div className="mt-2 bg-muted p-4 h-auto rounded-md">
                             {isLoadingDiagrams ? (
                               <div className="flex items-center justify-center h-40">
                                 <Loader2 className="h-6 w-6 animate-spin" />
                               </div>
-                            ) : visualDiagrams[aid.title] ? (
+                            ) : aid.title && visualDiagrams[aid.title] ? (
                               <div className="text-sm overflow-auto max-h-[200px]">
                                 <p className="whitespace-pre-wrap">{visualDiagrams[aid.title]}</p>
                               </div>
