@@ -1,273 +1,246 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import OnboardingCard from '@/components/OnboardingCard';
+import { 
+  Card, 
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Book, Rocket, GraduationCap, User, BookOpen, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import StudyHeroHeader from '@/components/StudyHeroHeader';
+import OnboardingCard from '@/components/OnboardingCard';
+import SchoolSelectionForm from '@/components/SchoolSelectionForm';
+import { BookOpen, ChevronRight, GraduationCap, School } from "lucide-react";
 
 const Onboarding = () => {
-  const [step, setStep] = useState(1);
-  const [board, setBoard] = useState('');
-  const [className, setClassName] = useState('');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const boards = [
-    'CBSE', 
-    'ICSE', 
-    'State Board - Maharashtra', 
-    'State Board - Tamil Nadu',
-    'State Board - Karnataka',
-    'State Board - UP',
-    'International Baccalaureate'
-  ];
+  const [step, setStep] = useState(1);
+  const [board, setBoard] = useState<string>('');
+  const [className, setClassName] = useState<string>('');
+  const [schoolInfo, setSchoolInfo] = useState<{
+    state: string;
+    city: string;
+    school: string;
+  } | null>(null);
   
-  const classes = ['6', '7', '8', '9', '10', '11', '12'];
+  const handleBoardSelect = (selectedBoard: string) => {
+    setBoard(selectedBoard);
+    localStorage.setItem('selectedBoard', selectedBoard);
+    
+    toast.success("Board Selected", {
+      description: `You've selected the ${selectedBoard} curriculum.`,
+    });
+    
+    setStep(2);
+  };
   
-  const getSubjectsForClass = (className: string) => {
-    const classNum = parseInt(className);
-    if (classNum >= 6 && classNum <= 10) {
-      return {
-        compulsory: ['Mathematics', 'Science', 'Social Studies', 'English'],
-        optional: ['Hindi', 'Sanskrit', 'Computer Science', 'Physical Education', 'Arts']
-      };
-    } else {
-      return {
-        compulsory: ['English'],
-        optional: [
-          'Physics', 
-          'Chemistry', 
-          'Mathematics', 
-          'Biology', 
-          'Computer Science', 
-          'Economics',
-          'Business Studies',
-          'Accountancy',
-          'Political Science',
-          'History',
-          'Geography',
-          'Psychology'
-        ]
-      };
-    }
-  };
-
-  const handleNext = () => {
-    if (step === 1 && !board) {
-      toast({
-        title: "Please select a board",
-        description: "You need to select your board to continue",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleClassSelect = (selectedClass: string) => {
+    setClassName(selectedClass);
+    localStorage.setItem('selectedClass', selectedClass);
     
-    if (step === 2 && !className) {
-      toast({
-        title: "Please select a class",
-        description: "You need to select your class to continue",
-        variant: "destructive"
-      });
-      return;
-    }
+    toast.success("Class Selected", {
+      description: `You've selected Class ${selectedClass}.`,
+    });
     
-    if (step === 3) {
-      const { compulsory } = getSubjectsForClass(className);
-      
-      // Check if at least one optional subject is selected
-      const selectedOptionalSubjects = selectedSubjects.filter(sub => !compulsory.includes(sub));
-      
-      if (selectedOptionalSubjects.length === 0) {
-        toast({
-          title: "Please select at least one optional subject",
-          description: "You need to select at least one optional subject to continue",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
-    if (step < 3) {
-      setStep(step + 1);
-      
-      // If moving from class selection to subject selection, automatically select compulsory subjects
-      if (step === 2) {
-        const { compulsory } = getSubjectsForClass(className);
-        setSelectedSubjects([...compulsory]);
-      }
-    } else {
-      // Save to localStorage
-      localStorage.setItem('studyHeroProfile', JSON.stringify({
-        board,
-        className,
-        subjects: selectedSubjects,
-        mainSubject: selectedSubjects[0], // Set first subject as main subject for initial dashboard view
-        completed: false,
-        lastUpdated: new Date().toISOString()
-      }));
-      
-      // Navigate to dashboard
-      navigate('/dashboard');
-    }
+    setStep(3);
   };
-
-  const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
-  const handleSubjectToggle = (subject: string) => {
-    const { compulsory } = getSubjectsForClass(className);
+  
+  const handleSchoolSelection = (school: {
+    state: string;
+    city: string;
+    school: string;
+  }) => {
+    setSchoolInfo(school);
     
-    // Check if the subject is compulsory
-    if (compulsory.includes(subject)) {
-      // If trying to deselect a compulsory subject, show an error
-      if (selectedSubjects.includes(subject)) {
-        toast({
-          title: "Compulsory subject",
-          description: `${subject} is a compulsory subject and cannot be deselected`,
-          variant: "destructive"
-        });
-      }
-      return;
-    }
-    
-    // Toggle optional subject
-    setSelectedSubjects(prev => 
-      prev.includes(subject) 
-        ? prev.filter(s => s !== subject) 
-        : [...prev, subject]
-    );
+    // Continue to the dashboard
+    setStep(4);
   };
-
+  
+  const handleGetStarted = () => {
+    // Initialize XP and level
+    localStorage.setItem('currentXp', '0');
+    localStorage.setItem('currentLevel', '1');
+    
+    navigate('/dashboard');
+  };
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 flex flex-col">
-      <div className="flex-1 container flex flex-col items-center justify-center py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-display text-primary mb-2">StudyHero</h1>
-          <p className="text-lg text-muted-foreground">Your adventure map to academic success</p>
-        </div>
-
-        <div className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
+      <StudyHeroHeader />
+      
+      <main className="flex-1 container py-10 mx-auto">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center space-x-2">
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                1
+              </div>
+              <div className={`h-1 w-12 ${step > 1 ? 'bg-primary' : 'bg-muted'}`}></div>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                2
+              </div>
+              <div className={`h-1 w-12 ${step > 2 ? 'bg-primary' : 'bg-muted'}`}></div>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                3
+              </div>
+              <div className={`h-1 w-12 ${step > 3 ? 'bg-primary' : 'bg-muted'}`}></div>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step >= 4 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                4
+              </div>
+            </div>
+          </div>
+          
           {step === 1 && (
-            <OnboardingCard
-              title="Select Your Board"
-              description="Choose the educational board you're studying under"
-              options={boards}
-              selectedOption={board}
-              onOptionSelect={setBoard}
-              icon={<Book className="h-5 w-5" />}
-            />
-          )}
-
-          {step === 2 && (
-            <OnboardingCard
-              title="Select Your Class"
-              description="Which class are you currently studying in?"
-              options={classes}
-              selectedOption={className}
-              onOptionSelect={setClassName}
-              icon={<GraduationCap className="h-5 w-5" />}
-            />
-          )}
-
-          {step === 3 && className && (
-            <Card>
+            <Card className="shadow-lg border-t-4 border-t-primary">
               <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                  <CardTitle>Select Your Subjects</CardTitle>
-                </div>
-                <CardDescription>
-                  Compulsory subjects are automatically selected. Choose optional subjects based on your curriculum.
-                </CardDescription>
+                <CardTitle className="text-2xl text-center">Select Your Educational Board</CardTitle>
+                <CardDescription className="text-center">Choose the curriculum that your school follows</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-3">Compulsory Subjects</h3>
-                    <div className="grid grid-cols-1 gap-2">
-                      {getSubjectsForClass(className).compulsory.map((subject) => (
-                        <div key={subject} className="flex items-center space-x-2 rounded-md border p-3 bg-muted/40">
-                          <Check className="h-4 w-4 text-primary" />
-                          <span>{subject}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium mb-3">Optional Subjects (Select at least one)</h3>
-                    <div className="grid grid-cols-1 gap-2">
-                      {getSubjectsForClass(className).optional.map((subject) => (
-                        <div 
-                          key={subject} 
-                          className={`flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-muted/40 ${
-                            selectedSubjects.includes(subject) ? 'bg-primary/10 border-primary' : ''
-                          }`}
-                          onClick={() => handleSubjectToggle(subject)}
-                        >
-                          <Checkbox 
-                            checked={selectedSubjects.includes(subject)}
-                            onCheckedChange={() => handleSubjectToggle(subject)}
-                            id={`subject-${subject}`}
-                          />
-                          <Label 
-                            htmlFor={`subject-${subject}`}
-                            className="flex-grow cursor-pointer"
-                          >
-                            {subject}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <OnboardingCard
+                    title="CBSE"
+                    description="Central Board of Secondary Education"
+                    icon={<BookOpen className="h-8 w-8" />}
+                    onClick={() => handleBoardSelect('CBSE')}
+                  />
+                  <OnboardingCard
+                    title="ICSE"
+                    description="Indian Certificate of Secondary Education"
+                    icon={<BookOpen className="h-8 w-8" />}
+                    onClick={() => handleBoardSelect('ICSE')}
+                  />
+                  <OnboardingCard
+                    title="State Board"
+                    description="State Education Board Curriculum"
+                    icon={<BookOpen className="h-8 w-8" />}
+                    onClick={() => handleBoardSelect('State Board')}
+                  />
+                  <OnboardingCard
+                    title="International"
+                    description="IB, Cambridge & Other International Curricula"
+                    icon={<BookOpen className="h-8 w-8" />}
+                    onClick={() => handleBoardSelect('International')}
+                  />
                 </div>
               </CardContent>
             </Card>
           )}
-
-          <div className="flex justify-between mt-8">
-            <Button 
-              variant="outline" 
-              onClick={handleBack}
-              disabled={step === 1}
-            >
-              Back
-            </Button>
-            <Button 
-              onClick={handleNext} 
-              className="gradient-button"
-            >
-              <span className="gradient-button-bg"></span>
-              <span className="gradient-button-text">
-                {step < 3 ? 'Next' : 'Create My Adventure Map'}
-              </span>
-            </Button>
-          </div>
+          
+          {step === 2 && (
+            <Card className="shadow-lg border-t-4 border-t-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-center">Select Your Class</CardTitle>
+                <CardDescription className="text-center">Choose your current class level</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {[6, 7, 8, 9, 10, 11, 12].map(classNum => (
+                    <OnboardingCard
+                      key={classNum}
+                      title={`Class ${classNum}`}
+                      description={`${board} Curriculum`}
+                      icon={<GraduationCap className="h-8 w-8" />}
+                      onClick={() => handleClassSelect(classNum.toString())}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-start">
+                <Button variant="outline" onClick={() => setStep(1)}>
+                  Back to Board Selection
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+          
+          {step === 3 && (
+            <Card className="shadow-lg border-t-4 border-t-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-center">Select Your School</CardTitle>
+                <CardDescription className="text-center">Help us find your school for personalized learning</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SchoolSelectionForm 
+                  board={board} 
+                  onComplete={handleSchoolSelection} 
+                />
+              </CardContent>
+              <CardFooter className="flex justify-start">
+                <Button variant="outline" onClick={() => setStep(2)}>
+                  Back to Class Selection
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+          
+          {step === 4 && (
+            <Card className="shadow-lg border-t-4 border-t-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-center">Ready to Start Learning!</CardTitle>
+                <CardDescription className="text-center">Your personalized learning plan is ready</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-green-50 p-4 rounded-lg space-y-3">
+                  <div className="flex items-center">
+                    <BookOpen className="h-5 w-5 mr-3 text-primary" />
+                    <div>
+                      <p className="font-medium">Curriculum</p>
+                      <p className="text-muted-foreground">{board}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <GraduationCap className="h-5 w-5 mr-3 text-primary" />
+                    <div>
+                      <p className="font-medium">Class</p>
+                      <p className="text-muted-foreground">Class {className}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <School className="h-5 w-5 mr-3 text-primary" />
+                    <div>
+                      <p className="font-medium">School</p>
+                      <p className="text-muted-foreground">{schoolInfo?.school}</p>
+                      <p className="text-sm text-muted-foreground">{schoolInfo?.city}, {schoolInfo?.state}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-center space-y-2">
+                  <h3 className="font-medium">What's next?</h3>
+                  <p className="text-muted-foreground">
+                    We've prepared personalized learning materials following the {board} curriculum
+                    for Class {className}. You'll have access to lessons, quizzes, and practice exercises.
+                  </p>
+                </div>
+                
+                <Button onClick={handleGetStarted} className="w-full" size="lg">
+                  Get Started with Your Learning Journey
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardContent>
+              <CardFooter className="flex justify-start">
+                <Button variant="outline" onClick={() => setStep(3)}>
+                  Back to School Selection
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
         </div>
-      </div>
-
-      <footer className="py-6 border-t">
-        <div className="container flex flex-col md:flex-row items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            © 2023 StudyHero. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4 mt-4 md:mt-0">
-            <Button variant="ghost" size="sm">Privacy</Button>
-            <Button variant="ghost" size="sm">Terms</Button>
-            <Button variant="ghost" size="sm">Help</Button>
-          </div>
-        </div>
-      </footer>
+      </main>
     </div>
   );
 };

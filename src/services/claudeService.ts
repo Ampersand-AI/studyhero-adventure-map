@@ -1,902 +1,646 @@
-// src/services/claudeService.ts
-import { generateAIContent, AIStatus } from './aiService';
+import Anthropic from '@anthropic-ai/sdk';
 import { toast } from "sonner";
 
-interface ClaudeService {
-  generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
-  generateLessonContent: (subject: string, topic: string, className?: string) => Promise<any>;
-  generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
-  generateLessonTest: (subject: string, topic: string, questionCount: number) => Promise<any>;
-  generateWeeklyPlan: (subject: string, items: any[]) => Promise<any>;
-  clearAllUserData: () => void;
-  researchCurriculum: (subject: string, className: string) => Promise<any>;
-  extractTextbookContent: (subject: string, className: string, chapter: string) => Promise<any>;
-  generateVisualLearningResources: (subject: string, topic: string) => Promise<any>;
-  getSubjectTopics: (subject: string, className: string) => Promise<any>;
+// Define interfaces for better typing
+interface Curriculum {
+  subject: string;
+  chapterNumber?: number;
+  title: string;
+  description: string;
+  type: "lesson" | "quiz" | "practice";
+  estimatedTimeInMinutes: number;
+  difficulty?: "beginner" | "intermediate" | "advanced";
 }
 
-// Function to ensure we have at least minimal content structure
-const createMinimalContent = (subject: string, topic: string) => {
-  return {
-    title: topic,
-    keyPoints: [
-      `We're using reliable educational sources for this content.`,
-      `This information follows standard curriculum guidelines for ${subject}.`,
-      `The content is structured to align with educational standards.`,
-      `Visual aids and examples enhance understanding of ${topic}.`,
-      `Interactive elements help reinforce learning.`
-    ],
-    explanation: [
-      `${topic} is an important concept in ${subject} that builds on foundational knowledge and helps students develop deeper understanding.`,
-      `Following educational standards, we've structured this content to provide clear, accurate information about ${topic}.`,
-      `The material includes visual aids, examples, and activities that follow curriculum guidelines.`
-    ],
-    examples: [
-      {
-        title: `Standard Example`,
-        content: `This example demonstrates key concepts of ${topic} based on curriculum guidelines.`
-      },
-      {
-        title: `Application Example`,
-        content: `This shows how ${topic} applies in practical situations, following educational standards.`
-      }
-    ],
-    visualAids: [
-      {
-        title: `Concept Visualization`,
-        description: `A visual representation of key concepts in ${topic}.`,
-        visualType: "Diagram"
-      },
-      {
-        title: `Process Flowchart`,
-        description: `Step-by-step visualization of processes related to ${topic}.`,
-        visualType: "Flowchart"
-      },
-      {
-        title: `Conceptual Relationship`,
-        description: `Visual showing how concepts in ${topic} relate to each other.`,
-        visualType: "Chart"
-      }
-    ],
-    activities: [
-      {
-        title: `Guided Practice`,
-        instructions: `Complete these exercises to reinforce understanding of ${topic}.`,
-        learningOutcome: `Reinforced understanding of core concepts`
-      },
-      {
-        title: `Application Exercise`,
-        instructions: `Apply the principles of ${topic} to solve these practice problems.`,
-        learningOutcome: `Applied knowledge to practical scenarios`
-      }
-    ],
-    summary: `${topic} provides essential knowledge in ${subject} that follows educational standards and builds a foundation for further learning. The content includes visual aids and interactive elements to enhance understanding.`
-  };
-};
-
-export const claudeService: ClaudeService = {
-  // Add new function to get all topics for a subject
-  getSubjectTopics: async (subject: string, className: string) => {
-    try {
-      toast.loading("Loading Subject Topics", {
-        description: "Retrieving NCERT curriculum data..."
-      });
-      
-      // Create prompt for Claude AI
-      const prompt = `Generate a comprehensive list of topics that would be covered in ${subject} for Class ${className} following the NCERT curriculum. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and difficulty level.`;
-      
-      // Call the AI service with Claude as primary
-      const topicsData = await generateAIContent(prompt, (status: AIStatus) => {
-        // Update toast with current status
-        toast.loading(`Loading Topics (${status.provider})`, {
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Curriculum Loaded", {
-        description: "Subject topics from NCERT curriculum are ready"
-      });
-      
-      // Ensure we have structured data
-      let topics = [];
-      
-      if (Array.isArray(topicsData.topics)) {
-        topics = topicsData.topics;
-      } else if (typeof topicsData === 'object' && topicsData !== null) {
-        // If the AI returns a different structure, try to extract topics
-        if (Array.isArray(topicsData.items)) {
-          topics = topicsData.items;
-        } else if (Array.isArray(topicsData.chapters)) {
-          topics = topicsData.chapters;
-        } else {
-          // Create topics array from object properties if needed
-          topics = Object.keys(topicsData)
-            .filter(key => Array.isArray(topicsData[key]))
-            .flatMap(key => topicsData[key]);
-        }
-      }
-      
-      // If we still don't have topics, generate fallback data
-      if (!topics || topics.length === 0) {
-        // Generate fallback topics based on subject
-        topics = generateFallbackTopics(subject, className);
-      }
-      
-      return { topics };
-    } catch (error) {
-      console.error("Error loading subject topics:", error);
-      toast.error("Error", {
-        description: "Failed to load subject topics. Using default data."
-      });
-      
-      // Return fallback topics
-      return { topics: generateFallbackTopics(subject, className) };
-    }
-  },
-
-  // Keep other existing methods with fixes for toast calls
-  generateStudyPlan: async (board: string, className: string, subject: string) => {
-    try {
-      // Create the loading toast
-      const toastId = toast.loading("Creating Study Plan", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Generate a comprehensive study plan for ${subject} for Class ${className} following ${board} curriculum. Include a list of topics, their descriptions, estimated study time, and type (lesson, quiz, or practice).`;
-      
-      // Call the AI service with status updates that modify the toast
-      const studyPlan = await generateAIContent(prompt, (status: AIStatus) => {
-        // Update the toast with the current status
-        toast.loading(`Creating Study Plan (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Study Plan Created", {
-        id: toastId,
-        description: "Your curriculum-aligned study plan is ready!"
-      });
-      
-      return { items: Array.isArray(studyPlan.items) ? studyPlan.items : studyPlan };
-    } catch (error) {
-      console.error("Error generating study plan:", error);
-      
-      // Generate a simple fallback plan using the curriculum structure
-      const now = new Date();
-      const subjectLower = subject.toLowerCase();
-      let topics = [];
-      
-      // Subject-specific topics
-      if (subjectLower.includes('math')) {
-        topics = ["Number Systems", "Algebra", "Geometry", "Trigonometry", "Statistics", "Probability"];
-      } else if (subjectLower.includes('physics')) {
-        topics = ["Motion", "Force and Laws of Motion", "Gravitation", "Work and Energy", "Sound", "Light"];
-      } else if (subjectLower.includes('chemistry')) {
-        topics = ["Matter", "Atoms and Molecules", "Chemical Reactions", "Carbon Compounds", "Periodic Classification"];
-      } else {
-        topics = ["Introduction", "Core Concepts", "Key Principles", "Applications", "Advanced Topics", "Review"];
-      }
-      
-      // Create items array with standard topics
-      const items = topics.map((topic, index) => {
-        const dueDate = new Date(now);
-        dueDate.setDate(dueDate.getDate() + index * 7);
-        
-        return {
-          id: `${subject.toLowerCase().replace(/\s+/g, '-')}-${index + 1}`,
-          title: topic,
-          description: `Learn about ${topic} in ${subject}`,
-          type: index % 3 === 0 ? "lesson" : (index % 3 === 1 ? "quiz" : "practice"),
-          status: index === 0 ? "current" : "future",
-          dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          estimatedTimeInMinutes: 45,
-          subject: subject,
-          content: `Comprehensive overview of ${topic} based on educational standards.`,
-          textbookReference: `${subject} textbook, Chapter ${index + 1}`,
-          hasVisualAids: true
-        };
-      });
-      
-      return { items };
-    }
-  },
-
-  generateLessonContent: async (subject: string, topic: string, className: string = '10') => {
-    try {
-      const toastId = toast.loading("Loading Lesson Content", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Generate comprehensive, curriculum-aligned lesson content about ${topic} for ${subject} Class ${className}. Include key points, detailed explanations, examples, visual aid descriptions, activities, and a summary.`;
-      
-      // Call the AI service with status updates
-      const lessonContent = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Loading Lesson Content (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Lesson Content Ready", {
-        id: toastId,
-        description: "Curriculum-aligned content has been loaded"
-      });
-      
-      // Verify we have good content or return minimal content
-      if (lessonContent && 
-          lessonContent.keyPoints && 
-          lessonContent.explanation && 
-          lessonContent.examples) {
-        return lessonContent;
-      } else {
-        return createMinimalContent(subject, topic);
-      }
-    } catch (error) {
-      console.error("Error generating lesson content:", error);
-      return createMinimalContent(subject, topic);
-    }
-  },
-
-  generateQuizQuestion: async (subject: string, topic: string) => {
-    try {
-      const toastId = toast.loading("Creating Quiz", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Generate a curriculum-aligned multiple-choice quiz question about ${topic} for ${subject}. Include 4 options with the correct answer and explanation.`;
-      
-      // Call the AI service with status updates
-      const quizQuestion = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Creating Quiz (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Quiz Created", {
-        id: toastId,
-        description: "Your curriculum-aligned quiz is ready!"
-      });
-      
-      return quizQuestion;
-    } catch (error) {
-      console.error("Error generating quiz question:", error);
-      
-      // Fallback content
-      return {
-        question: `Which of the following best describes ${topic} in ${subject}?`,
-        options: [
-          "A fundamental concept that explains key principles",
-          "An advanced application rarely used in practice",
-          "A historical theory that has been disproven",
-          "A specialized technique used only in research"
-        ],
-        correctIndex: 0,
-        explanation: `${topic} is indeed a fundamental concept in ${subject} that explains key principles according to standard curriculum.`
-      };
-    }
-  },
-
-  generateLessonTest: async (subject: string, topic: string, questionCount: number) => {
-    try {
-      const toastId = toast.loading("Creating Test", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Generate a ${questionCount}-question curriculum-aligned test about ${topic} for ${subject}. Each question should have 4 options, with one correct answer and an explanation.`;
-      
-      // Call the AI service with status updates
-      const lessonTest = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Creating Test (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Test Created", {
-        id: toastId,
-        description: "Your curriculum-aligned test is ready!"
-      });
-      
-      return lessonTest;
-    } catch (error) {
-      console.error("Error generating lesson test:", error);
-      
-      // Generate a simple fallback test
-      const questions = Array.from({ length: Math.min(questionCount, 5) }, (_, i) => {
-        // Create different question types
-        const questionType = i % 3; // 0: recall, 1: understanding, 2: application
-        let question = "";
-        let options = [];
-        
-        if (questionType === 0) {
-          question = `Which of the following correctly defines a key aspect of ${topic}?`;
-          options = [
-            `The main principle that governs ${topic}`,
-            `A minor detail related to ${topic}`,
-            `An advanced concept beyond ${topic}`,
-            `A historical note about ${topic}`
-          ];
-        } else if (questionType === 1) {
-          question = `What is the best explanation for how ${topic} works?`;
-          options = [
-            `Through a systematic process following educational principles`,
-            `Through random events unrelated to principles`,
-            `Only in specific unusual circumstances`,
-            `In a way that contradicts basic principles`
-          ];
-        } else {
-          question = `How would you apply ${topic} in a real-world situation?`;
-          options = [
-            `By following the steps outlined in the curriculum`,
-            `By ignoring established principles`,
-            `Only in theoretical settings, never in practice`,
-            `By using methods unrelated to ${topic}`
-          ];
-        }
-        
-        return {
-          id: `q-${i + 1}`,
-          question,
-          options,
-          correctAnswer: options[0], // First option is always correct in our fallback
-          explanation: `This answer correctly follows educational standards for ${topic} in ${subject}.`
-        };
-      });
-      
-      return { questions };
-    }
-  },
-
-  generateWeeklyPlan: async (subject: string, items: any[]) => {
-    try {
-      const toastId = toast.loading("Creating Weekly Plan", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Generate a weekly study plan for ${subject} based on these topics: ${items.map(item => item.title).join(", ")}. Organize into 12 weeks with daily activities for each week.`;
-      
-      // Call the AI service with status updates
-      const weeklyPlan = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Creating Weekly Plan (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Weekly Plan Created", {
-        id: toastId,
-        description: "Your curriculum-aligned weekly plan is ready!"
-      });
-      
-      return weeklyPlan;
-    } catch (error) {
-      console.error("Error generating weekly plan:", error);
-      
-      // Generate a simple weekly plan from items
-      const now = new Date();
-      let currentDay = new Date(now);
-      
-      // Create 12 weeks of study plan
-      const weeklyPlans = Array.from({ length: 12 }, (_, weekIndex) => {
-        const weekStart = new Date(currentDay);
-        
-        // Create daily activities for the week (5 school days)
-        const dailyActivities = Array.from({ length: 5 }, (_, dayIndex) => {
-          const day = new Date(currentDay);
-          currentDay.setDate(currentDay.getDate() + 1);
-          
-          // Skip weekends
-          if (day.getDay() === 0 || day.getDay() === 6) {
-            currentDay.setDate(currentDay.getDate() + 1);
-          }
-          
-          // Assign lessons/quizzes from the original items to days
-          const itemIndex = (weekIndex * 5 + dayIndex) % items.length;
-          const item = items[itemIndex];
-          
-          return {
-            date: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' }),
-            items: [
-              {
-                ...item,
-                dueDate: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              }
-            ]
-          };
-        });
-        
-        // Add a weekly test at the end of the week
-        const testDay = new Date(currentDay);
-        testDay.setDate(testDay.getDate() - 1); // Last day of the "week"
-        
-        const weeklyTest = {
-          id: `test-week-${weekIndex + 1}`,
-          title: `Week ${weekIndex + 1} Review Test`,
-          description: `Curriculum-aligned test covering all topics from week ${weekIndex + 1}`,
-          type: "quiz",
-          status: weekIndex === 0 ? "current" : "future",
-          dueDate: testDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          estimatedTimeInMinutes: 45,
-          subject,
-          isWeeklyTest: true,
-          weekNumber: weekIndex + 1
-        };
-        
-        // Skip to next week (add days until Monday)
-        while (currentDay.getDay() !== 1) {
-          currentDay.setDate(currentDay.getDate() + 1);
-        }
-        
-        return {
-          weekNumber: weekIndex + 1,
-          startDate: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          endDate: new Date(currentDay.getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          dailyActivities,
-          weeklyTest
-        };
-      });
-      
-      return { weeklyPlans };
-    }
-  },
+// Create a service with methods to interact with Claude API
+class ClaudeService {
+  private anthropic: Anthropic;
+  private apiKey: string;
   
-  // Function to research curriculum
-  researchCurriculum: async (subject: string, className: string) => {
+  constructor() {
+    // In a production app, you would use environment variables for API keys
+    // For the demo, using a sample key (this will not work in production)
+    this.apiKey = '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';
+    
     try {
-      const toastId = toast.loading("Researching Curriculum", {
-        description: "Initializing AI services..."
+      this.anthropic = new Anthropic({
+        apiKey: this.apiKey,
       });
-      
-      // Create prompt for AI
-      const prompt = `Research and provide detailed curriculum information for ${subject} Class ${className}. Include textbook details, units, chapters, key topics, and recommended sessions.`;
-      
-      // Call the AI service with status updates
-      const curriculumData = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Researching Curriculum (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Curriculum Research Complete", {
-        id: toastId,
-        description: "Curriculum details have been compiled"
-      });
-      
-      return curriculumData;
     } catch (error) {
-      console.error("Error researching curriculum:", error);
-      
-      // Generate standard curriculum data
-      return {
-        subject,
-        class: className,
-        textbookTitle: `${subject} for Class ${className}`,
-        textbookURL: `https://example.com/textbooks/${subject.toLowerCase().replace(/\s+/g, '-')}/class-${className}`,
-        units: [
-          {
-            unitNumber: 1,
-            title: "Fundamentals",
-            chapters: [
-              {
-                chapterNumber: 1,
-                title: "Introduction",
-                keyTopics: ["Basic Concepts", "Historical Context", "Modern Applications"],
-                recommendedSessions: 3,
-                hasVisualLearningComponents: true
-              },
-              {
-                chapterNumber: 2,
-                title: "Core Principles",
-                keyTopics: ["Principle 1", "Principle 2", "Practical Examples"],
-                recommendedSessions: 4,
-                hasVisualLearningComponents: true
-              }
-            ]
-          },
-          {
-            unitNumber: 2,
-            title: "Advanced Concepts",
-            chapters: [
-              {
-                chapterNumber: 3,
-                title: "Applications",
-                keyTopics: ["Application 1", "Application 2", "Case Studies"],
-                recommendedSessions: 5,
-                hasVisualLearningComponents: true
-              }
-            ]
-          }
-        ]
-      };
+      console.error('Error initializing Anthropic SDK:', error);
     }
-  },
-
-  // Function to extract textbook content
-  extractTextbookContent: async (subject: string, className: string, chapter: string) => {
-    try {
-      const toastId = toast.loading("Extracting Content", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Extract and provide detailed content from the ${subject} textbook for Class ${className}, Chapter ${chapter}. Include sections, key terms, visualizations, exercises, and a summary.`;
-      
-      // Call the AI service with status updates
-      const textbookContent = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Extracting Content (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Content Extracted", {
-        id: toastId,
-        description: "Textbook content has been processed"
-      });
-      
-      return textbookContent;
-    } catch (error) {
-      console.error("Error extracting textbook content:", error);
-      
-      // Return minimal textbook content
-      return {
-        chapterTitle: `Chapter ${chapter}: Standard Educational Content`,
-        sections: [
-          {
-            title: "Introduction to the Chapter",
-            content: `This chapter introduces key concepts related to this topic in ${subject} for Class ${className}, following educational standards.`,
-            keyTerms: ["Curriculum", "Standards", "Education"],
-            hasVisuals: true,
-            visualDescriptions: ["Standard educational diagrams"]
-          },
-          {
-            title: "Core Concepts",
-            content: `The core concepts in this chapter align with educational standards for ${subject} in Class ${className}.`,
-            keyTerms: ["Concepts", "Principles", "Standards"],
-            hasVisuals: true,
-            visualDescriptions: ["Concept visualization"]
-          },
-          {
-            title: "Applications and Examples",
-            content: `These examples show how to apply the concepts from this chapter, following educational best practices.`,
-            keyTerms: ["Application", "Examples", "Practice"],
-            hasVisuals: true,
-            visualDescriptions: ["Example diagrams"]
-          }
-        ],
-        exercises: [
-          {
-            title: "Practice Exercises",
-            questions: [
-              "Standard curriculum-aligned question 1",
-              "Standard curriculum-aligned question 2",
-              "Standard curriculum-aligned question 3"
-            ]
-          }
-        ],
-        summary: `This chapter covers essential material for ${subject} Class ${className} based on standard educational curriculum.`
-      };
-    }
-  },
-
-  generateVisualLearningResources: async (subject: string, topic: string) => {
-    try {
-      const toastId = toast.loading("Creating Visuals", {
-        description: "Initializing AI services..."
-      });
-      
-      // Create prompt for AI
-      const prompt = `Generate detailed descriptions for visual learning resources about ${topic} for ${subject}. Include diagrams, flowcharts, and infographics with learning objectives and suggested uses.`;
-      
-      // Call the AI service with status updates
-      const visualResources = await generateAIContent(prompt, (status: AIStatus) => {
-        toast.loading(`Creating Visuals (${status.provider})`, {
-          id: toastId,
-          description: status.stage
-        });
-      });
-      
-      // Handle successful completion
-      toast.success("Visuals Created", {
-        id: toastId,
-        description: "Visual learning resources are ready"
-      });
-      
-      return visualResources;
-    } catch (error) {
-      console.error("Error generating visual resources:", error);
-      
-      // Return minimal visual resources response
-      return { 
-        visualResources: [
-          {
-            type: "Diagram",
-            title: `Standard Diagram: ${topic} Visualization`,
-            description: "A standard educational diagram visualizing key concepts.",
-            learningObjective: "To understand the structure and relationships of key concepts",
-            complexity: "Intermediate",
-            colorScheme: "Educational standard colors",
-            keyConcepts: ["Structure", "Relationships", "Concepts"],
-            textbookReference: "Standard curriculum",
-            suggestedUse: "For introducing and reinforcing key concepts"
-          },
-          {
-            type: "Flowchart",
-            title: `Process Flowchart: ${topic} Application`,
-            description: "A standard educational flowchart showing process steps.",
-            learningObjective: "To understand sequential processes and procedures",
-            complexity: "Intermediate",
-            colorScheme: "Sequential color coding",
-            keyConcepts: ["Process", "Sequence", "Steps"],
-            textbookReference: "Standard curriculum",
-            suggestedUse: "For teaching processes and procedures"
-          },
-          {
-            type: "Infographic",
-            title: `Educational Infographic: ${topic} Overview`,
-            description: "A comprehensive visual overview of the topic.",
-            learningObjective: "To provide a holistic understanding of the topic",
-            complexity: "Basic",
-            colorScheme: "Engaging educational colors",
-            keyConcepts: ["Overview", "Integration", "Summary"],
-            textbookReference: "Standard curriculum",
-            suggestedUse: "For introducing or summarizing the topic"
-          }
-        ]
-      };
-    }
-  },
-
-  clearAllUserData: () => {
-    localStorage.clear();
-    toast.success("Data Cleared", {
-      description: "All user data has been reset successfully."
-    });
-  }
-};
-
-// Helper function to generate fallback topics for a subject
-function generateFallbackTopics(subject: string, className: string) {
-  const subjectLower = subject.toLowerCase();
-  let topics = [];
-  
-  if (subjectLower.includes('math')) {
-    topics = [
-      {
-        id: "math-1",
-        title: "Real Numbers",
-        description: "Understanding real numbers, irrational numbers, and their properties",
-        type: "lesson",
-        estimatedTimeInMinutes: 60,
-        chapterNumber: 1,
-        difficulty: "beginner"
-      },
-      {
-        id: "math-2",
-        title: "Polynomials",
-        description: "Working with polynomials and their zeros",
-        type: "lesson",
-        estimatedTimeInMinutes: 75,
-        chapterNumber: 2,
-        difficulty: "intermediate"
-      },
-      {
-        id: "math-3",
-        title: "Linear Equations in Two Variables",
-        description: "Solving systems of linear equations",
-        type: "practice",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 3,
-        difficulty: "intermediate"
-      },
-      {
-        id: "math-4",
-        title: "Quadratic Equations",
-        description: "Solving and applying quadratic equations",
-        type: "lesson",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 4,
-        difficulty: "intermediate"
-      },
-      {
-        id: "math-5",
-        title: "Arithmetic Progressions",
-        description: "Understanding patterns and sequences",
-        type: "quiz",
-        estimatedTimeInMinutes: 45,
-        chapterNumber: 5,
-        difficulty: "intermediate"
-      },
-      {
-        id: "math-6",
-        title: "Triangles",
-        description: "Properties of triangles and congruence",
-        type: "lesson",
-        estimatedTimeInMinutes: 75,
-        chapterNumber: 6,
-        difficulty: "beginner"
-      },
-      {
-        id: "math-7",
-        title: "Coordinate Geometry",
-        description: "Working with points and lines in the coordinate plane",
-        type: "practice",
-        estimatedTimeInMinutes: 60,
-        chapterNumber: 7,
-        difficulty: "intermediate"
-      },
-      {
-        id: "math-8",
-        title: "Trigonometry",
-        description: "Introduction to trigonometric ratios and identities",
-        type: "lesson",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 8,
-        difficulty: "advanced"
-      }
-    ];
-  } else if (subjectLower.includes('physics')) {
-    topics = [
-      {
-        id: "physics-1",
-        title: "Light - Reflection and Refraction",
-        description: "Understanding how light behaves when it encounters different media",
-        type: "lesson",
-        estimatedTimeInMinutes: 75,
-        chapterNumber: 1,
-        difficulty: "intermediate"
-      },
-      {
-        id: "physics-2",
-        title: "Human Eye and Colorful World",
-        description: "Learn about the human eye and dispersion of light",
-        type: "lesson",
-        estimatedTimeInMinutes: 60,
-        chapterNumber: 2,
-        difficulty: "beginner"
-      },
-      {
-        id: "physics-3",
-        title: "Electricity and Circuits",
-        description: "Understanding electric current and circuits",
-        type: "practice",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 3,
-        difficulty: "intermediate"
-      },
-      {
-        id: "physics-4",
-        title: "Magnetic Effects of Electric Current",
-        description: "Exploring electromagnetism and its applications",
-        type: "quiz",
-        estimatedTimeInMinutes: 45,
-        chapterNumber: 4,
-        difficulty: "advanced"
-      },
-      {
-        id: "physics-5",
-        title: "Sources of Energy",
-        description: "Renewable and non-renewable energy sources",
-        type: "lesson",
-        estimatedTimeInMinutes: 60,
-        chapterNumber: 5,
-        difficulty: "beginner"
-      }
-    ];
-  } else if (subjectLower.includes('chemistry')) {
-    topics = [
-      {
-        id: "chemistry-1",
-        title: "Chemical Reactions and Equations",
-        description: "Balancing chemical equations and types of reactions",
-        type: "lesson",
-        estimatedTimeInMinutes: 75,
-        chapterNumber: 1,
-        difficulty: "intermediate"
-      },
-      {
-        id: "chemistry-2",
-        title: "Acids, Bases and Salts",
-        description: "Understanding the properties of acids, bases, and salts",
-        type: "practice",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 2,
-        difficulty: "intermediate"
-      },
-      {
-        id: "chemistry-3",
-        title: "Metals and Non-metals",
-        description: "Properties and reactivity of metals and non-metals",
-        type: "quiz",
-        estimatedTimeInMinutes: 45,
-        chapterNumber: 3,
-        difficulty: "beginner"
-      },
-      {
-        id: "chemistry-4",
-        title: "Carbon and its Compounds",
-        description: "Introduction to organic chemistry",
-        type: "lesson",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 4,
-        difficulty: "advanced"
-      },
-      {
-        id: "chemistry-5",
-        title: "Periodic Classification of Elements",
-        description: "Understanding the periodic table and trends",
-        type: "lesson",
-        estimatedTimeInMinutes: 75,
-        chapterNumber: 5,
-        difficulty: "intermediate"
-      }
-    ];
-  } else {
-    // Generic topics for any other subject
-    topics = [
-      {
-        id: `${subjectLower}-1`,
-        title: "Introduction to the Subject",
-        description: `Basic principles and concepts of ${subject}`,
-        type: "lesson",
-        estimatedTimeInMinutes: 60,
-        chapterNumber: 1,
-        difficulty: "beginner"
-      },
-      {
-        id: `${subjectLower}-2`,
-        title: "Core Concepts",
-        description: `Essential knowledge in ${subject}`,
-        type: "lesson",
-        estimatedTimeInMinutes: 75,
-        chapterNumber: 2,
-        difficulty: "beginner"
-      },
-      {
-        id: `${subjectLower}-3`,
-        title: "Advanced Principles",
-        description: `Deeper exploration of ${subject} concepts`,
-        type: "practice",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 3,
-        difficulty: "intermediate"
-      },
-      {
-        id: `${subjectLower}-4`,
-        title: "Practical Applications",
-        description: `Real-world uses of ${subject}`,
-        type: "quiz",
-        estimatedTimeInMinutes: 45,
-        chapterNumber: 4,
-        difficulty: "intermediate"
-      },
-      {
-        id: `${subjectLower}-5`,
-        title: "Special Topics",
-        description: `Specialized areas within ${subject}`,
-        type: "lesson",
-        estimatedTimeInMinutes: 90,
-        chapterNumber: 5,
-        difficulty: "advanced"
-      }
-    ];
   }
   
-  return topics;
+  // Method to get subject topics based on curriculum details
+  async getSubjectTopics(subject: string, className: string) {
+    try {
+      // First, check if we have cached topics
+      const cachedTopics = localStorage.getItem(`topics_${subject}_${className}`);
+      
+      if (cachedTopics) {
+        return JSON.parse(cachedTopics);
+      }
+      
+      // Get board and school information if available
+      const board = localStorage.getItem('selectedBoard') || 'CBSE';
+      const state = localStorage.getItem('selectedState') || '';
+      const city = localStorage.getItem('selectedCity') || '';
+      const school = localStorage.getItem('selectedSchool') || '';
+      
+      // Show loading toast
+      toast.loading("Generating Curriculum", {
+        description: `Building ${subject} curriculum for Class ${className}...`,
+      });
+      
+      // Get user message based on subject
+      const userMessage = this.getUserMessageForSubject(subject, className, board, state, city, school);
+      
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-opus-20240229',
+        max_tokens: 4000,
+        messages: [
+          {
+            role: 'user',
+            content: userMessage,
+          }
+        ],
+      });
+      
+      // Parse the response
+      const content = response.content[0].text;
+      try {
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```([\s\S]*?)```/);
+        let parsedData;
+        
+        if (jsonMatch && jsonMatch[1]) {
+          parsedData = JSON.parse(jsonMatch[1]);
+        } else {
+          // Attempt to find JSON in the content without code blocks
+          const jsonRegex = /\{[\s\S]*\}/;
+          const jsonString = content.match(jsonRegex);
+          
+          if (jsonString) {
+            parsedData = JSON.parse(jsonString[0]);
+          } else {
+            throw new Error('Could not extract JSON from Claude response');
+          }
+        }
+        
+        // Close the loading toast
+        toast.success("Curriculum Ready", {
+          description: `${subject} curriculum for Class ${className} is ready.`,
+        });
+        
+        // Cache the topics
+        localStorage.setItem(`topics_${subject}_${className}`, JSON.stringify(parsedData));
+        
+        return parsedData;
+      } catch (error) {
+        console.error('Error parsing Claude response:', error);
+        console.log('Raw response:', content);
+        
+        // Show error toast
+        toast.error("Error", {
+          description: "Failed to generate curriculum. Please try again.",
+        });
+        
+        // Return fallback data
+        return this.getFallbackTopics(subject, className);
+      }
+    } catch (error) {
+      console.error('Error with Claude API:', error);
+      
+      // Show error toast
+      toast.error("API Connection Error", {
+        description: "Could not connect to AI service. Using sample data instead.",
+      });
+      
+      // Return fallback data
+      return this.getFallbackTopics(subject, className);
+    }
+  }
+  
+  // Method to get lesson content
+  async getLessonContent(subject: string, topic: string, className: string = '10') {
+    try {
+      // First, check if we have cached lesson content
+      const cachedContent = localStorage.getItem(`lesson_${subject}_${topic.replace(/\s+/g, '_')}`);
+      
+      if (cachedContent) {
+        return JSON.parse(cachedContent);
+      }
+      
+      // Get board and school information if available
+      const board = localStorage.getItem('selectedBoard') || 'CBSE';
+      const state = localStorage.getItem('selectedState') || '';
+      const city = localStorage.getItem('selectedCity') || '';
+      const school = localStorage.getItem('selectedSchool') || '';
+      
+      // Show loading toast
+      toast.loading("Loading Lesson", {
+        description: `Creating content for ${topic} in ${subject}...`,
+      });
+      
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-opus-20240229',
+        max_tokens: 4000,
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert educational content creator specializing in ${board} curriculum for ${subject}.
+            Create detailed, engaging, and ACCURATE lesson content for the topic "${topic}" in ${subject}.
+            Focus on providing information that would be found in actual ${board} textbooks for class ${className} in ${school ? school + ', ' : ''}${city ? city + ', ' : ''}${state}.
+            
+            Your response should be in JSON format with the following structure:
+            {
+              "title": "${topic}",
+              "keyPoints": [array of 5-7 key concepts to understand, written in simple, clear language],
+              "explanation": [array of 3-5 detailed explanatory paragraphs following the curriculum, written in an engaging, conversational style],
+              "examples": [array of 2-3 objects with "title" and "content" properties using REAL examples that are relatable to students],
+              "visualAids": [array of 3-4 objects with "title", "description", and "visualType" (diagram, chart, graph, illustration, etc.) properties that help visualize the concepts],
+              "activities": [array of 2-3 objects with "title", "instructions" and "learningOutcome" properties that are similar to those found in textbooks],
+              "summary": "a concluding paragraph summarizing the lesson in a motivational way",
+              "textbookReferences": [array of objects with "chapter", "pageNumbers", and "description" properties that directly link to textbooks],
+              "interestingFacts": [array of 2-3 facts related to the topic that will capture student interest]
+            }
+            
+            Focus on making the content:
+            1. Age-appropriate for class ${className} students
+            2. Engaging with conversational language
+            3. Visually rich with multiple types of visual aids
+            4. Connected to real-world applications
+            5. Including interesting facts that spark curiosity
+            6. STRICTLY ADHERING to actual ${board} textbook content for Class ${className}`
+          },
+          {
+            role: 'user',
+            content: `Create engaging, AUTHENTIC ${board}-aligned lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for Class ${className} students in ${school ? school + ', ' : ''}${city ? city + ', ' : ''}${state}. ONLY include information that actually appears in ${board} textbooks.`,
+          }
+        ],
+      });
+      
+      // Parse the response
+      const content = response.content[0].text;
+      try {
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```([\s\S]*?)```/);
+        let parsedData;
+        
+        if (jsonMatch && jsonMatch[1]) {
+          parsedData = JSON.parse(jsonMatch[1]);
+        } else {
+          // Attempt to find JSON in the content without code blocks
+          const jsonRegex = /\{[\s\S]*\}/;
+          const jsonString = content.match(jsonRegex);
+          
+          if (jsonString) {
+            parsedData = JSON.parse(jsonString[0]);
+          } else {
+            throw new Error('Could not extract JSON from Claude response');
+          }
+        }
+        
+        // Close the loading toast
+        toast.success("Lesson Ready", {
+          description: `Content for ${topic} is ready to learn.`,
+        });
+        
+        // Cache the lesson content
+        localStorage.setItem(`lesson_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(parsedData));
+        
+        return parsedData;
+      } catch (error) {
+        console.error('Error parsing Claude response for lesson:', error);
+        console.log('Raw response:', content);
+        
+        // Show error toast
+        toast.error("Error", {
+          description: "Failed to generate lesson content. Please try again.",
+        });
+        
+        // Return fallback data
+        return this.getFallbackLessonContent(subject, topic);
+      }
+    } catch (error) {
+      console.error('Error with Claude API for lesson:', error);
+      
+      // Show error toast
+      toast.error("API Connection Error", {
+        description: "Could not connect to AI service. Using sample data instead.",
+      });
+      
+      // Return fallback data
+      return this.getFallbackLessonContent(subject, topic);
+    }
+  }
+
+  // Method to get quiz questions
+  async getQuizQuestions(subject: string, topic: string, questionCount: number = 10) {
+    try {
+      // First, check if we have cached quiz questions
+      const cachedQuiz = localStorage.getItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`);
+      
+      if (cachedQuiz) {
+        return JSON.parse(cachedQuiz);
+      }
+      
+      // Get board and school information if available
+      const board = localStorage.getItem('selectedBoard') || 'CBSE';
+      const className = localStorage.getItem('selectedClass') || '10';
+      
+      // Show loading toast
+      toast.loading("Creating Quiz", {
+        description: `Generating ${questionCount} questions for ${topic}...`,
+      });
+      
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-opus-20240229',
+        max_tokens: 4000,
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert educational assessment creator specializing in ${board} curriculum for ${subject}.
+            Create a quiz with ${questionCount} questions for the topic "${topic}" in ${subject} Class ${className}.
+            Your response should be in JSON format with a "questions" array containing question objects.
+            Each question object should have:
+            - id: a unique string identifier
+            - question: the question text based directly on ${board} content
+            - options: an array of 4 possible answers
+            - correctAnswer: the text of the correct answer (must match exactly one of the options)
+            - explanation: explanation of why the correct answer is right, with reference to textbook concepts`
+          },
+          {
+            role: 'user',
+            content: `Create a ${board}-aligned quiz with ${questionCount} questions for "${topic}" in ${subject} for Class ${className}.`
+          }
+        ],
+      });
+      
+      // Parse the response
+      const content = response.content[0].text;
+      try {
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```([\s\S]*?)```/);
+        let parsedData;
+        
+        if (jsonMatch && jsonMatch[1]) {
+          parsedData = JSON.parse(jsonMatch[1]);
+        } else {
+          // Attempt to find JSON in the content without code blocks
+          const jsonRegex = /\{[\s\S]*\}/;
+          const jsonString = content.match(jsonRegex);
+          
+          if (jsonString) {
+            parsedData = JSON.parse(jsonString[0]);
+          } else {
+            throw new Error('Could not extract JSON from Claude response');
+          }
+        }
+        
+        // Close the loading toast
+        toast.success("Quiz Ready", {
+          description: `${questionCount} questions prepared for ${topic}.`,
+        });
+        
+        // Cache the quiz questions
+        localStorage.setItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(parsedData));
+        
+        return parsedData;
+      } catch (error) {
+        console.error('Error parsing Claude response for quiz:', error);
+        console.log('Raw response:', content);
+        
+        // Show error toast
+        toast.error("Error", {
+          description: "Failed to generate quiz questions. Please try again.",
+        });
+        
+        // Return fallback data
+        return this.getFallbackQuizQuestions(subject, topic);
+      }
+    } catch (error) {
+      console.error('Error with Claude API for quiz:', error);
+      
+      // Show error toast
+      toast.error("API Connection Error", {
+        description: "Could not connect to AI service. Using sample data instead.",
+      });
+      
+      // Return fallback data
+      return this.getFallbackQuizQuestions(subject, topic);
+    }
+  }
+  
+  // Helper function to get user message for subject curriculum
+  private getUserMessageForSubject(subject: string, className: string, board: string, state: string, city: string, school: string) {
+    const schoolContext = school ? ` in ${school}, ${city}, ${state}` : '';
+    
+    switch (subject) {
+      case 'Mathematics':
+        return `Generate a comprehensive list of topics that would be covered in Mathematics for Class ${className} following the ${board} curriculum${schoolContext}. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and difficulty level.`;
+      
+      case 'Science':
+        return `Generate a comprehensive list of topics that would be covered in Science for Class ${className} following the ${board} curriculum${schoolContext}. Include physics, chemistry, and biology topics. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and whether it includes lab work.`;
+      
+      case 'English':
+        return `Generate a comprehensive list of topics that would be covered in English for Class ${className} following the ${board} curriculum${schoolContext}. Include grammar, literature, writing, and comprehension topics. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and relevant literature references.`;
+      
+      case 'Social Studies':
+        return `Generate a comprehensive list of topics that would be covered in Social Studies for Class ${className} following the ${board} curriculum${schoolContext}. Include history, geography, civics, and economics topics. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and historical period if applicable.`;
+      
+      case 'Computer Science':
+        return `Generate a comprehensive list of topics that would be covered in Computer Science for Class ${className} following the ${board} curriculum${schoolContext}. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and whether it includes practical coding exercises.`;
+      
+      default:
+        return `Generate a comprehensive list of topics that would be covered in ${subject} for Class ${className} following the ${board} curriculum${schoolContext}. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and difficulty level.`;
+    }
+  }
+  
+  // Fallback data methods in case API fails
+  private getFallbackTopics(subject: string, className: string): { topics: Curriculum[] } {
+    
+    switch (subject) {
+      case 'Mathematics':
+        return {
+          topics: [
+            {
+              id: 'math-01',
+              title: 'Real Numbers',
+              description: 'Understanding irrational numbers, decimal expansions, and fundamental operations.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 45,
+              difficulty: 'beginner',
+              chapterNumber: 1
+            },
+            {
+              id: 'math-02',
+              title: 'Polynomials',
+              description: 'Learn about quadratic and cubic polynomials, their zeros, and relationships.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 60,
+              difficulty: 'intermediate',
+              chapterNumber: 2
+            },
+            {
+              id: 'math-03',
+              title: 'Pair of Linear Equations',
+              description: 'Methods to solve pairs of linear equations including substitution, elimination and graphical.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 75,
+              difficulty: 'intermediate',
+              chapterNumber: 3
+            },
+            {
+              id: 'math-04',
+              title: 'Quadratic Equations',
+              description: 'Solving quadratic equations using factorization, completing the square, and quadratic formula.',
+              type: 'quiz',
+              estimatedTimeInMinutes: 30,
+              difficulty: 'intermediate',
+              chapterNumber: 4
+            },
+            {
+              id: 'math-05',
+              title: 'Arithmetic Progressions',
+              description: 'Understanding AP, common difference, nth term, and sum of n terms.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 50,
+              difficulty: 'intermediate',
+              chapterNumber: 5
+            },
+            {
+              id: 'math-06',
+              title: 'Triangles',
+              description: 'Similarity of triangles, Pythagoras theorem, and other properties.',
+              type: 'practice',
+              estimatedTimeInMinutes: 90,
+              difficulty: 'intermediate',
+              chapterNumber: 6
+            },
+            {
+              id: 'math-07',
+              title: 'Coordinate Geometry',
+              description: 'Distance formula, section formula, area of triangle, and more.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 60,
+              difficulty: 'advanced',
+              chapterNumber: 7
+            }
+          ]
+        };
+        
+      case 'Science':
+        return {
+          topics: [
+            {
+              id: 'sci-01',
+              title: 'Chemical Reactions and Equations',
+              description: 'Balancing chemical equations and types of chemical reactions.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 60,
+              difficulty: 'intermediate',
+              chapterNumber: 1
+            },
+            {
+              id: 'sci-02',
+              title: 'Acids, Bases and Salts',
+              description: 'Properties, reactions, and pH of acids, bases, and salts.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 50,
+              difficulty: 'intermediate',
+              chapterNumber: 2
+            },
+            {
+              id: 'sci-03',
+              title: 'Metals and Non-metals',
+              description: 'Physical and chemical properties, reactivity series, and extraction of metals.',
+              type: 'quiz',
+              estimatedTimeInMinutes: 30,
+              difficulty: 'intermediate',
+              chapterNumber: 3
+            },
+            {
+              id: 'sci-04',
+              title: 'Life Processes',
+              description: 'Nutrition, respiration, transportation, and excretion in organisms.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 75,
+              difficulty: 'advanced',
+              chapterNumber: 6
+            },
+            {
+              id: 'sci-05',
+              title: 'Heredity and Evolution',
+              description: 'Mendel\'s laws, inheritance, and human evolution.',
+              type: 'practice',
+              estimatedTimeInMinutes: 90,
+              difficulty: 'advanced',
+              chapterNumber: 9
+            }
+          ]
+        };
+        
+      default:
+        return {
+          topics: [
+            {
+              id: `${subject.toLowerCase()}-01`,
+              title: 'Introduction to the Subject',
+              description: `Basic concepts of ${subject} for Class ${className}.`,
+              type: 'lesson',
+              estimatedTimeInMinutes: 45,
+              difficulty: 'beginner',
+              chapterNumber: 1
+            },
+            {
+              id: `${subject.toLowerCase()}-02`,
+              title: 'Core Principles',
+              description: `Fundamental principles of ${subject} for this grade level.`,
+              type: 'lesson',
+              estimatedTimeInMinutes: 60,
+              difficulty: 'intermediate',
+              chapterNumber: 2
+            },
+            {
+              id: `${subject.toLowerCase()}-03`,
+              title: 'Practical Applications',
+              description: `How to apply ${subject} concepts in real-world scenarios.`,
+              type: 'practice',
+              estimatedTimeInMinutes: 75,
+              difficulty: 'intermediate',
+              chapterNumber: 3
+            },
+            {
+              id: `${subject.toLowerCase()}-04`,
+              title: 'Advanced Topics',
+              description: `More complex areas of ${subject} for this grade level.`,
+              type: 'quiz',
+              estimatedTimeInMinutes: 30,
+              difficulty: 'advanced',
+              chapterNumber: 4
+            }
+          ]
+        };
+    }
+  }
+
+  private getFallbackLessonContent(subject: string, topic: string) {
+    
+    return {
+      title: topic,
+      keyPoints: [
+        `This is a key point about ${topic} in ${subject}`,
+        "Important concept to understand from the curriculum",
+        "Another essential concept covered in textbooks",
+        "Practical application of the theory",
+        "Common misconception clarified"
+      ],
+      explanation: [
+        `${topic} is an important concept in ${subject} that helps students understand fundamental principles. The curriculum covers this topic to build a strong foundation for advanced concepts.`,
+        "This paragraph would contain detailed explanation with examples and clear language. It would follow the official curriculum requirements and use appropriate terminology.",
+        "This section would connect the concept to real-world applications and practical scenarios that students can relate to, making the learning more engaging and relevant."
+      ],
+      examples: [
+        {
+          title: "Basic Example",
+          content: `A straightforward example of ${topic} that illustrates the core concept.`
+        },
+        {
+          title: "Real-world Application",
+          content: "An example showing how this concept is used in everyday situations or modern technology."
+        }
+      ],
+      visualAids: [
+        {
+          title: "Conceptual Diagram",
+          description: `A visual representation of how ${topic} works, showing the key components and their relationships.`,
+          visualType: "diagram"
+        },
+        {
+          title: "Process Flowchart",
+          description: "A step-by-step visual guide to understanding the procedure or method.",
+          visualType: "flowchart"
+        },
+        {
+          title: "Comparative Analysis",
+          description: "A visual comparison between different aspects or applications of the concept.",
+          visualType: "comparison chart"
+        }
+      ],
+      activities: [
+        {
+          title: "Hands-on Experiment",
+          instructions: `Perform this simple activity to observe ${topic} in action and verify the principles learned.`,
+          learningOutcome: "Students will be able to demonstrate the concept through practical observation."
+        },
+        {
+          title: "Problem-solving Challenge",
+          instructions: "Solve these problems by applying the concepts learned in this lesson.",
+          learningOutcome: "Students will strengthen their analytical skills and application of the theory."
+        }
+      ],
+      summary: `In this lesson, we explored ${topic} in ${subject}, covering key concepts, examples, and practical applications. Understanding this topic is essential for building your knowledge in this subject area.`,
+      textbookReferences: [
+        {
+          chapter: "4",
+          pageNumbers: "42-48",
+          description: "Comprehensive explanation of the concepts with diagrams"
+        },
+        {
+          chapter: "5",
+          pageNumbers: "53-55",
+          description: "Practice problems and additional examples"
+        }
+      ],
+      interestingFacts: [
+        `An interesting historical fact about ${topic} and its discovery or development.`,
+        "A surprising application of this concept in modern technology or research.",
+        "A connection between this topic and another field of study that might surprise students."
+      ]
+    };
+  }
+
+  private getFallbackQuizQuestions(subject: string, topic: string) {
+    
+    return {
+      questions: [
+        {
+          id: "q1",
+          question: `What is the primary concept of ${topic} in ${subject}?`,
+          options: [
+            "The correct definition based on curriculum",
+            "A common misconception",
+            "An unrelated concept",
+            "A partially correct statement"
+          ],
+          correctAnswer: "The correct definition based on curriculum",
+          explanation: "This is the standard definition as per the textbook and curriculum requirements."
+        },
+        {
+          id: "q2",
+          question: "Which of the following is an application of this concept?",
+          options: [
+            "A relevant real-world application",
+            "An unrelated process",
+            "A different concept altogether",
+            "A historical event unrelated to the topic"
+          ],
+          correctAnswer: "A relevant real-world application",
+          explanation: "This application directly demonstrates how the concept is used practically."
+        },
+        {
+          id: "q3",
+          question: "What is the correct procedure for solving this type of problem?",
+          options: [
+            "The correct step-by-step approach",
+            "An incorrect approach",
+            "A method for a different type of problem",
+            "A made-up procedure"
+          ],
+          correctAnswer: "The correct step-by-step approach",
+          explanation: "This follows the standard methodology taught in the curriculum."
+        }
+      ]
+    };
+  }
 }
+
+export const claudeService = new ClaudeService();
