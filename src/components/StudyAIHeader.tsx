@@ -2,7 +2,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
@@ -82,10 +82,6 @@ const StudyAIHeader = ({
           ))}
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-destructive"></span>
-          </Button>
           <div className="hidden md:flex items-center gap-2">
             <div className="flex flex-col items-end">
               <p className="text-sm font-medium">Level {level}</p>

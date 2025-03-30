@@ -1,6 +1,7 @@
+
 // src/services/claudeService.ts
-import * as openaiService from './openaiService';
-import { toast } from "@/hooks/use-toast";
+import { generateAIContent, AIStatus } from './aiService';
+import { useToast, toast } from "@/hooks/use-toast";
 
 interface ClaudeService {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
@@ -73,83 +74,48 @@ const createMinimalContent = (subject: string, topic: string) => {
   };
 };
 
-// Check if the error is due to an API key issue
-const isApiKeyError = (error: any): boolean => {
-  if (!error) return false;
-  
-  const errorMessage = typeof error === 'string' ? error : (error.message || '');
-  return errorMessage.includes('API key') || 
-         errorMessage.includes('invalid_api_key') || 
-         errorMessage.includes('401') ||
-         errorMessage.includes('authentication');
-};
-
 export const claudeService: ClaudeService = {
   generateStudyPlan: async (board: string, className: string, subject: string) => {
     try {
-      // Show toast notification
+      // Create the loading toast and store its ID
       const loadingToast = toast({
         title: "Creating Study Plan",
-        description: "Extracting curriculum data for your study plan...",
-        progress: 10
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to generate the study plan
-      try {
-        toast.update({
-          id: loadingToast.id,
-          progress: 40,
-          description: "Analyzing curriculum structure..."
+      // Create prompt for AI
+      const prompt = `Generate a comprehensive study plan for ${subject} for Class ${className} following ${board} curriculum. Include a list of topics, their descriptions, estimated study time, and type (lesson, quiz, or practice).`;
+      
+      // Call the AI service with status updates that modify the toast
+      const studyPlan = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
+        
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Creating Study Plan (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        const studyPlan = await openaiService.generateStudyPlan(board, className, subject);
-        
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Study plan created successfully!",
-          duration: 2000
-        });
-        
-        return studyPlan;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Creating study plan from reliable educational resources",
-            progress: 50
-          });
-          
-          // Try again using the fallback mechanism in openaiService
-          const fallbackPlan = await openaiService.generateStudyPlan(board, className, subject);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Study plan created using educational resources",
-            duration: 2000
-          });
-          
-          return fallbackPlan;
-        }
-        
-        // If it's another kind of error, rethrow to be handled below
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Study Plan Created",
+        description: "Your curriculum-aligned study plan is ready!",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return { items: Array.isArray(studyPlan.items) ? studyPlan.items : studyPlan };
     } catch (error) {
       console.error("Error generating study plan:", error);
       
-      toast({
-        title: "Using Standard Curriculum",
-        description: "Created study plan based on educational standards",
-        variant: "default"
-      });
-      
       // Generate a simple fallback plan using the curriculum structure
       const now = new Date();
-      
       const subjectLower = subject.toLowerCase();
       let topics = [];
       
@@ -189,155 +155,93 @@ export const claudeService: ClaudeService = {
   },
 
   generateLessonContent: async (subject: string, topic: string, className: string = '10') => {
-    let retryCount = 0;
-    const maxRetries = 1;
-    
-    const attemptGeneration = async () => {
-      try {
-        const loadingToast = toast({
-          title: "Loading Content",
-          description: "Fetching curriculum-aligned lesson content with visual aids...",
-          progress: 20
-        });
+    try {
+      // Create the loading toast and store its ID
+      const loadingToast = toast({
+        title: "Loading Lesson Content",
+        description: "Initializing AI services...",
+        progress: 0
+      });
+      
+      // Create prompt for AI
+      const prompt = `Generate comprehensive, curriculum-aligned lesson content about ${topic} for ${subject} Class ${className}. Include key points, detailed explanations, examples, visual aid descriptions, activities, and a summary.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const lessonContent = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
         
-        // Use OpenAI to generate the enhanced lesson content
-        try {
-          toast.update({
-            id: loadingToast.id,
-            progress: 50,
-            description: "Formatting lesson materials..."
-          });
-          
-          const lessonContent = await openaiService.generateLessonContent(subject, topic, className);
-          
-          // Verify we have good content
-          if (lessonContent && 
-              lessonContent.keyPoints && 
-              lessonContent.explanation && 
-              lessonContent.examples) {
-                
-            toast.update({
-              id: loadingToast.id,
-              progress: 100,
-              description: "Lesson content loaded successfully!",
-              duration: 2000
-            });
-            
-            return lessonContent;
-          } else {
-            throw new Error("Incomplete lesson content received");
-          }
-        } catch (error) {
-          // Check if this is an API key error
-          if (isApiKeyError(error)) {
-            toast.update({
-              id: loadingToast.id,
-              title: "Using Alternative Sources",
-              description: "Generating content from educational resources",
-              progress: 60
-            });
-            
-            // Try again using the fallback mechanism
-            const fallbackContent = await openaiService.generateLessonContent(subject, topic, className);
-            
-            toast.update({
-              id: loadingToast.id,
-              progress: 100,
-              description: "Lesson content loaded from educational resources",
-              duration: 2000
-            });
-            
-            return fallbackContent;
-          }
-          
-          // If it's another kind of error, rethrow
-          throw error;
-        }
-      } catch (error) {
-        retryCount++;
-        console.error(`Error generating lesson content (attempt ${retryCount}):`, error);
-        
-        // If we've tried enough times, return minimal content
-        if (retryCount >= maxRetries) {
-          toast({
-            title: "Using Standard Content",
-            description: "Generated content based on educational standards",
-            variant: "default"
-          });
-          
-          // Return minimal error-state content
-          return createMinimalContent(subject, topic);
-        }
-        
-        // Otherwise, try again
+        // Update the toast with the current status
         toast({
-          title: "Retrying",
-          description: `Reconnecting to educational resources (attempt ${retryCount + 1})...`,
+          id,
+          title: `Loading Lesson Content (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        // Wait a moment before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return await attemptGeneration();
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Lesson Content Ready",
+        description: "Curriculum-aligned content has been loaded",
+        progress: 100,
+        duration: 2000
+      });
+      
+      // Verify we have good content or return minimal content
+      if (lessonContent && 
+          lessonContent.keyPoints && 
+          lessonContent.explanation && 
+          lessonContent.examples) {
+        return lessonContent;
+      } else {
+        return createMinimalContent(subject, topic);
       }
-    };
-    
-    return await attemptGeneration();
+    } catch (error) {
+      console.error("Error generating lesson content:", error);
+      return createMinimalContent(subject, topic);
+    }
   },
 
   generateQuizQuestion: async (subject: string, topic: string) => {
     try {
+      // Create the loading toast and store its ID
       const loadingToast = toast({
-        title: "Loading Quiz",
-        description: "Generating curriculum-aligned quiz question...",
-        progress: 30
+        title: "Creating Quiz",
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to generate the quiz question
-      try {
-        const quizQuestion = await openaiService.generateQuizQuestion(subject, topic);
+      // Create prompt for AI
+      const prompt = `Generate a curriculum-aligned multiple-choice quiz question about ${topic} for ${subject}. Include 4 options with the correct answer and explanation.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const quizQuestion = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
         
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Quiz question created successfully!",
-          duration: 2000
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Creating Quiz (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        return quizQuestion;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Creating quiz from educational question bank",
-            progress: 50
-          });
-          
-          // Try again using the fallback mechanism
-          const fallbackQuestion = await openaiService.generateQuizQuestion(subject, topic);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Quiz created from educational sources",
-            duration: 2000
-          });
-          
-          return fallbackQuestion;
-        }
-        
-        // If it's another kind of error, rethrow
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Quiz Created",
+        description: "Your curriculum-aligned quiz is ready!",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return quizQuestion;
     } catch (error) {
       console.error("Error generating quiz question:", error);
-      
-      toast({
-        title: "Using Standard Quiz",
-        description: "Created quiz based on educational standards",
-        variant: "default"
-      });
       
       // Fallback content
       return {
@@ -356,58 +260,42 @@ export const claudeService: ClaudeService = {
 
   generateLessonTest: async (subject: string, topic: string, questionCount: number) => {
     try {
+      // Create the loading toast and store its ID
       const loadingToast = toast({
-        title: "Preparing Test",
-        description: `Creating a ${questionCount}-question curriculum-aligned test for ${topic}...`,
-        progress: 30
+        title: "Creating Test",
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to generate the lesson test
-      try {
-        const lessonTest = await openaiService.generateLessonTest(subject, topic, questionCount);
+      // Create prompt for AI
+      const prompt = `Generate a ${questionCount}-question curriculum-aligned test about ${topic} for ${subject}. Each question should have 4 options, with one correct answer and an explanation.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const lessonTest = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
         
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Test created successfully!",
-          duration: 2000
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Creating Test (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        return lessonTest;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Creating test from educational question bank",
-            progress: 50
-          });
-          
-          // Try again using the fallback mechanism
-          const fallbackTest = await openaiService.generateLessonTest(subject, topic, questionCount);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Test created from educational sources",
-            duration: 2000
-          });
-          
-          return fallbackTest;
-        }
-        
-        // If it's another kind of error, rethrow
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Test Created",
+        description: "Your curriculum-aligned test is ready!",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return lessonTest;
     } catch (error) {
       console.error("Error generating lesson test:", error);
-      
-      toast({
-        title: "Using Standard Test",
-        description: "Created test based on educational standards",
-        variant: "default"
-      });
       
       // Generate a simple fallback test
       const questions = Array.from({ length: Math.min(questionCount, 5) }, (_, i) => {
@@ -457,64 +345,42 @@ export const claudeService: ClaudeService = {
 
   generateWeeklyPlan: async (subject: string, items: any[]) => {
     try {
+      // Create the loading toast and store its ID
       const loadingToast = toast({
-        title: "Creating Engaging Study Plan",
-        description: "Designing weekly schedule with visual learning elements...",
-        progress: 20
+        title: "Creating Weekly Plan",
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to generate the enhanced weekly plan
-      try {
-        toast.update({
-          id: loadingToast.id,
-          progress: 50,
-          description: "Organizing lessons into structured weeks..."
+      // Create prompt for AI
+      const prompt = `Generate a weekly study plan for ${subject} based on these topics: ${items.map(item => item.title).join(", ")}. Organize into 12 weeks with daily activities for each week.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const weeklyPlan = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
+        
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Creating Weekly Plan (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        const weeklyPlan = await openaiService.generateWeeklyPlan(subject, items);
-        
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Weekly plan created successfully!",
-          duration: 2000
-        });
-        
-        return weeklyPlan;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Creating plan from educational curriculum guidelines",
-            progress: 60
-          });
-          
-          // Try again using the fallback mechanism
-          const fallbackPlan = await openaiService.generateWeeklyPlan(subject, items);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Weekly plan created from educational sources",
-            duration: 2000
-          });
-          
-          return fallbackPlan;
-        }
-        
-        // If it's another kind of error, rethrow
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Weekly Plan Created",
+        description: "Your curriculum-aligned weekly plan is ready!",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return weeklyPlan;
     } catch (error) {
       console.error("Error generating weekly plan:", error);
-      
-      toast({
-        title: "Using Standard Plan",
-        description: "Created weekly plan based on educational standards",
-        variant: "default"
-      });
       
       // Generate a simple weekly plan from items
       const now = new Date();
@@ -587,58 +453,42 @@ export const claudeService: ClaudeService = {
   // Function to research curriculum
   researchCurriculum: async (subject: string, className: string) => {
     try {
+      // Create the loading toast and store its ID
       const loadingToast = toast({
         title: "Researching Curriculum",
-        description: `Finding curriculum for ${subject} Class ${className}...`,
-        progress: 30
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to research the curriculum
-      try {
-        const curriculumData = await openaiService.researchNCERTCurriculum(subject, className);
+      // Create prompt for AI
+      const prompt = `Research and provide detailed curriculum information for ${subject} Class ${className}. Include textbook details, units, chapters, key topics, and recommended sessions.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const curriculumData = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
         
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Curriculum research completed successfully!",
-          duration: 2000
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Researching Curriculum (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        return curriculumData;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Researching curriculum from educational standards",
-            progress: 60
-          });
-          
-          // Try again using the fallback mechanism
-          const fallbackCurriculum = await openaiService.researchNCERTCurriculum(subject, className);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Curriculum found from educational sources",
-            duration: 2000
-          });
-          
-          return fallbackCurriculum;
-        }
-        
-        // If it's another kind of error, rethrow
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Curriculum Research Complete",
+        description: "Curriculum details have been compiled",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return curriculumData;
     } catch (error) {
       console.error("Error researching curriculum:", error);
-      
-      toast({
-        title: "Using Standard Curriculum",
-        description: "Using educational standards for curriculum",
-        variant: "default"
-      });
       
       // Generate standard curriculum data
       return {
@@ -688,64 +538,42 @@ export const claudeService: ClaudeService = {
   // Function to extract textbook content
   extractTextbookContent: async (subject: string, className: string, chapter: string) => {
     try {
+      // Create the loading toast and store its ID
       const loadingToast = toast({
-        title: "Extracting Textbook Content",
-        description: `Accessing textbook for ${subject} Class ${className}, Chapter ${chapter}...`,
-        progress: 20
+        title: "Extracting Content",
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to extract textbook content
-      try {
-        toast.update({
-          id: loadingToast.id,
-          progress: 60,
-          description: "Formatting chapter content..."
+      // Create prompt for AI
+      const prompt = `Extract and provide detailed content from the ${subject} textbook for Class ${className}, Chapter ${chapter}. Include sections, key terms, visualizations, exercises, and a summary.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const textbookContent = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
+        
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Extracting Content (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        const textbookContent = await openaiService.extractTextbookContent(subject, className, chapter);
-        
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Textbook content extracted successfully!",
-          duration: 2000
-        });
-        
-        return textbookContent;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Generating chapter content from educational resources",
-            progress: 50
-          });
-          
-          // Try again using the fallback mechanism
-          const fallbackContent = await openaiService.extractTextbookContent(subject, className, chapter);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Chapter content generated from educational sources",
-            duration: 2000
-          });
-          
-          return fallbackContent;
-        }
-        
-        // If it's another kind of error, rethrow
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Content Extracted",
+        description: "Textbook content has been processed",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return textbookContent;
     } catch (error) {
       console.error("Error extracting textbook content:", error);
-      
-      toast({
-        title: "Using Standard Content",
-        description: "Generated chapter content based on educational standards",
-        variant: "default"
-      });
       
       // Return minimal textbook content
       return {
@@ -790,64 +618,42 @@ export const claudeService: ClaudeService = {
 
   generateVisualLearningResources: async (subject: string, topic: string) => {
     try {
+      // Create the loading toast and store its ID
       const loadingToast = toast({
-        title: "Creating Visual Resources",
-        description: `Generating visual learning aids for ${topic}...`,
-        progress: 30
+        title: "Creating Visuals",
+        description: "Initializing AI services...",
+        progress: 0
       });
       
-      // Use OpenAI to generate visual learning resources
-      try {
-        toast.update({
-          id: loadingToast.id,
-          progress: 60,
-          description: "Designing visual learning elements..."
+      // Create prompt for AI
+      const prompt = `Generate detailed descriptions for visual learning resources about ${topic} for ${subject}. Include diagrams, flowcharts, and infographics with learning objectives and suggested uses.`;
+      
+      // Call the AI service with status updates that modify the toast
+      const visualResources = await generateAIContent(prompt, (status: AIStatus) => {
+        const { id } = loadingToast;
+        
+        // Update the toast with the current status
+        toast({
+          id,
+          title: `Creating Visuals (${status.provider})`,
+          description: status.stage,
+          progress: status.progress
         });
-        
-        const visualResources = await openaiService.generateVisualLearningResources(subject, topic);
-        
-        toast.update({
-          id: loadingToast.id,
-          progress: 100,
-          description: "Visual resources created successfully!",
-          duration: 2000
-        });
-        
-        return visualResources;
-      } catch (error) {
-        // Check if this is an API key error
-        if (isApiKeyError(error)) {
-          toast.update({
-            id: loadingToast.id,
-            title: "Using Alternative Sources",
-            description: "Creating visuals from educational resources",
-            progress: 70
-          });
-          
-          // Try again using the fallback mechanism
-          const fallbackVisuals = await openaiService.generateVisualLearningResources(subject, topic);
-          
-          toast.update({
-            id: loadingToast.id,
-            progress: 100,
-            description: "Visual resources created from educational sources",
-            duration: 2000
-          });
-          
-          return fallbackVisuals;
-        }
-        
-        // If it's another kind of error, rethrow
-        throw error;
-      }
+      });
+      
+      // Handle successful completion
+      const { id } = loadingToast;
+      toast({
+        id,
+        title: "Visuals Created",
+        description: "Visual learning resources are ready",
+        progress: 100,
+        duration: 2000
+      });
+      
+      return visualResources;
     } catch (error) {
       console.error("Error generating visual resources:", error);
-      
-      toast({
-        title: "Using Standard Visuals",
-        description: "Created visual resources based on educational standards",
-        variant: "default"
-      });
       
       // Return minimal visual resources response
       return { 
