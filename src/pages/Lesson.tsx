@@ -1,9 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import StudyAIHeader from '@/components/StudyAIHeader';
 import LessonTest from '@/components/LessonTest';
@@ -53,6 +53,12 @@ interface LessonContent {
   }[];
 }
 
+interface GenerationStatus {
+  stage: string;
+  progress: number;
+  provider: string;
+}
+
 const Lesson = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -61,6 +67,11 @@ const Lesson = () => {
   const [lesson, setLesson] = useState<LessonContent | null>(null);
   const [showTest, setShowTest] = useState(false);
   const [studyItem, setStudyItem] = useState<any>(null);
+  const [generationStatus, setGenerationStatus] = useState<GenerationStatus>({
+    stage: "Initializing", 
+    progress: 0,
+    provider: "AI"
+  });
   
   useEffect(() => {
     const loadLessonContent = async () => {
@@ -86,6 +97,12 @@ const Lesson = () => {
           description: "Retrieving NCERT-aligned learning content...",
         });
         
+        setGenerationStatus({
+          stage: "Looking for cached content",
+          progress: 10,
+          provider: "System"
+        });
+        
         // Try to get cached lesson first
         const cachedLesson = localStorage.getItem(`lesson_${parsedStudyItem.subject}_${parsedStudyItem.title}`);
         if (cachedLesson) {
@@ -93,6 +110,12 @@ const Lesson = () => {
           setLoading(false);
           return;
         }
+        
+        setGenerationStatus({
+          stage: "Preparing content generation",
+          progress: 20,
+          provider: "AI Service"
+        });
         
         // Try to get lesson content from coordinated AI services
         const prompt = `
@@ -108,6 +131,8 @@ const Lesson = () => {
           7. References to textbook chapters and pages
           8. Interesting facts to engage students
           
+          Base your response on actual NCERT textbook content for class ${parsedStudyItem.className || '10'} ${parsedStudyItem.subject} curriculum.
+          
           Format the response as a well-structured JSON object following this schema:
           {
             "title": "full topic title",
@@ -121,7 +146,7 @@ const Lesson = () => {
             "interestingFacts": ["fact 1", "fact 2", ...]
           }
           
-          Ensure the content is accurate, age-appropriate, and aligned with standard curriculum for ${parsedStudyItem.subject}.
+          Ensure the content is accurate, age-appropriate, and aligned with NCERT curriculum for ${parsedStudyItem.subject}.
         `;
         
         // Create a context object for the AI service
@@ -137,13 +162,25 @@ const Lesson = () => {
           context,
           (status) => {
             // Update loading status
-            toast(`${status.stage} (${status.progress}%)`, {
-              description: `Using ${status.provider} AI service to generate content...`,
+            setGenerationStatus({
+              stage: status.stage || "Generating content",
+              progress: status.progress || 30,
+              provider: status.provider || "AI Service"
+            });
+            
+            toast(`${status.stage || "Generating"} (${status.progress || 30}%)`, {
+              description: `Using ${status.provider || "AI"} service to generate content...`,
             });
           }
         );
         
         if (result) {
+          setGenerationStatus({
+            stage: "Processing response",
+            progress: 90,
+            provider: "System"
+          });
+          
           // Transform result if needed to match our expected format
           const formattedLesson: LessonContent = {
             title: result.title || parsedStudyItem.title,
@@ -171,6 +208,12 @@ const Lesson = () => {
             JSON.stringify(formattedLesson)
           );
           
+          setGenerationStatus({
+            stage: "Completed",
+            progress: 100,
+            provider: "System"
+          });
+          
           // Show success toast
           toast.success("Lesson Ready - " + parsedStudyItem.title + " content has been loaded successfully");
           
@@ -182,6 +225,12 @@ const Lesson = () => {
         }
       } catch (error) {
         console.error("Error loading lesson content:", error);
+        
+        setGenerationStatus({
+          stage: "Trying fallback content source",
+          progress: 50,
+          provider: "Claude AI"
+        });
         
         // Try one more time with claudeService as fallback
         try {
@@ -195,6 +244,11 @@ const Lesson = () => {
           
           if (fallbackResult) {
             setLesson(fallbackResult);
+            setGenerationStatus({
+              stage: "Content loaded from alternative source",
+              progress: 100,
+              provider: "Claude AI"
+            });
             toast.success("Content loaded from alternative source");
           } else {
             throw new Error("Fallback source also failed");
@@ -203,6 +257,11 @@ const Lesson = () => {
           console.error("Fallback error:", fallbackError);
           setError("Failed to load lesson content. Please try refreshing the page.");
           toast.error("Unable to load lesson content");
+          setGenerationStatus({
+            stage: "Generation failed",
+            progress: 0,
+            provider: "System"
+          });
         }
       } finally {
         setLoading(false);
@@ -256,11 +315,27 @@ const Lesson = () => {
           <Card className="w-full max-w-3xl mx-auto">
             <CardHeader>
               <CardTitle>Loading Lesson</CardTitle>
-              <CardDescription>Retrieving learning materials...</CardDescription>
+              <CardDescription>Retrieving {studyItem?.subject || 'subject'} learning materials...</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium">{generationStatus.stage}</p>
+                    <span className="text-sm text-muted-foreground">{generationStatus.progress}%</span>
+                  </div>
+                  <Progress value={generationStatus.progress} variant={generationStatus.progress >= 100 ? "success" : "default"} />
+                  <p className="text-xs text-muted-foreground">Using {generationStatus.provider} to generate NCERT-aligned content</p>
+                </div>
+                
+                <div className="pt-4 space-y-2">
+                  <p className="text-sm">This content is being generated based on:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
+                    <li>NCERT curriculum guidelines</li>
+                    <li>Class {studyItem?.className || '10'} textbook content</li>
+                    <li>Standard {studyItem?.subject || 'subject'} learning objectives</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -282,6 +357,7 @@ const Lesson = () => {
             </CardContent>
           </Card>
         ) : lesson ? (
+          
           <div className="max-w-4xl mx-auto">
             <div className="mb-6 flex items-center gap-2">
               <Button variant="outline" onClick={() => navigate(`/subject/${studyItem?.subject || ''}`)}>

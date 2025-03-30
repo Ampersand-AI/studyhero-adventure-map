@@ -79,23 +79,40 @@ export const generateLessonContent = async (
       }
     };
 
+    // First, check if we have cached lesson content
+    try {
+      const cachedContent = localStorage.getItem(`lesson_${context.subject}_${context.topic.replace(/\s+/g, '_')}`);
+      if (cachedContent) {
+        updateStatus({
+          stage: "Retrieved from cache",
+          progress: 100,
+          provider: "System"
+        });
+        return JSON.parse(cachedContent);
+      }
+    } catch (e) {
+      console.warn("Cache check failed:", e);
+    }
+
     // Build the prompt for lesson content generation
-    const prompt = `
+    const ncertAlignedPrompt = `
       Create a comprehensive educational lesson on "${context.topic}" for the subject "${context.subject}" for students in class ${context.className || '10'}.
       
-      The lesson should include:
-      1. Key learning points (5-7 points)
-      2. Detailed explanation (3-5 paragraphs)
-      3. Practical examples (2-3)
-      4. Visual learning aids (3-4 descriptions)
-      5. Hands-on activities (2-3)
-      6. A concise summary
-      7. References to textbook chapters and pages
-      8. Interesting facts to engage students
+      IMPORTANT: Base your response on ACTUAL NCERT textbook content for class ${context.className || '10'} ${context.subject} curriculum. Extract and structure the information to closely match what students would find in their actual textbooks.
       
+      The lesson should include:
+      1. Key learning points (5-7 points) that align with NCERT learning objectives
+      2. Detailed explanation (3-5 paragraphs) using language and concepts from the NCERT textbook
+      3. Practical examples (2-3) similar to those found in NCERT textbooks
+      4. Visual learning aids (3-4 descriptions) that would complement the textbook material
+      5. Hands-on activities (2-3) that reinforce curriculum concepts
+      6. A concise summary that highlights the most important NCERT curriculum points
+      7. References to specific textbook chapters and pages
+      8. Interesting facts to engage students that connect to the core curriculum
+
       Format the response as a well-structured JSON object following this schema:
       {
-        "title": "full topic title",
+        "title": "full topic title as it appears in NCERT",
         "keyPoints": ["point 1", "point 2", ...],
         "explanation": ["paragraph 1", "paragraph 2", ...],
         "examples": [{"title": "Example 1", "content": "..."}, ...],
@@ -106,12 +123,12 @@ export const generateLessonContent = async (
         "interestingFacts": ["fact 1", "fact 2", ...]
       }
       
-      Ensure the content is accurate, age-appropriate, and aligned with standard curriculum for ${context.subject}.
+      Remember: The goal is to create content that is directly aligned with the NCERT curriculum and feels like it was extracted directly from an official textbook.
     `;
 
     // Generate content using the service that coordinates multiple AI providers
     const result = await generateEnhancedContent(
-      prompt,
+      ncertAlignedPrompt,
       context,
       updateStatus
     );
@@ -155,7 +172,7 @@ export const generateLessonContent = async (
     // Cache the lesson
     try {
       localStorage.setItem(
-        `lesson_${context.subject}_${context.topic}`, 
+        `lesson_${context.subject}_${context.topic.replace(/\s+/g, '_')}`, 
         JSON.stringify(formattedLesson)
       );
     } catch (e) {
@@ -192,9 +209,26 @@ export const generateQuizContent = async (
       }
     };
 
+    // Check for cached quiz
+    try {
+      const cachedQuiz = localStorage.getItem(`quiz_${context.subject}_${context.topic.replace(/\s+/g, '_')}`);
+      if (cachedQuiz) {
+        updateStatus({
+          stage: "Retrieved from cache",
+          progress: 100,
+          provider: "System"
+        });
+        return JSON.parse(cachedQuiz);
+      }
+    } catch (e) {
+      console.warn("Cache check failed:", e);
+    }
+
     // Build the prompt for quiz generation
     const prompt = `
       Create a quiz with ${questionCount} questions to test understanding of "${context.topic}" for ${context.subject} at class ${context.className || '10'} level.
+      
+      IMPORTANT: Base your questions on ACTUAL NCERT textbook content for this subject and class. The questions should assess understanding of key concepts as presented in the curriculum.
       
       Each question should be multiple choice with 4 options.
       
@@ -214,7 +248,7 @@ export const generateQuizContent = async (
       Ensure questions are:
       1. Clear and unambiguous
       2. Appropriate difficulty for class ${context.className || '10'}
-      3. Focused on core concepts from the topic
+      3. Focused on core concepts from the NCERT curriculum
       4. Includes a mix of recall and application questions
       5. Contains helpful explanations that reinforce learning
     `;
@@ -252,7 +286,7 @@ export const generateQuizContent = async (
     // Cache the quiz
     try {
       localStorage.setItem(
-        `quiz_${context.subject}_${context.topic}`, 
+        `quiz_${context.subject}_${context.topic.replace(/\s+/g, '_')}`, 
         JSON.stringify(parsedResult)
       );
     } catch (e) {
