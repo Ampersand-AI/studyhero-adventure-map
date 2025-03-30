@@ -15,7 +15,7 @@ interface StudyAIHeaderProps {
   navigation: Array<{ name: string; href: string; icon: React.ReactNode }>;
 }
 
-export const StudyAIHeader = ({ 
+const StudyAIHeader = ({ 
   userName, 
   avatarUrl, 
   level, 

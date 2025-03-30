@@ -10,6 +10,7 @@ import {
   Clock, 
   CheckCircle 
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -198,9 +199,9 @@ const Index = () => {
               © 2023 StudyHero. All rights reserved.
             </p>
             <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">Contact Us</a>
+              <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link>
+              <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link>
+              <Link to="#" className="text-sm text-muted-foreground hover:text-foreground">Contact Us</Link>
             </div>
           </div>
         </div>
