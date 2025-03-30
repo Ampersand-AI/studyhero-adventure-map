@@ -849,4 +849,4 @@ class AIService implements AI {
         {
           id: "topic-1",
           title: "Scientific Method and Inquiry",
-          description: "Understanding the process of scientific investigation
+          description: "Understanding the process of scientific investigation",
