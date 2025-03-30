@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, User } from '@/services/userService';
@@ -12,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Home, Trophy, BarChart, PlusCircle, BookOpen, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 interface StudyItem {
   id: string;
@@ -106,7 +106,10 @@ const Dashboard = () => {
       try {
         // Increment progress
         setLoadingProgress(10);
-        loadingToast.update({ progress: 10 });
+        loadingToast.update({
+          id: loadingToast.id,
+          progress: 10
+        });
         
         // Load user data
         const userData = await userService.getUserProfile();
@@ -114,7 +117,8 @@ const Dashboard = () => {
         
         // Increment progress
         setLoadingProgress(20);
-        loadingToast.update({ 
+        loadingToast.update({
+          id: loadingToast.id, 
           progress: 20,
           description: "Loading your profile..."
         });
@@ -123,7 +127,7 @@ const Dashboard = () => {
         const profileData = localStorage.getItem('studyHeroProfile');
         if (!profileData) {
           // If no profile exists, redirect to onboarding
-          loadingToast.dismiss();
+          toast.dismiss(loadingToast.id);
           navigate('/onboarding');
           return;
         }
@@ -133,7 +137,7 @@ const Dashboard = () => {
         setSubjects(userSubjects);
         
         if (userSubjects.length === 0) {
-          loadingToast.dismiss();
+          toast.dismiss(loadingToast.id);
           toast({
             title: "No subjects found",
             description: "Please add subjects to your profile to generate a study plan.",
@@ -144,7 +148,8 @@ const Dashboard = () => {
         
         // Increment progress
         setLoadingProgress(30);
-        loadingToast.update({ 
+        loadingToast.update({
+          id: loadingToast.id, 
           progress: 30,
           description: "Checking existing study plans..."
         });
@@ -160,7 +165,8 @@ const Dashboard = () => {
         
         // Increment progress
         setLoadingProgress(50);
-        loadingToast.update({ 
+        loadingToast.update({
+          id: loadingToast.id, 
           progress: 50,
           description: "Analyzing your curriculum needs..."
         });
@@ -171,6 +177,7 @@ const Dashboard = () => {
         
         if (subjectsToGenerate.length > 0) {
           loadingToast.update({
+            id: loadingToast.id,
             title: "Generating Study Plans",
             description: `Creating plans for ${subjectsToGenerate.length} subjects based on NCERT curriculum...`,
             progress: 60
@@ -193,14 +200,16 @@ const Dashboard = () => {
           
           // Increment progress
           setLoadingProgress(70);
-          loadingToast.update({ 
+          loadingToast.update({
+            id: loadingToast.id, 
             progress: 70,
             description: "Organizing your weekly schedule..."
           });
         } else {
           // Skip ahead in the progress if we don't need to generate plans
           setLoadingProgress(70);
-          loadingToast.update({ 
+          loadingToast.update({
+            id: loadingToast.id, 
             progress: 70,
             description: "Organizing your weekly schedule..."
           });
@@ -217,7 +226,8 @@ const Dashboard = () => {
           if (!initialLoadComplete) {
             // Increment progress
             setLoadingProgress(90);
-            loadingToast.update({ 
+            loadingToast.update({
+              id: loadingToast.id, 
               progress: 90,
               description: "Finalizing your dashboard..."
             });
@@ -225,6 +235,7 @@ const Dashboard = () => {
         } else {
           // Generate new weekly plans
           loadingToast.update({
+            id: loadingToast.id,
             title: "Creating Weekly Schedule",
             description: "Organizing your study material into a weekly plan...",
             progress: 80
@@ -237,7 +248,8 @@ const Dashboard = () => {
           
           // Increment progress
           setLoadingProgress(90);
-          loadingToast.update({ 
+          loadingToast.update({
+            id: loadingToast.id, 
             progress: 90,
             description: "Finalizing your dashboard..."
           });
@@ -256,7 +268,8 @@ const Dashboard = () => {
         
         // Increment progress to completion
         setLoadingProgress(100);
-        loadingToast.update({ 
+        loadingToast.update({
+          id: loadingToast.id, 
           progress: 100,
           description: "Dashboard ready!",
           duration: 2000 // Auto dismiss after 2 seconds
@@ -271,6 +284,7 @@ const Dashboard = () => {
         // Update toast to show error
         if (loadingToastId) {
           loadingToast.update({
+            id: loadingToast.id,
             title: "Error",
             description: "Failed to load dashboard data. Please try again.",
             variant: "destructive",

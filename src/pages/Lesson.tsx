@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
@@ -92,7 +93,8 @@ const Lesson = () => {
         
         // Increment progress
         setLoadingProgress(20);
-        loadingToast.update({ 
+        loadingToast.update({
+          id: loadingToast.id,
           progress: 20,
           description: "Retrieving NCERT curriculum data..."
         });
@@ -101,7 +103,8 @@ const Lesson = () => {
         try {
           // Increment progress
           setLoadingProgress(40);
-          loadingToast.update({ 
+          loadingToast.update({
+            id: loadingToast.id,
             progress: 40,
             description: "Extracting authentic NCERT content..."
           });
@@ -118,7 +121,8 @@ const Lesson = () => {
           
           // Increment progress
           setLoadingProgress(80);
-          loadingToast.update({ 
+          loadingToast.update({
+            id: loadingToast.id,
             progress: 80,
             description: "Formatting lesson materials..."
           });
@@ -138,7 +142,8 @@ const Lesson = () => {
             
             // Finish progress
             setLoadingProgress(100);
-            loadingToast.update({ 
+            loadingToast.update({
+              id: loadingToast.id,
               progress: 100,
               description: "Lesson ready!",
               duration: 2000 // Auto dismiss after 2 seconds
@@ -155,6 +160,7 @@ const Lesson = () => {
                lessonError.message.includes('authentication'))) {
             
             loadingToast.update({
+              id: loadingToast.id,
               title: "API Configuration Error",
               description: "Please check your API key in settings.",
               variant: "destructive",
@@ -179,6 +185,7 @@ const Lesson = () => {
               
               // Inform user we're using cached content
               loadingToast.update({
+                id: loadingToast.id,
                 title: "Using cached content",
                 description: "Couldn't connect to NCERT database. Using previously loaded content.",
                 progress: 100,
@@ -197,6 +204,7 @@ const Lesson = () => {
         // Update toast to show error
         if (loadingToastId) {
           loadingToast.update({
+            id: loadingToast.id,
             title: "Error",
             description: "Failed to load lesson content. Please try again.",
             variant: "destructive",
