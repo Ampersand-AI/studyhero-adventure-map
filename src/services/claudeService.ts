@@ -1,4 +1,3 @@
-
 // src/services/claudeService.ts
 import { generateAIContent, AIStatus } from './aiService';
 import { useToast, toast } from "@/hooks/use-toast";
@@ -77,8 +76,8 @@ const createMinimalContent = (subject: string, topic: string) => {
 export const claudeService: ClaudeService = {
   generateStudyPlan: async (board: string, className: string, subject: string) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      // Create the loading toast
+      toast({
         title: "Creating Study Plan",
         description: "Initializing AI services...",
         progress: 0
@@ -89,11 +88,8 @@ export const claudeService: ClaudeService = {
       
       // Call the AI service with status updates that modify the toast
       const studyPlan = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
         // Update the toast with the current status
         toast({
-          id,
           title: `Creating Study Plan (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -101,13 +97,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Study Plan Created",
         description: "Your curriculum-aligned study plan is ready!",
         progress: 100,
-        duration: 2000
       });
       
       return { items: Array.isArray(studyPlan.items) ? studyPlan.items : studyPlan };
@@ -154,10 +147,10 @@ export const claudeService: ClaudeService = {
     }
   },
 
+  // Updated pattern for remaining methods
   generateLessonContent: async (subject: string, topic: string, className: string = '10') => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Loading Lesson Content",
         description: "Initializing AI services...",
         progress: 0
@@ -166,13 +159,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Generate comprehensive, curriculum-aligned lesson content about ${topic} for ${subject} Class ${className}. Include key points, detailed explanations, examples, visual aid descriptions, activities, and a summary.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const lessonContent = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Loading Lesson Content (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -180,13 +169,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Lesson Content Ready",
         description: "Curriculum-aligned content has been loaded",
         progress: 100,
-        duration: 2000
       });
       
       // Verify we have good content or return minimal content
@@ -206,8 +192,7 @@ export const claudeService: ClaudeService = {
 
   generateQuizQuestion: async (subject: string, topic: string) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Creating Quiz",
         description: "Initializing AI services...",
         progress: 0
@@ -216,13 +201,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Generate a curriculum-aligned multiple-choice quiz question about ${topic} for ${subject}. Include 4 options with the correct answer and explanation.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const quizQuestion = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Creating Quiz (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -230,13 +211,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Quiz Created",
         description: "Your curriculum-aligned quiz is ready!",
         progress: 100,
-        duration: 2000
       });
       
       return quizQuestion;
@@ -260,8 +238,7 @@ export const claudeService: ClaudeService = {
 
   generateLessonTest: async (subject: string, topic: string, questionCount: number) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Creating Test",
         description: "Initializing AI services...",
         progress: 0
@@ -270,13 +247,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Generate a ${questionCount}-question curriculum-aligned test about ${topic} for ${subject}. Each question should have 4 options, with one correct answer and an explanation.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const lessonTest = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Creating Test (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -284,13 +257,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Test Created",
         description: "Your curriculum-aligned test is ready!",
         progress: 100,
-        duration: 2000
       });
       
       return lessonTest;
@@ -345,8 +315,7 @@ export const claudeService: ClaudeService = {
 
   generateWeeklyPlan: async (subject: string, items: any[]) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Creating Weekly Plan",
         description: "Initializing AI services...",
         progress: 0
@@ -355,13 +324,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Generate a weekly study plan for ${subject} based on these topics: ${items.map(item => item.title).join(", ")}. Organize into 12 weeks with daily activities for each week.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const weeklyPlan = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Creating Weekly Plan (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -369,13 +334,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Weekly Plan Created",
         description: "Your curriculum-aligned weekly plan is ready!",
         progress: 100,
-        duration: 2000
       });
       
       return weeklyPlan;
@@ -453,8 +415,7 @@ export const claudeService: ClaudeService = {
   // Function to research curriculum
   researchCurriculum: async (subject: string, className: string) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Researching Curriculum",
         description: "Initializing AI services...",
         progress: 0
@@ -463,13 +424,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Research and provide detailed curriculum information for ${subject} Class ${className}. Include textbook details, units, chapters, key topics, and recommended sessions.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const curriculumData = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Researching Curriculum (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -477,13 +434,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Curriculum Research Complete",
         description: "Curriculum details have been compiled",
         progress: 100,
-        duration: 2000
       });
       
       return curriculumData;
@@ -538,8 +492,7 @@ export const claudeService: ClaudeService = {
   // Function to extract textbook content
   extractTextbookContent: async (subject: string, className: string, chapter: string) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Extracting Content",
         description: "Initializing AI services...",
         progress: 0
@@ -548,13 +501,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Extract and provide detailed content from the ${subject} textbook for Class ${className}, Chapter ${chapter}. Include sections, key terms, visualizations, exercises, and a summary.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const textbookContent = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Extracting Content (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -562,13 +511,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Content Extracted",
         description: "Textbook content has been processed",
         progress: 100,
-        duration: 2000
       });
       
       return textbookContent;
@@ -618,8 +564,7 @@ export const claudeService: ClaudeService = {
 
   generateVisualLearningResources: async (subject: string, topic: string) => {
     try {
-      // Create the loading toast and store its ID
-      const loadingToast = toast({
+      toast({
         title: "Creating Visuals",
         description: "Initializing AI services...",
         progress: 0
@@ -628,13 +573,9 @@ export const claudeService: ClaudeService = {
       // Create prompt for AI
       const prompt = `Generate detailed descriptions for visual learning resources about ${topic} for ${subject}. Include diagrams, flowcharts, and infographics with learning objectives and suggested uses.`;
       
-      // Call the AI service with status updates that modify the toast
+      // Call the AI service with status updates
       const visualResources = await generateAIContent(prompt, (status: AIStatus) => {
-        const { id } = loadingToast;
-        
-        // Update the toast with the current status
         toast({
-          id,
           title: `Creating Visuals (${status.provider})`,
           description: status.stage,
           progress: status.progress
@@ -642,13 +583,10 @@ export const claudeService: ClaudeService = {
       });
       
       // Handle successful completion
-      const { id } = loadingToast;
       toast({
-        id,
         title: "Visuals Created",
         description: "Visual learning resources are ready",
         progress: 100,
-        duration: 2000
       });
       
       return visualResources;

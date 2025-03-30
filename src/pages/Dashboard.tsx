@@ -79,7 +79,6 @@ const Dashboard = () => {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -94,20 +93,16 @@ const Dashboard = () => {
       setLoadingProgress(0);
       
       // Show initial loading toast with progress bar
-      const loadingToast = toast({
+      toast({
         title: "Loading Dashboard",
         description: "Initializing system...",
         progress: 0,
-        duration: 100000, // Long duration which we'll manually dismiss
       });
-      
-      setLoadingToastId(loadingToast.id);
       
       try {
         // Increment progress
         setLoadingProgress(10);
         toast({
-          id: loadingToast.id,
           title: "Loading Dashboard",
           description: "Connecting to user service...",
           progress: 10
@@ -120,7 +115,6 @@ const Dashboard = () => {
         // Increment progress
         setLoadingProgress(20);
         toast({
-          id: loadingToast.id, 
           title: "Loading Dashboard",
           description: "Loading your profile data...",
           progress: 20
@@ -130,7 +124,7 @@ const Dashboard = () => {
         const profileData = localStorage.getItem('studyHeroProfile');
         if (!profileData) {
           // If no profile exists, redirect to onboarding
-          toast.dismiss(loadingToast.id);
+          toast.dismiss();
           navigate('/onboarding');
           return;
         }
@@ -140,7 +134,7 @@ const Dashboard = () => {
         setSubjects(userSubjects);
         
         if (userSubjects.length === 0) {
-          toast.dismiss(loadingToast.id);
+          toast.dismiss();
           toast({
             title: "No subjects found",
             description: "Please add subjects to your profile to generate a study plan.",
@@ -152,7 +146,6 @@ const Dashboard = () => {
         // Increment progress
         setLoadingProgress(30);
         toast({
-          id: loadingToast.id, 
           title: "Loading Dashboard",
           description: "Checking existing curriculum plans...",
           progress: 30
@@ -170,7 +163,6 @@ const Dashboard = () => {
         // Increment progress
         setLoadingProgress(50);
         toast({
-          id: loadingToast.id, 
           title: "Loading Dashboard",
           description: "Analyzing your curriculum needs...",
           progress: 50
@@ -182,7 +174,6 @@ const Dashboard = () => {
         
         if (subjectsToGenerate.length > 0) {
           toast({
-            id: loadingToast.id,
             title: "Generating Study Plans",
             description: `Connecting to AI services for ${subjectsToGenerate.length} subjects...`,
             progress: 60
@@ -193,7 +184,6 @@ const Dashboard = () => {
           for (const subject of subjectsToGenerate) {
             try {
               toast({
-                id: loadingToast.id,
                 title: "Generating Study Plans",
                 description: `Creating curriculum for ${subject}...`,
                 progress: 65
@@ -203,7 +193,6 @@ const Dashboard = () => {
               newPlans.push(plan);
               
               toast({
-                id: loadingToast.id,
                 title: "Generating Study Plans",
                 description: `${subject} curriculum created successfully`,
                 progress: 68
@@ -212,7 +201,6 @@ const Dashboard = () => {
               console.error(`Error generating plan for ${subject}:`, err);
               
               toast({
-                id: loadingToast.id,
                 title: "Generating Study Plans",
                 description: `Using standard curriculum for ${subject}`,
                 progress: 68
@@ -227,7 +215,6 @@ const Dashboard = () => {
           // Increment progress
           setLoadingProgress(70);
           toast({
-            id: loadingToast.id, 
             title: "Organizing Content",
             description: "Creating your weekly learning schedule...",
             progress: 70
@@ -236,7 +223,6 @@ const Dashboard = () => {
           // Skip ahead in the progress if we don't need to generate plans
           setLoadingProgress(70);
           toast({
-            id: loadingToast.id, 
             title: "Organizing Content",
             description: "Loading your weekly learning schedule...",
             progress: 70
@@ -255,7 +241,6 @@ const Dashboard = () => {
             // Increment progress
             setLoadingProgress(90);
             toast({
-              id: loadingToast.id, 
               title: "Almost Ready",
               description: "Preparing dashboard visualization...",
               progress: 90
@@ -264,7 +249,6 @@ const Dashboard = () => {
         } else {
           // Generate new weekly plans
           toast({
-            id: loadingToast.id,
             title: "Creating Weekly Schedule",
             description: "Connecting to AI services for schedule optimization...",
             progress: 80
@@ -278,7 +262,6 @@ const Dashboard = () => {
           // Increment progress
           setLoadingProgress(90);
           toast({
-            id: loadingToast.id, 
             title: "Almost Ready",
             description: "Finalizing dashboard elements...",
             progress: 90
@@ -299,11 +282,9 @@ const Dashboard = () => {
         // Increment progress to completion
         setLoadingProgress(100);
         toast({
-          id: loadingToast.id, 
           title: "Dashboard Ready",
           description: "Your personalized learning experience is ready!",
           progress: 100,
-          duration: 2000 // Auto dismiss after 2 seconds
         });
         
         setInitialLoadComplete(true);
@@ -313,22 +294,16 @@ const Dashboard = () => {
         setError(err.message || "Failed to load dashboard data.");
         
         // Update toast to show error
-        if (loadingToastId) {
-          toast({
-            id: loadingToast.id,
-            title: "Error",
-            description: "Failed to load dashboard data. Please try again.",
-            variant: "destructive",
-            progress: undefined // Remove progress bar for error
-          });
-        }
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
-        // Ensure toast is dismissed if still showing
+        // Ensure toast is dismissed
         setTimeout(() => {
-          if (loadingToastId) {
-            toast.dismiss(loadingToastId);
-          }
+          toast.dismiss();
         }, 2000);
       }
     };
