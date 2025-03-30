@@ -1,6 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/hooks/use-toast";
+import { userService } from './userService';
 
 // Interface definitions
 interface StudyItem {
