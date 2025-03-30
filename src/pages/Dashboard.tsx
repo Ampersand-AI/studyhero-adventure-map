@@ -4,9 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
 import ProgressCard from '@/components/ProgressCard';
 import StudyTimeline from '@/components/StudyTimeline';
+import WeeklyPlanView from '@/components/WeeklyPlanView';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2, PlusCircle, Trash2, RefreshCw } from "lucide-react";
+import { Calendar, BookOpen, BarChart, Award, Home, Trophy, Map, Loader2, PlusCircle, Trash2, RefreshCw, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { claudeService } from '@/services/claudeService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,9 +30,44 @@ interface StudyItem {
   subject?: string;
 }
 
+interface WeeklyTest {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  status: string;
+  dueDate: string;
+  estimatedTimeInMinutes: number;
+  subject: string;
+  isWeeklyTest: boolean;
+  weekNumber: number;
+}
+
+interface DailyActivity {
+  date: string;
+  items: StudyItem[];
+}
+
+interface WeeklyPlan {
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  dailyActivities: DailyActivity[];
+  weeklyTest: WeeklyTest;
+}
+
 interface SubjectPlan {
   subject: string;
   items: StudyItem[];
+  weeklyPlans?: WeeklyPlan[];
+}
+
+interface TestScore {
+  id: string;
+  subject: string;
+  weekNumber: number;
+  score: number;
+  date: string;
 }
 
 const Dashboard = () => {
@@ -40,6 +76,8 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [studyPlans, setStudyPlans] = useState<SubjectPlan[]>([]);
   const [activeSubject, setActiveSubject] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"timeline" | "weekly">("timeline");
+  const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [profileInfo, setProfileInfo] = useState<any>({
     board: '',
     className: '',
@@ -56,6 +94,7 @@ const Dashboard = () => {
 
   // New dialog state for reset confirmation
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isGeneratingWeeklyPlan, setIsGeneratingWeeklyPlan] = useState(false);
 
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -77,7 +116,27 @@ const Dashboard = () => {
 
     // Load all study plans
     loadStudyPlans();
+    
+    // Load test scores
+    loadTestScores();
   }, [navigate]);
+
+  const loadTestScores = () => {
+    const savedScores = localStorage.getItem('weeklyTestScores');
+    if (savedScores) {
+      try {
+        const scores = JSON.parse(savedScores);
+        // Convert array to record
+        const scoreRecord: Record<string, number> = {};
+        scores.forEach((score: TestScore) => {
+          scoreRecord[score.id] = score.score;
+        });
+        setTestScores(scoreRecord);
+      } catch (e) {
+        console.error("Error loading test scores:", e);
+      }
+    }
+  };
 
   const loadStudyPlans = async () => {
     setIsLoading(true);
@@ -95,6 +154,14 @@ const Dashboard = () => {
         if (parsedPlans.length > 0 && !activeSubject) {
           setActiveSubject(parsedPlans[0].subject);
         }
+        
+        // Generate weekly plans for subjects that don't have them
+        for (const plan of parsedPlans) {
+          if (!plan.weeklyPlans || plan.weeklyPlans.length === 0) {
+            await generateWeeklyPlan(plan.subject, plan.items);
+          }
+        }
+        
         setIsLoading(false);
       } else {
         // If no plans exist yet, create plans for all selected subjects from profile
@@ -114,9 +181,18 @@ const Dashboard = () => {
               try {
                 const plan = await generateStudyPlan(board, className, subject);
                 if (plan) {
+                  // Generate weekly plan
+                  const weeklyData = await generateWeeklyPlan(subject, plan);
+                  
                   newPlans.push({
                     subject,
-                    items: plan
+                    items: plan,
+                    weeklyPlans: weeklyData
+                  });
+                  
+                  toast({
+                    title: "Subject Plan Created",
+                    description: `Successfully loaded ${subject} into your dashboard`,
                   });
                 }
               } catch (err) {
@@ -144,11 +220,21 @@ const Dashboard = () => {
     try {
       setError(null);
       
+      toast({
+        title: "Connecting to NCERT",
+        description: `Extracting curriculum data for ${subject}...`,
+      });
+      
       const planData = await claudeService.generateStudyPlan(board, className, subject);
       
       if (!planData || !planData.items || !Array.isArray(planData.items) || planData.items.length === 0) {
         throw new Error("Invalid study plan data received");
       }
+      
+      toast({
+        title: "Study Plan Created",
+        description: `Successfully generated curriculum for ${subject}`,
+      });
       
       // Use the items from the response directly
       return planData.items;
@@ -164,13 +250,84 @@ const Dashboard = () => {
     }
   };
 
+  const generateWeeklyPlan = async (subject: string, items: StudyItem[]): Promise<WeeklyPlan[] | undefined> => {
+    try {
+      setIsGeneratingWeeklyPlan(true);
+      
+      const response = await claudeService.generateWeeklyPlan(subject, items);
+      
+      if (!response || !response.weeklyPlans) {
+        throw new Error("Invalid weekly plan data received");
+      }
+      
+      // Update the study plans in state
+      setStudyPlans(prevPlans => 
+        prevPlans.map(plan => 
+          plan.subject === subject 
+            ? { ...plan, weeklyPlans: response.weeklyPlans } 
+            : plan
+        )
+      );
+      
+      // Update localStorage
+      const updatedPlans = studyPlans.map(plan => 
+        plan.subject === subject 
+          ? { ...plan, weeklyPlans: response.weeklyPlans } 
+          : plan
+      );
+      localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+      
+      toast({
+        title: "Weekly Plan Created",
+        description: `Your ${subject} curriculum is now organized into a daily study schedule`,
+      });
+      
+      return response.weeklyPlans;
+    } catch (error) {
+      console.error("Error generating weekly plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create weekly plan",
+        variant: "destructive"
+      });
+      return undefined;
+    } finally {
+      setIsGeneratingWeeklyPlan(false);
+    }
+  };
+
   const handleStartItem = (id: string) => {
     // Find the active subject plan
     const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
     if (!activePlan) return;
     
-    // Find the item in study plan
-    const item = activePlan.items.find(item => item.id === id);
+    // Try to find the item in regular study plan
+    let item = activePlan.items.find(item => item.id === id);
+    
+    // If not found, check weekly tests
+    if (!item && activePlan.weeklyPlans) {
+      for (const week of activePlan.weeklyPlans) {
+        if (week.weeklyTest.id === id) {
+          item = week.weeklyTest as StudyItem;
+          break;
+        }
+      }
+    }
+    
+    // If still not found, check in daily activities
+    if (!item && activePlan.weeklyPlans) {
+      for (const week of activePlan.weeklyPlans) {
+        for (const day of week.dailyActivities) {
+          const foundItem = day.items.find(dayItem => dayItem.id === id);
+          if (foundItem) {
+            item = foundItem;
+            break;
+          }
+        }
+        if (item) break;
+      }
+    }
+    
     if (item) {
       // Save the current item to localStorage for the lesson/quiz page
       localStorage.setItem('currentStudyItem', JSON.stringify(item));
@@ -195,9 +352,12 @@ const Dashboard = () => {
       const plan = await generateStudyPlan(profileInfo.board, profileInfo.className, activeSubject);
       
       if (plan) {
+        // Generate weekly plan for the new study plan
+        const weeklyPlans = await generateWeeklyPlan(activeSubject, plan);
+        
         // Update just the active plan
         const updatedPlans = studyPlans.map(p => 
-          p.subject === activeSubject ? { ...p, items: plan } : p
+          p.subject === activeSubject ? { ...p, items: plan, weeklyPlans } : p
         );
         
         setStudyPlans(updatedPlans);
@@ -205,7 +365,7 @@ const Dashboard = () => {
         
         toast({
           title: "Study plan regenerated!",
-          description: `Your ${activeSubject} study plan has been updated`,
+          description: `Your ${activeSubject} study plan has been updated with a new daily schedule`,
         });
       }
     } catch (err) {
@@ -245,14 +405,23 @@ const Dashboard = () => {
         return;
       }
       
+      toast({
+        title: "Adding New Subject",
+        description: `Connecting to NCERT for ${newSubject} curriculum...`,
+      });
+      
       // Generate new plan
       const newPlan = await generateStudyPlan(newSubjectBoard, newSubjectClass, newSubject);
       
       if (newPlan) {
+        // Generate weekly plan
+        const weeklyPlans = await generateWeeklyPlan(newSubject, newPlan);
+        
         // Add to existing plans
         const updatedPlans = [...studyPlans, {
           subject: newSubject,
-          items: newPlan
+          items: newPlan,
+          weeklyPlans
         }];
         
         setStudyPlans(updatedPlans);
@@ -275,7 +444,7 @@ const Dashboard = () => {
         
         toast({
           title: "Subject added!",
-          description: `Your ${newSubject} study plan is now ready`,
+          description: `Your ${newSubject} study plan is now ready with a daily schedule`,
         });
       }
     } catch (error) {
@@ -316,6 +485,7 @@ const Dashboard = () => {
   // Get the current active plan
   const activePlan = studyPlans.find(plan => plan.subject === activeSubject);
   const activeItems = activePlan?.items || [];
+  const activeWeeklyPlans = activePlan?.weeklyPlans || [];
 
   // Calculate progress for the active plan
   const totalItems = activeItems.length;
@@ -472,8 +642,19 @@ const Dashboard = () => {
             </Alert>
           ) : (
             <Tabs defaultValue="timeline" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-3">
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsList className="grid w-full max-w-md grid-cols-4">
+                <TabsTrigger 
+                  value="timeline" 
+                  onClick={() => setViewMode("timeline")}
+                >
+                  Timeline
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="daily"
+                  onClick={() => setViewMode("weekly")}
+                >
+                  Daily Plan
+                </TabsTrigger>
                 <TabsTrigger value="progress">Progress</TabsTrigger>
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
@@ -492,6 +673,43 @@ const Dashboard = () => {
                     <p className="text-muted-foreground mt-2">Click the Regenerate button to create a new study plan</p>
                     <Button className="mt-4" onClick={handleRegeneratePlan}>
                       Generate Study Plan
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="daily" className="mt-6">
+                {isLoading || isGeneratingWeeklyPlan ? (
+                  <div className="flex flex-col justify-center items-center h-64 space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p>Organizing your daily study schedule...</p>
+                  </div>
+                ) : activeWeeklyPlans.length > 0 ? (
+                  <WeeklyPlanView 
+                    weeklyPlans={activeWeeklyPlans} 
+                    onStartItem={handleStartItem}
+                    testScores={testScores}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <h3 className="text-lg font-medium">No daily plan available</h3>
+                    <p className="text-muted-foreground mt-2">We need to generate a daily study schedule for you</p>
+                    <Button 
+                      className="mt-4" 
+                      onClick={() => generateWeeklyPlan(activeSubject, activeItems)}
+                      disabled={isGeneratingWeeklyPlan}
+                    >
+                      {isGeneratingWeeklyPlan ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="mr-2 h-4 w-4" />
+                          Create Daily Schedule
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}
@@ -527,6 +745,52 @@ const Dashboard = () => {
                     color="orange"
                   />
                 </div>
+                
+                {Object.keys(testScores).length > 0 && (
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle>Weekly Test Scores</CardTitle>
+                      <CardDescription>Your performance on weekly assessment tests</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                        {Object.entries(testScores)
+                          .filter(([id]) => id.startsWith('test-week-'))
+                          .sort((a, b) => {
+                            const weekA = parseInt(a[0].split('-').pop() || '0');
+                            const weekB = parseInt(b[0].split('-').pop() || '0');
+                            return weekA - weekB;
+                          })
+                          .map(([id, score]) => {
+                            const weekNumber = id.split('-').pop();
+                            return (
+                              <Card key={id} className="border">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-base">Week {weekNumber} Test</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="text-3xl font-bold text-center my-2">
+                                    {score}%
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div 
+                                      className={`h-2.5 rounded-full ${
+                                        score >= 80 ? 'bg-green-500' : 
+                                        score >= 60 ? 'bg-yellow-500' : 
+                                        'bg-red-500'
+                                      }`}
+                                      style={{ width: `${score}%` }}
+                                    ></div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })
+                        }
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
               
               <TabsContent value="upcoming" className="mt-6">

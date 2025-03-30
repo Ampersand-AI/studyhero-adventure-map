@@ -12,6 +12,7 @@ interface ClaudeService {
   generateLessonContent: (subject: string, topic: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
   generateLessonTest: (subject: string, topic: string, questionCount: number) => Promise<any>;
+  generateWeeklyPlan: (subject: string, items: any[]) => Promise<any>;
   clearAllUserData: () => void;
 }
 
@@ -275,6 +276,106 @@ export const claudeService: ClaudeService = {
       }));
       
       return { questions };
+    }
+  },
+
+  generateWeeklyPlan: async (subject: string, items: any[]) => {
+    try {
+      toast({
+        title: "Organizing Study Plan",
+        description: "Creating weekly schedule for your curriculum...",
+      });
+      
+      // In a production environment, uncomment this to use the actual API
+      // const response = await axios.post(`${API_BASE_URL}/api/claude/weeklyPlan`, {
+      //   subject,
+      //   items
+      // });
+      // return response.data;
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Generate mock weekly plan
+      const now = new Date();
+      let currentDay = new Date(now);
+      
+      // Create 12 weeks of study plan
+      const weeklyPlans = Array.from({ length: 12 }, (_, weekIndex) => {
+        const weekStart = new Date(currentDay);
+        
+        // Create daily activities for the week
+        const dailyActivities = Array.from({ length: 5 }, (_, dayIndex) => {
+          const day = new Date(currentDay);
+          currentDay.setDate(currentDay.getDate() + 1);
+          
+          // Skip weekends
+          if (day.getDay() === 0 || day.getDay() === 6) {
+            currentDay.setDate(currentDay.getDate() + 1);
+          }
+          
+          // Assign lessons/quizzes from the original items to days
+          const itemIndex = (weekIndex * 5 + dayIndex) % items.length;
+          const item = items[itemIndex];
+          
+          return {
+            date: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' }),
+            items: [
+              {
+                ...item,
+                dueDate: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              }
+            ]
+          };
+        });
+        
+        // Add a weekly test at the end of the week
+        const testDay = new Date(currentDay);
+        testDay.setDate(testDay.getDate() - 1); // Last day of the "week"
+        
+        const weeklyTest = {
+          id: `test-week-${weekIndex + 1}`,
+          title: `Week ${weekIndex + 1} Review Test`,
+          description: `Test covering all topics from week ${weekIndex + 1}`,
+          type: "quiz",
+          status: weekIndex === 0 ? "current" : "future",
+          dueDate: testDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          estimatedTimeInMinutes: 45,
+          subject,
+          isWeeklyTest: true,
+          weekNumber: weekIndex + 1
+        };
+        
+        // Skip to next week (add days until Monday)
+        while (currentDay.getDay() !== 1) {
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+        
+        return {
+          weekNumber: weekIndex + 1,
+          startDate: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          endDate: new Date(currentDay.getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          dailyActivities,
+          weeklyTest
+        };
+      });
+      
+      toast({
+        title: "Weekly Plan Created",
+        description: `Your ${subject} curriculum is now organized into a weekly schedule`,
+      });
+      
+      return { weeklyPlans };
+    } catch (error) {
+      console.error("Error generating weekly plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create weekly plan. Using standard study plan.",
+        variant: "destructive"
+      });
+      
+      // Return empty plan in case of error
+      return { weeklyPlans: [] };
     }
   },
 
