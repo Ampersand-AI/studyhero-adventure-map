@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import QuizCard from '@/components/QuizCard';
@@ -34,11 +33,10 @@ const Quiz = () => {
   useEffect(() => {
     const loadQuiz = async () => {
       try {
-        // Get the quiz details from the study plan
-        const studyPlan = JSON.parse(localStorage.getItem('studyPlan') || '[]');
-        const quiz = studyPlan.find((item: any) => item.id === id);
+        // Get the current quiz item from localStorage
+        const currentItem = localStorage.getItem('currentStudyItem');
         
-        if (!quiz) {
+        if (!currentItem) {
           toast({
             title: "Quiz not found",
             description: "The quiz you're looking for doesn't exist",
@@ -48,6 +46,7 @@ const Quiz = () => {
           return;
         }
         
+        const quiz = JSON.parse(currentItem);
         setQuizItem(quiz);
         
         // Check if quiz questions are already in localStorage
@@ -117,18 +116,30 @@ const Quiz = () => {
       } else {
         setQuizCompleted(true);
         
-        // Update the study plan to mark this quiz as completed
-        const studyPlan = JSON.parse(localStorage.getItem('studyPlan') || '[]');
-        const updatedPlan = studyPlan.map((item: any) => {
-          if (item.id === id) {
-            return { ...item, status: "completed" };
-          } else if (item.status === "future" && studyPlan.filter((i: any) => i.status === "current").length === 0) {
-            return { ...item, status: "current" };
-          }
-          return item;
-        });
+        // Update the study plans to mark this quiz as completed
+        const studyPlans = JSON.parse(localStorage.getItem('studyPlans') || '[]');
+        const currentItem = JSON.parse(localStorage.getItem('currentStudyItem') || '{}');
         
-        localStorage.setItem('studyPlan', JSON.stringify(updatedPlan));
+        if (currentItem && currentItem.subject) {
+          const updatedPlans = studyPlans.map((plan: any) => {
+            if (plan.subject === currentItem.subject) {
+              const updatedItems = plan.items.map((item: any) => {
+                if (item.id === id) {
+                  return { ...item, status: "completed" };
+                } 
+                // If this was the current item and we've completed it, mark the next item as current
+                else if (item.status === "future" && plan.items.every((i: any) => i.id === id || i.status !== "current")) {
+                  return { ...item, status: "current" };
+                }
+                return item;
+              });
+              return { ...plan, items: updatedItems };
+            }
+            return plan;
+          });
+          
+          localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+        }
       }
     }, 2000);
   };

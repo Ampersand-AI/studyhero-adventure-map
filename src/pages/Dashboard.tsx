@@ -175,6 +175,9 @@ const Dashboard = () => {
       // Save the current item to localStorage for the lesson/quiz page
       localStorage.setItem('currentStudyItem', JSON.stringify(item));
       
+      // Update the studyPlans with all subjects
+      localStorage.setItem('studyPlans', JSON.stringify(studyPlans));
+      
       if (item.type === 'quiz') {
         navigate(`/quiz/${id}`);
       } else {
