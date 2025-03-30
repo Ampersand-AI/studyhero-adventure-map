@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -168,24 +169,51 @@ function toast({ ...props }: Toast) {
   }
 }
 
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+// Create a React Context to wrap our toast functionality
+const ToastContext = React.createContext<{
+  toasts: ToasterToast[];
+  toast: typeof toast;
+  dismiss: (toastId?: string) => void;
+}>({
+  toasts: [],
+  toast,
+  dismiss: () => {}
+});
+
+export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
+  const [state, setState] = React.useState<State>(memoryState);
 
   React.useEffect(() => {
-    listeners.push(setState)
+    listeners.push(setState);
     return () => {
-      const index = listeners.indexOf(setState)
+      const index = listeners.indexOf(setState);
       if (index > -1) {
-        listeners.splice(index, 1)
+        listeners.splice(index, 1);
       }
-    }
-  }, [state])
+    };
+  }, [state]);
 
-  return {
+  const value = {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  }
-}
+  };
 
-export { useToast, toast }
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+    </ToastContext.Provider>
+  );
+};
+
+// Hook to use the toast functionality
+export const useToast = () => {
+  const context = React.useContext(ToastContext);
+  if (!context) {
+    throw new Error("useToast must be used within a ToastProvider");
+  }
+  return context;
+};
+
+// For backwards compatibility and for cases where we can't use hooks
+export { toast };

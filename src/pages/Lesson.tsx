@@ -1,696 +1,349 @@
-import React, { useEffect, useState } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
 import { StudyAIHeader } from '@/components/StudyAIHeader';
-import { ArrowLeft, BookOpen, Home, Award, BarChart, Trophy, Map, CheckCircle, TestTube, Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/hooks/use-toast";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
 import { claudeService } from '@/services/claudeService';
 import LessonTest from '@/components/LessonTest';
+import { Award, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface LessonActivity {
+  title: string;
+  instructions: string;
+}
+
+interface LessonExample {
+  title: string;
+  content: string;
+}
+
+interface VisualAid {
+  title: string;
+  description: string;
+}
 
 interface LessonContent {
   title: string;
   keyPoints: string[];
   explanation: string[];
-  examples: Array<{ title: string; content: string }>;
-  visualAids: Array<{ title: string; description: string }>;
-  activities: Array<{ title?: string; instructions: string }> | string[];
+  examples: LessonExample[];
+  visualAids: VisualAid[];
+  activities: LessonActivity[];
   summary: string;
-}
-
-interface TestResult {
-  lessonId: string;
-  score: number;
-  total: number;
-  date: string;
 }
 
 const Lesson = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [lessonItem, setLessonItem] = useState<any>(null);
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
-  const [showTest, setShowTest] = useState(false);
-  const [testQuestions, setTestQuestions] = useState<any[]>([]);
-  const [isLoadingTest, setIsLoadingTest] = useState(false);
-  const [visualDiagrams, setVisualDiagrams] = useState<Record<string, string>>({});
-  const [isLoadingDiagrams, setIsLoadingDiagrams] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-
-  const navigationItems = [
-    { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
-    { name: "Timeline", href: "/dashboard", icon: <Map className="h-4 w-4" /> },
-    { name: "Achievements", href: "/achievements", icon: <Trophy className="h-4 w-4" /> },
-    { name: "Analytics", href: "/analytics", icon: <BarChart className="h-4 w-4" /> },
-  ];
-
+  const [lessonCompleted, setLessonCompleted] = useState(false);
+  const [currentSection, setCurrentSection] = useState('content'); // 'content' or 'test'
+  const [testContent, setTestContent] = useState<any>(null);
+  
+  // Get the current study item from localStorage
+  const currentStudyItem = JSON.parse(localStorage.getItem('currentStudyItem') || '{}');
+  
   useEffect(() => {
-    // First try to get the lesson item from the currentStudyItem in localStorage
-    const currentItem = localStorage.getItem('currentStudyItem');
-    if (currentItem) {
+    const loadLessonContent = async () => {
+      setIsLoading(true);
+      
       try {
-        const parsedItem = JSON.parse(currentItem);
-        if (parsedItem.id === id) {
-          setLessonItem(parsedItem);
-          loadLessonContent(parsedItem.title);
-          return;
+        if (!currentStudyItem || !currentStudyItem.subject || !currentStudyItem.title) {
+          throw new Error("Missing study item information");
         }
-      } catch (e) {
-        console.error("Error parsing currentStudyItem:", e);
-      }
-    }
-
-    // Otherwise, find the lesson in the study plan
-    const studyPlans = localStorage.getItem('studyPlans');
-    if (studyPlans) {
-      try {
-        const plans = JSON.parse(studyPlans);
-        let found = false;
         
-        for (const plan of plans) {
-          const item = plan.items.find((item: any) => item.id === id);
-          if (item) {
-            setLessonItem(item);
-            loadLessonContent(item.title);
-            found = true;
-            break;
+        // Check if we already have content for this lesson
+        const cachedContent = localStorage.getItem(`lesson_${id}_content`);
+        if (cachedContent) {
+          setLessonContent(JSON.parse(cachedContent));
+        } else {
+          // Generate content
+          const content = await claudeService.generateLessonContent(
+            currentStudyItem.subject,
+            currentStudyItem.title
+          );
+          
+          if (content) {
+            setLessonContent(content);
+            localStorage.setItem(`lesson_${id}_content`, JSON.stringify(content));
           }
         }
         
-        if (!found) {
-          navigate('/dashboard');
-          toast({
-            title: "Lesson not found",
-            description: "This lesson could not be found in your study plans",
-            variant: "destructive"
-          });
+        // Load test content too (for later)
+        const cachedTest = localStorage.getItem(`lesson_${id}_test`);
+        if (cachedTest) {
+          setTestContent(JSON.parse(cachedTest));
+        } else {
+          // We'll lazy load this when needed
         }
-      } catch (e) {
-        console.error("Error parsing study plans:", e);
-        navigate('/dashboard');
+      } catch (error) {
+        console.error("Error loading lesson content:", error);
         toast({
-          title: "Error loading lesson data",
-          description: "Failed to parse study plan data",
+          title: "Error",
+          description: "Failed to load lesson content. Please try again.",
           variant: "destructive"
         });
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      navigate('/dashboard');
-      toast({
-        title: "No study plans found",
-        description: "Please set up your study plans first",
-        variant: "destructive"
-      });
-    }
-  }, [id, navigate]);
-
-  const loadLessonContent = async (topic: string) => {
-    setIsLoading(true);
-    setApiError(null);
-    
-    try {
-      // Check if we already have cached content for this lesson
-      const cachedContent = localStorage.getItem(`lesson-content-${id}`);
-      if (cachedContent) {
-        try {
-          const parsed = JSON.parse(cachedContent);
-          
-          // Validate the parsed content has all required fields
-          if (!parsed || !parsed.keyPoints || !parsed.explanation || !parsed.examples || !parsed.summary) {
-            console.warn("Cached lesson content is missing required fields, loading fresh content");
-            localStorage.removeItem(`lesson-content-${id}`);
-            await fetchLessonContent(topic);
-            return;
-          }
-          
-          setLessonContent(parsed);
-          
-          // Still load diagrams if we don't have them
-          if (!localStorage.getItem(`lesson-diagrams-${id}`)) {
-            loadVisualDiagrams(topic, parsed.visualAids || []);
-          } else {
-            setVisualDiagrams(JSON.parse(localStorage.getItem(`lesson-diagrams-${id}`) || '{}'));
-          }
-        } catch (e) {
-          console.error("Error parsing cached lesson content:", e);
-          // If cached content is invalid, remove it and load fresh content
-          localStorage.removeItem(`lesson-content-${id}`);
-          await fetchLessonContent(topic);
-        }
-      } else {
-        await fetchLessonContent(topic);
-      }
-    } catch (error) {
-      console.error("Error in loadLessonContent:", error);
-      setApiError("Failed to load lesson content. Please try again later.");
-      toast({
-        title: "Error loading lesson content",
-        description: "Please try again later",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchLessonContent = async (topic: string) => {
-    try {
-      // Get profile info to determine subject
-      const profile = localStorage.getItem('studyHeroProfile');
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-      
-      const { subject } = JSON.parse(profile);
-      console.log(`Fetching lesson content for ${subject}, topic: ${topic}`);
-      
-      const content = await claudeService.generateLessonContent(subject, topic);
-      
-      // Ensure the content has all required fields with fallbacks
-      const normalizedContent: LessonContent = {
-        title: content?.title || topic,
-        keyPoints: Array.isArray(content?.keyPoints) ? content.keyPoints : [],
-        explanation: Array.isArray(content?.explanation) ? content.explanation : [],
-        examples: Array.isArray(content?.examples) ? content.examples : [],
-        visualAids: Array.isArray(content?.visualAids) ? content.visualAids : [],
-        activities: [],
-        summary: content?.summary || ""
-      };
-      
-      // Normalize activities if they're not in the expected format
-      if (content?.activities && Array.isArray(content.activities)) {
-        if (content.activities.length > 0) {
-          if (typeof content.activities[0] === 'string') {
-            normalizedContent.activities = content.activities.map((activity: string) => ({
-              instructions: activity
-            }));
-          } else {
-            normalizedContent.activities = content.activities;
-          }
-        }
-      }
-      
-      setLessonContent(normalizedContent);
-      
-      // Cache the content
-      localStorage.setItem(`lesson-content-${id}`, JSON.stringify(normalizedContent));
-      
-      // Load visual diagrams
-      if (normalizedContent.visualAids && normalizedContent.visualAids.length > 0) {
-        loadVisualDiagrams(topic, normalizedContent.visualAids);
-      }
-
-      return normalizedContent;
-    } catch (error) {
-      console.error("Error fetching lesson content:", error);
-      // Set a default lesson content structure to prevent rendering errors
-      const defaultContent: LessonContent = {
-        title: topic || "Lesson",
-        keyPoints: ["Key concepts in this lesson"],
-        explanation: ["This lesson covers important educational material."],
-        examples: [{ title: "Example", content: "An example would be shown here." }],
-        visualAids: [],
-        activities: [],
-        summary: "A summary of the lesson concepts."
-      };
-      
-      setLessonContent(defaultContent);
-      throw error;
-    }
-  };
-
-  const loadVisualDiagrams = async (topic: string, visualAids: Array<{ title: string; description: string }>) => {
-    setIsLoadingDiagrams(true);
-    try {
-      // Check if we already have cached diagrams
-      const cachedDiagrams = localStorage.getItem(`lesson-diagrams-${id}`);
-      if (cachedDiagrams) {
-        setVisualDiagrams(JSON.parse(cachedDiagrams));
-        setIsLoadingDiagrams(false);
-        return;
-      }
-
-      // Get profile info to determine subject
-      const profile = localStorage.getItem('studyHeroProfile');
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-      
-      const { subject } = JSON.parse(profile);
-      const diagramsObj: Record<string, string> = {};
-      
-      // Generate diagrams for each visual aid
-      if (visualAids && visualAids.length > 0) {
-        for (const aid of visualAids) {
-          if (aid?.title) {
-            console.log(`Generating diagram for ${aid.title}`);
-            const diagramDescription = await claudeService.generateDiagram(subject, topic, aid.title);
-            diagramsObj[aid.title] = diagramDescription;
-          }
-        }
-      }
-      
-      setVisualDiagrams(diagramsObj);
-      // Cache the diagrams
-      localStorage.setItem(`lesson-diagrams-${id}`, JSON.stringify(diagramsObj));
-    } catch (error) {
-      console.error("Error loading visual diagrams:", error);
-      toast({
-        title: "Error loading visual aids",
-        description: "Some visual aids may not display properly",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingDiagrams(false);
-    }
-  };
-
-  const startTest = async () => {
-    setIsLoadingTest(true);
-    try {
-      // Check if we already have cached test questions for this lesson
-      const cachedTest = localStorage.getItem(`lesson-test-${id}`);
-      if (cachedTest) {
-        setTestQuestions(JSON.parse(cachedTest).questions);
-        setShowTest(true);
-        setIsLoadingTest(false);
-        return;
-      }
-
-      const profile = localStorage.getItem('studyHeroProfile');
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-      
-      const { subject } = JSON.parse(profile);
-      console.log(`Generating test for ${subject}, topic: ${lessonItem.title}`);
-      
-      const testData = await claudeService.generateLessonTest(subject, lessonItem.title, 5);
-      
-      setTestQuestions(testData.questions);
-      // Cache the test
-      localStorage.setItem(`lesson-test-${id}`, JSON.stringify(testData));
-      setShowTest(true);
-    } catch (error) {
-      console.error("Error loading test questions:", error);
-      toast({
-        title: "Error loading test questions",
-        description: "Please try again later",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingTest(false);
-    }
-  };
-
-  const handleTestComplete = (score: number, total: number) => {
-    // Save test result
-    const testResults = JSON.parse(localStorage.getItem('testResults') || '[]');
-    const newResult: TestResult = {
-      lessonId: id || '',
-      score,
-      total,
-      date: new Date().toISOString()
     };
-    testResults.push(newResult);
-    localStorage.setItem('testResults', JSON.stringify(testResults));
     
-    // Update XP
-    const xpGained = Math.round((score / total) * 100);
-    const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
-    localStorage.setItem('currentXp', (currentXp + xpGained).toString());
-    
-    toast({
-      title: `Test completed!`,
-      description: `You scored ${score}/${total} and earned ${xpGained} XP`,
-    });
-  };
-
-  const markAsCompleted = () => {
-    if (!lessonItem) return;
-    
-    const studyPlans = localStorage.getItem('studyPlans');
-    if (studyPlans) {
-      const plans = JSON.parse(studyPlans);
+    loadLessonContent();
+  }, [id, currentStudyItem]);
+  
+  const handleNextLesson = () => {
+    if (!lessonCompleted) {
+      // Mark this lesson as completed
+      setLessonCompleted(true);
       
-      const updatedPlans = plans.map((plan: any) => {
-        // Check if this lesson is in this plan
-        const itemIndex = plan.items.findIndex((item: any) => item.id === id);
-        
-        if (itemIndex >= 0) {
-          // Create a copy of items
-          const updatedItems = [...plan.items];
+      // Update the study plan item
+      const studyPlans = JSON.parse(localStorage.getItem('studyPlans') || '[]');
+      const subject = currentStudyItem.subject;
+      
+      const updatedPlans = studyPlans.map((plan: any) => {
+        if (plan.subject === subject) {
+          const updatedItems = plan.items.map((item: any) => {
+            if (item.id === id) {
+              return {
+                ...item,
+                status: 'completed',
+              };
+            }
+            
+            // Find the next item and mark it as current
+            const currentIndex = plan.items.findIndex((i: any) => i.id === id);
+            if (currentIndex >= 0 && currentIndex + 1 < plan.items.length) {
+              const nextItem = plan.items[currentIndex + 1];
+              if (item.id === nextItem.id) {
+                return {
+                  ...item,
+                  status: 'current',
+                };
+              }
+            }
+            
+            return item;
+          });
           
-          // Update the completed item
-          updatedItems[itemIndex] = { 
-            ...updatedItems[itemIndex], 
-            status: "completed" 
+          return {
+            ...plan,
+            items: updatedItems,
           };
-          
-          // If this was a "current" item, make the next item "current"
-          if (updatedItems[itemIndex].status === "current" && itemIndex + 1 < updatedItems.length) {
-            updatedItems[itemIndex + 1] = {
-              ...updatedItems[itemIndex + 1],
-              status: "current"
-            };
-          }
-          
-          return { ...plan, items: updatedItems };
         }
-        
         return plan;
       });
       
       localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
       
+      // Award XP
+      const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
+      const currentLevel = parseInt(localStorage.getItem('currentLevel') || '1');
+      
+      const newXp = currentXp + 50; // 50 XP for completing a lesson
+      localStorage.setItem('currentXp', newXp.toString());
+      
+      // Check if level up (every 100 XP)
+      if (Math.floor(newXp / 100) > Math.floor(currentXp / 100)) {
+        const newLevel = currentLevel + 1;
+        localStorage.setItem('currentLevel', newLevel.toString());
+        
+        toast({
+          title: "Level Up!",
+          description: `Congratulations! You've reached level ${newLevel}`,
+        });
+      }
+      
       toast({
-        title: "Lesson completed!",
+        title: "Lesson Completed!",
         description: "You've earned 50 XP",
       });
-      
-      // Add XP
-      const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
-      localStorage.setItem('currentXp', (currentXp + 50).toString());
-      
-      // If it was a lesson (not a practice or quiz), offer test
-      if (lessonItem.type === "lesson") {
-        startTest();
-      } else {
-        navigate('/dashboard');
+    }
+    
+    // Navigate back to dashboard
+    navigate('/dashboard');
+  };
+  
+  const handleStartTest = async () => {
+    // If we don't have test content yet, generate it
+    if (!testContent) {
+      setIsLoading(true);
+      try {
+        const test = await claudeService.generateLessonTest(
+          currentStudyItem.subject,
+          currentStudyItem.title,
+          5  // 5 questions
+        );
+        
+        if (test) {
+          setTestContent(test);
+          localStorage.setItem(`lesson_${id}_test`, JSON.stringify(test));
+        }
+      } catch (error) {
+        console.error("Error generating test:", error);
+        toast({
+          title: "Error",
+          description: "Failed to generate test. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
     }
+    
+    // Switch to test view
+    setCurrentSection('test');
   };
-
-  // Get user profile info
-  const profile = localStorage.getItem('studyHeroProfile');
-  const profileData = profile ? JSON.parse(profile) : { userName: "Student" };
-
-  if (!lessonItem) {
+  
+  const navigationItems = [
+    { name: "Dashboard", href: "/dashboard", icon: <ChevronLeft className="h-4 w-4" /> },
+  ];
+  
+  if (isLoading || !lessonContent) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <StudyAIHeader 
-          userName={profileData.userName || "Student"} 
+          userName="Student"
           level={parseInt(localStorage.getItem('currentLevel') || '1')}
           xp={parseInt(localStorage.getItem('currentXp') || '0')}
           navigation={navigationItems}
         />
-        <div className="container py-12 flex justify-center">
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <p>Loading lesson...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (showTest) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <StudyAIHeader 
-          userName={profileData.userName || "Student"} 
-          level={parseInt(localStorage.getItem('currentLevel') || '1')}
-          xp={parseInt(localStorage.getItem('currentXp') || '0')}
-          navigation={navigationItems}
-        />
-        <main className="flex-1">
-          <div className="container py-6">
-            {isLoadingTest ? (
-              <div className="text-center py-12 flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p>Preparing your test...</p>
-              </div>
-            ) : (
-              <LessonTest 
-                lessonId={id || ''} 
-                lessonTitle={lessonItem.title}
-                questions={testQuestions}
-                onComplete={handleTestComplete}
-                onCancel={() => navigate('/dashboard')}
-              />
-            )}
+        <main className="flex-1 container py-12 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p>Loading lesson content...</p>
           </div>
         </main>
       </div>
     );
   }
-
+  
+  if (currentSection === 'test' && testContent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader 
+          userName="Student"
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
+          navigation={navigationItems}
+        />
+        <main className="flex-1 container py-6 md:py-12">
+          <LessonTest 
+            test={testContent}
+            onComplete={handleNextLesson}
+          />
+        </main>
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <StudyAIHeader 
-        userName={profileData.userName || "Student"} 
+        userName="Student"
         level={parseInt(localStorage.getItem('currentLevel') || '1')}
         xp={parseInt(localStorage.getItem('currentXp') || '0')}
         navigation={navigationItems}
       />
       
-      <main className="flex-1">
-        <div className="container py-6">
-          <Button 
-            variant="ghost" 
-            className="mb-4" 
-            onClick={() => navigate('/dashboard')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-          </Button>
-          
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-display">{lessonItem.title}</h1>
-              <p className="text-muted-foreground">
-                {lessonItem.estimatedTimeInMinutes} min • {lessonItem.type.charAt(0).toUpperCase() + lessonItem.type.slice(1)}
-              </p>
-            </div>
-            
-            <div className="flex gap-2">
-              {lessonItem.type === "lesson" && (
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2"
-                  onClick={startTest}
-                  disabled={isLoadingTest}
-                >
-                  {isLoadingTest ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <TestTube className="h-4 w-4" />
-                  )} Take Test
-                </Button>
-              )}
-              <Button onClick={markAsCompleted}>
-                <CheckCircle className="mr-2 h-4 w-4" /> Mark as Completed
-              </Button>
-            </div>
-          </div>
-          
-          {apiError && (
-            <div className="mb-6">
-              <Card className="bg-destructive/10 border-destructive">
-                <CardHeader>
-                  <CardTitle>Error Loading Content</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>{apiError}</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => loadLessonContent(lessonItem.title)}
-                  >
-                    Retry
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center">
-                      <BookOpen className="mr-2 h-5 w-5 text-primary" /> 
-                      Lesson Content
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-8 w-4/5" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-8 w-2/5 mt-8" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-full" />
-                    </div>
-                  ) : lessonContent ? (
-                    
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Key Points</h3>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {lessonContent.keyPoints && Array.isArray(lessonContent.keyPoints) && lessonContent.keyPoints.length > 0 ? (
-                            lessonContent.keyPoints.map((point, index) => (
-                              <li key={index}>{point}</li>
-                            ))
-                          ) : (
-                            <li>No key points available for this lesson.</li>
-                          )}
-                        </ul>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Explanation</h3>
-                        <div className="space-y-3">
-                          {lessonContent.explanation && Array.isArray(lessonContent.explanation) && lessonContent.explanation.length > 0 ? (
-                            lessonContent.explanation.map((paragraph, index) => (
-                              <p key={index}>{paragraph}</p>
-                            ))
-                          ) : (
-                            <p>No detailed explanation available for this lesson.</p>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Examples</h3>
-                        <div className="space-y-4">
-                          {lessonContent.examples && Array.isArray(lessonContent.examples) && lessonContent.examples.length > 0 ? (
-                            lessonContent.examples.map((example, index) => (
-                              <Card key={index} className="bg-muted/50">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-base">{example.title || `Example ${index + 1}`}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <p>{example.content}</p>
-                                </CardContent>
-                              </Card>
-                            ))
-                          ) : (
-                            <p>No examples available for this lesson.</p>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Summary</h3>
-                        <p>{lessonContent.summary || "No summary available for this lesson."}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="py-6 text-center">
-                      <p>Failed to load lesson content.</p>
-                      <Button 
-                        onClick={() => loadLessonContent(lessonItem.title)} 
-                        className="mt-4"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Visual Aids</CardTitle>
-                  <CardDescription>Diagrams and visual references</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-40 w-full rounded-md" />
-                    </div>
-                  ) : lessonContent && lessonContent.visualAids && Array.isArray(lessonContent.visualAids) && lessonContent.visualAids.length > 0 ? (
-                    <div className="space-y-4">
-                      {lessonContent.visualAids.map((aid, index) => (
-                        <div key={index} className="border rounded-md p-3">
-                          <h4 className="font-medium mb-1">{aid.title || `Visual Aid ${index+1}`}</h4>
-                          <p className="text-sm text-muted-foreground mb-2">{aid.description || "Visual representation of concept"}</p>
-                          <div className="mt-2 bg-muted p-4 h-auto rounded-md">
-                            {isLoadingDiagrams ? (
-                              <div className="flex items-center justify-center h-40">
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                              </div>
-                            ) : aid.title && visualDiagrams[aid.title] ? (
-                              <div className="text-sm overflow-auto max-h-[200px]">
-                                <p className="whitespace-pre-wrap">{visualDiagrams[aid.title]}</p>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center h-40 text-muted-foreground">
-                                <p>Diagram description not available</p>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => loadVisualDiagrams(lessonItem.title, lessonContent.visualAids)}
-                                  className="ml-2"
-                                >
-                                  <Loader2 className="h-4 w-4 mr-1" /> Load
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>No visual aids available for this lesson.</p>
-                  )}
-                </CardContent>
-              </Card>
+      <main className="flex-1 container py-6 md:py-12">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-2xl md:text-3xl">{lessonContent.title}</CardTitle>
+                <CardDescription className="mt-2">{currentStudyItem.subject}</CardDescription>
+              </div>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>Activities</CardTitle>
-                  <CardDescription>Practice to reinforce learning</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  ) : lessonContent && lessonContent.activities ? (
-                    <div className="space-y-3">
-                      {Array.isArray(lessonContent.activities) && lessonContent.activities.length > 0 ? (
-                        lessonContent.activities.map((activity, index) => (
-                          <div key={index} className="bg-muted/50 p-3 rounded-md">
-                            <p>
-                              <span className="font-medium">Activity {index + 1}: </span> 
-                              {typeof activity === 'string' 
-                                ? activity 
-                                : activity.instructions || (activity.title ? `${activity.title}` : 'Complete this activity')}
-                            </p>
-                          </div>
-                        ))
-                      ) : (
-                        <p>No specific activities available for this lesson.</p>
-                      )}
-                    </div>
-                  ) : (
-                    <p>No activities available.</p>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="flex space-x-2">
+                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Back to Dashboard
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardHeader>
+          
+          <CardContent className="space-y-8">
+            {/* Key Points */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4">Key Points</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                {lessonContent.keyPoints.map((point, index) => (
+                  <li key={index}>{point}</li>
+                ))}
+              </ul>
+            </section>
+            
+            {/* Explanation */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4">Explanation</h3>
+              <div className="space-y-4">
+                {lessonContent.explanation.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+            
+            {/* Examples */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4">Examples</h3>
+              <div className="space-y-4">
+                {lessonContent.examples.map((example, index) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <h4 className="font-medium mb-2">{example.title}</h4>
+                    <p>{example.content}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+            
+            {/* Visual Aids */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4">Visual Aids</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {lessonContent.visualAids.map((aid, index) => (
+                  <div key={index} className="p-4 border rounded-lg bg-muted/50">
+                    <h4 className="font-medium mb-2">{aid.title}</h4>
+                    <p>{aid.description}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+            
+            {/* Activities */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4">Activities</h3>
+              <div className="space-y-4">
+                {lessonContent.activities.map((activity, index) => (
+                  <div key={index} className="p-4 border rounded-lg bg-primary/5">
+                    <h4 className="font-medium mb-2">{activity.title}</h4>
+                    <p>{activity.instructions}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+            
+            {/* Summary */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4">Summary</h3>
+              <p>{lessonContent.summary}</p>
+            </section>
+          </CardContent>
+          
+          <CardFooter className="flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-end">
+            <Button onClick={handleNextLesson} variant="outline">
+              <Award className="mr-2 h-4 w-4" />
+              Mark as Completed 
+            </Button>
+            <Button onClick={handleStartTest}>
+              <BookOpen className="mr-2 h-4 w-4" />
+              Take Test
+            </Button>
+          </CardFooter>
+        </Card>
       </main>
     </div>
   );
