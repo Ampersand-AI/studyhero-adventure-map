@@ -1,3 +1,4 @@
+
 // src/services/claudeService.ts
 
 import axios from 'axios';
@@ -123,7 +124,7 @@ export const claudeService: ClaudeService = {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Return properly formatted mock lesson content that matches the interface in Lesson.tsx
-      return {
+      const lessonContent = {
         title: topic,
         keyPoints: [
           `Key point 1 about ${topic} in ${subject}`,
@@ -168,6 +169,8 @@ export const claudeService: ClaudeService = {
         ],
         summary: `In this lesson, you learned about ${topic} in ${subject}, including its key concepts, practical applications, and importance in the field.`
       };
+      
+      return lessonContent;
     } catch (error) {
       console.error("Error generating lesson content:", error);
       toast({
