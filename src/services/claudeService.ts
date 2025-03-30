@@ -1,4 +1,3 @@
-
 // src/services/claudeService.ts
 import * as openaiService from './openaiService';
 import { toast } from "@/hooks/use-toast";
@@ -11,6 +10,8 @@ interface ClaudeService {
   generateWeeklyPlan: (subject: string, items: any[]) => Promise<any>;
   clearAllUserData: () => void;
   researchCurriculum: (subject: string, className: string) => Promise<any>;
+  extractTextbookContent: (subject: string, className: string, chapter: string) => Promise<any>;
+  generateVisualLearningResources: (subject: string, topic: string) => Promise<any>;
 }
 
 // Mock data for fallback when API calls fail
@@ -98,11 +99,11 @@ export const claudeService: ClaudeService = {
   generateLessonContent: async (subject: string, topic: string) => {
     try {
       toast({
-        title: "Loading Content",
-        description: "Fetching NCERT-aligned lesson content...",
+        title: "Loading Enhanced Content",
+        description: "Fetching NCERT-aligned lesson content with visual aids...",
       });
       
-      // Use OpenAI to generate the lesson content
+      // Use OpenAI to generate the enhanced lesson content
       const lessonContent = await openaiService.generateLessonContent(subject, topic);
       
       // If OpenAI returns null (error occurred), fall back to mock data
@@ -156,6 +157,10 @@ export const claudeService: ClaudeService = {
               instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`,
               learningOutcome: `Apply ${topic} concepts to solve complex problems.`
             }
+          ],
+          interestingFacts: [
+            `Did you know? ${topic} has interesting applications in everyday life according to NCERT.`,
+            `Fun fact: ${topic} was discovered in an unexpected way as mentioned in NCERT textbooks.`
           ],
           textbookReferences: [
             {
@@ -342,11 +347,11 @@ export const claudeService: ClaudeService = {
   generateWeeklyPlan: async (subject: string, items: any[]) => {
     try {
       toast({
-        title: "Organizing Study Plan",
-        description: "Creating weekly schedule for your NCERT curriculum...",
+        title: "Creating Engaging Study Plan",
+        description: "Designing weekly schedule with visual learning elements...",
       });
       
-      // Use OpenAI to generate the weekly plan
+      // Use OpenAI to generate the enhanced weekly plan
       const weeklyPlan = await openaiService.generateWeeklyPlan(subject, items);
       
       // If OpenAI returns null (error occurred), fall back to mock data
@@ -439,7 +444,7 @@ export const claudeService: ClaudeService = {
     }
   },
   
-  // New function to research curriculum
+  // Function to research curriculum
   researchCurriculum: async (subject: string, className: string) => {
     try {
       toast({
@@ -503,6 +508,119 @@ export const claudeService: ClaudeService = {
       toast({
         title: "Error",
         description: "Failed to research curriculum. Using standard data.",
+        variant: "destructive"
+      });
+      
+      return null;
+    }
+  },
+
+  // New function to extract textbook content
+  extractTextbookContent: async (subject: string, className: string, chapter: string) => {
+    try {
+      // Use OpenAI to extract textbook content
+      const textbookContent = await openaiService.extractTextbookContent(subject, className, chapter);
+      
+      if (!textbookContent) {
+        console.log("Using fallback data for textbook content");
+        
+        // Generate mock textbook content
+        return {
+          chapterTitle: `Chapter ${chapter}: Sample NCERT Content`,
+          sections: [
+            {
+              title: "Introduction",
+              content: `This is an introduction to the topic in ${subject} for Class ${className}.`,
+              keyTerms: ["Term 1", "Term 2", "Term 3"],
+              hasVisuals: true,
+              visualDescriptions: ["A diagram showing the basic concept", "A chart illustrating relationships"]
+            },
+            {
+              title: "Main Concepts",
+              content: "This section covers the main concepts of the chapter.",
+              keyTerms: ["Concept A", "Concept B"],
+              hasVisuals: true,
+              visualDescriptions: ["A flowchart of the process"]
+            }
+          ],
+          exercises: [
+            {
+              title: "Practice Questions",
+              questions: ["Question 1", "Question 2", "Question 3"]
+            }
+          ],
+          summary: `This chapter covered important concepts in ${subject} for Class ${className}.`
+        };
+      }
+      
+      return textbookContent;
+    } catch (error) {
+      console.error("Error extracting textbook content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to extract textbook content. Using sample data.",
+        variant: "destructive"
+      });
+      
+      return null;
+    }
+  },
+
+  // New function to generate visual learning resources
+  generateVisualLearningResources: async (subject: string, topic: string) => {
+    try {
+      // Use OpenAI to generate visual learning resources
+      const visualResources = await openaiService.generateVisualLearningResources(subject, topic);
+      
+      if (!visualResources) {
+        console.log("Using fallback data for visual learning resources");
+        
+        // Generate mock visual learning resources
+        return {
+          visualResources: [
+            {
+              type: "Diagram",
+              title: `${topic} Concept Diagram`,
+              description: `A visual representation of the key components of ${topic}.`,
+              learningObjective: `Understand the structure and relationships in ${topic}.`,
+              complexity: "intermediate",
+              colorScheme: "Blue and orange with clear contrast",
+              keyConcepts: ["Main concept", "Related concept", "Application"],
+              textbookReference: `NCERT ${subject} textbook, Chapter 3, page 45`,
+              suggestedUse: "Use as an overview before diving into details."
+            },
+            {
+              type: "Flowchart",
+              title: `${topic} Process Flow`,
+              description: `Step-by-step visualization of the ${topic} process.`,
+              learningObjective: `Understand the sequence and causality in ${topic}.`,
+              complexity: "basic",
+              colorScheme: "Green progression with highlights for key steps",
+              keyConcepts: ["Process start", "Key steps", "Outcome"],
+              textbookReference: `NCERT ${subject} textbook, Chapter 4, page 62`,
+              suggestedUse: "Follow along while studying the process description."
+            },
+            {
+              type: "Mind Map",
+              title: `${topic} Connections`,
+              description: `A mind map showing how ${topic} connects to other concepts.`,
+              learningObjective: `Understand the broader context of ${topic}.`,
+              complexity: "advanced",
+              colorScheme: "Multi-color with thematic grouping",
+              keyConcepts: ["Central concept", "Related fields", "Applications"],
+              textbookReference: `NCERT ${subject} textbook, Chapter 5, page 78`,
+              suggestedUse: "Review after completing the chapter to consolidate knowledge."
+            }
+          ]
+        };
+      }
+      
+      return visualResources;
+    } catch (error) {
+      console.error("Error generating visual resources:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate visual resources. Using sample data.",
         variant: "destructive"
       });
       

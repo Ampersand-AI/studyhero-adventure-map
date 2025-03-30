@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
@@ -9,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { claudeService } from '@/services/claudeService';
 import LessonTest from '@/components/LessonTest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink } from 'lucide-react';
+import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink, Lightbulb, Sparkles } from 'lucide-react';
 
 interface LessonActivity {
   title: string;
@@ -50,6 +49,7 @@ interface LessonContent {
   summary: string;
   textbookReferences?: TextbookReference[];
   visualLearningResources?: VisualLearningResource[];
+  interestingFacts?: string[];
 }
 
 const Lesson = () => {
@@ -256,6 +256,27 @@ const Lesson = () => {
     setCurrentSection('test');
   };
   
+  // Function to load visual resources for the current topic
+  const loadVisualResources = async () => {
+    if (!currentStudyItem || !currentStudyItem.subject || !currentStudyItem.title) {
+      return;
+    }
+    
+    try {
+      const resources = await claudeService.generateVisualLearningResources(
+        currentStudyItem.subject,
+        currentStudyItem.title
+      );
+      
+      if (resources && resources.visualResources) {
+        // Store visual resources in localStorage for future use
+        localStorage.setItem(`lesson_${id}_visual_resources`, JSON.stringify(resources));
+      }
+    } catch (error) {
+      console.error("Error loading visual resources:", error);
+    }
+  };
+  
   // Function to get textbook URL based on subject
   const getTextbookUrl = (subject: string) => {
     const subjectLower = subject.toLowerCase();
@@ -413,6 +434,24 @@ const Lesson = () => {
               </div>
             </Alert>
             
+            {/* Interesting Facts - New Section */}
+            {lessonContent.interestingFacts && lessonContent.interestingFacts.length > 0 && (
+              <section className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                <h3 className="text-xl font-semibold mb-3 flex items-center text-amber-800">
+                  <Sparkles className="h-5 w-5 mr-2 text-amber-500" />
+                  Interesting Facts
+                </h3>
+                <ul className="space-y-2">
+                  {lessonContent.interestingFacts.map((fact, index) => (
+                    <li key={index} className="flex items-start">
+                      <Lightbulb className="h-5 w-5 mr-2 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-amber-900">{fact}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            
             {/* Key Points */}
             <section>
               <h3 className="text-xl font-semibold mb-4">Key Points</h3>
@@ -451,11 +490,11 @@ const Lesson = () => {
               <h3 className="text-xl font-semibold mb-4">Visual Learning Aids</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {lessonContent.visualAids && lessonContent.visualAids.map((aid, index) => (
-                  <div key={index} className="p-4 border rounded-lg bg-muted/50">
-                    <h4 className="font-medium mb-2">{aid.title}</h4>
-                    <p className="mb-2">{aid.description}</p>
+                  <div key={index} className="p-4 border rounded-lg bg-teal-50 border-teal-100">
+                    <h4 className="font-medium mb-2 text-teal-800">{aid.title}</h4>
+                    <p className="mb-2 text-teal-700">{aid.description}</p>
                     {aid.visualType && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge variant="outline" className="bg-teal-100 text-teal-700 border-teal-200">
                         {aid.visualType}
                       </Badge>
                     )}
@@ -495,13 +534,13 @@ const Lesson = () => {
               <h3 className="text-xl font-semibold mb-4">Activities</h3>
               <div className="space-y-4">
                 {lessonContent.activities && lessonContent.activities.map((activity, index) => (
-                  <div key={index} className="p-4 border rounded-lg bg-primary/5">
-                    <h4 className="font-medium mb-2">{activity.title}</h4>
-                    <p>{activity.instructions}</p>
+                  <div key={index} className="p-4 border rounded-lg bg-indigo-50 border-indigo-100">
+                    <h4 className="font-medium mb-2 text-indigo-800">{activity.title}</h4>
+                    <p className="text-indigo-700">{activity.instructions}</p>
                     {activity.learningOutcome && (
-                      <div className="mt-2 p-2 bg-white rounded border">
-                        <span className="text-xs font-medium text-primary">Learning Outcome:</span>
-                        <p className="text-sm">{activity.learningOutcome}</p>
+                      <div className="mt-2 p-2 bg-white rounded border border-indigo-100">
+                        <span className="text-xs font-medium text-indigo-600">Learning Outcome:</span>
+                        <p className="text-sm text-indigo-700">{activity.learningOutcome}</p>
                       </div>
                     )}
                   </div>
@@ -515,13 +554,13 @@ const Lesson = () => {
                 <h3 className="text-xl font-semibold mb-4">Additional Visual Learning Resources</h3>
                 <div className="space-y-3">
                   {lessonContent.visualLearningResources.map((resource, index) => (
-                    <div key={index} className="p-3 bg-primary/5 rounded-md">
+                    <div key={index} className="p-3 bg-green-50 border border-green-100 rounded-md">
                       <div className="flex items-start">
-                        <Info className="h-5 w-5 text-primary mr-2 mt-0.5" />
+                        <Info className="h-5 w-5 text-green-600 mr-2 mt-0.5" />
                         <div>
-                          <h4 className="font-medium">{resource.title}</h4>
-                          <p className="text-sm">{resource.description}</p>
-                          <Badge variant="outline" className="mt-1">
+                          <h4 className="font-medium text-green-800">{resource.title}</h4>
+                          <p className="text-sm text-green-700">{resource.description}</p>
+                          <Badge variant="outline" className="mt-1 bg-green-100 text-green-700 border-green-200">
                             {resource.type}
                           </Badge>
                         </div>

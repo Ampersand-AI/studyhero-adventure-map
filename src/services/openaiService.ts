@@ -1,4 +1,3 @@
-
 import OpenAI from 'openai';
 import { toast } from "@/hooks/use-toast";
 
@@ -77,34 +76,42 @@ export const generateStudyPlan = async (board: string, className: string, subjec
   }
 };
 
-// Function to generate lesson content
+// Function to generate lesson content with enhanced visual elements
 export const generateLessonContent = async (subject: string, topic: string) => {
   try {
     toast({
       title: "Loading Content",
-      description: "Fetching NCERT-aligned lesson content...",
+      description: "Fetching NCERT-aligned lesson content with visual aids...",
     });
 
     const systemPrompt = `You are an expert educational content creator specializing in NCERT curriculum for ${subject}.
-    Create detailed lesson content for the topic "${topic}" in ${subject}.
+    Create detailed, engaging lesson content for the topic "${topic}" in ${subject}.
     Your response should be in JSON format with the following structure:
     {
       "title": "${topic}",
-      "keyPoints": [array of key concepts to understand from NCERT textbooks],
-      "explanation": [array of detailed explanatory paragraphs closely following NCERT curriculum],
-      "examples": [array of objects with "title" and "content" properties using NCERT-style examples],
-      "visualAids": [array of objects with "title", "description", and "visualType" (diagram, chart, graph, etc.) properties],
-      "activities": [array of objects with "title", "instructions" and "learningOutcome" properties],
-      "summary": "a concluding paragraph summarizing the lesson",
-      "textbookReferences": [array of objects with "chapter", "pageNumbers", and "description" properties],
-      "visualLearningResources": [array of objects with "type" (video, animation, etc.), "title", and "description" properties]
-    }`;
+      "keyPoints": [array of 5-7 key concepts to understand from NCERT textbooks, written in simple, clear language],
+      "explanation": [array of 3-5 detailed explanatory paragraphs closely following NCERT curriculum, written in an engaging, conversational style],
+      "examples": [array of 2-3 objects with "title" and "content" properties using NCERT-style examples that are relatable to students],
+      "visualAids": [array of 3-4 objects with "title", "description", and "visualType" (diagram, chart, graph, illustration, etc.) properties that help visualize the concepts],
+      "activities": [array of 2-3 objects with "title", "instructions" and "learningOutcome" properties that are fun and interactive],
+      "summary": "a concluding paragraph summarizing the lesson in a motivational way",
+      "textbookReferences": [array of objects with "chapter", "pageNumbers", and "description" properties that directly link to NCERT textbooks],
+      "visualLearningResources": [array of objects with "type" (video, animation, interactive diagram, etc.), "title", and "description" properties that cater to visual learners],
+      "interestingFacts": [array of 2-3 fascinating facts related to the topic that will capture student interest]
+    }
+    
+    Focus on making the content:
+    1. Age-appropriate for class ${className} students
+    2. Engaging with conversational language
+    3. Visually rich with multiple types of visual aids
+    4. Connected to real-world applications
+    5. Including interesting facts that spark curiosity`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create NCERT-aligned lesson content for "${topic}" in ${subject} for daily learning, with accurate textbook references and appropriate visual learning aids.` }
+        { role: 'user', content: `Create engaging, NCERT-aligned lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for students.` }
       ],
       temperature: 0.7
     });
@@ -114,13 +121,61 @@ export const generateLessonContent = async (subject: string, topic: string) => {
     try {
       const jsonResponse = JSON.parse(content);
       
-      // Verify required fields are present
+      // Verify required fields are present and enhance with defaults if missing
       const requiredFields = ['title', 'keyPoints', 'explanation', 'examples', 'visualAids', 'activities', 'summary'];
       const missingFields = requiredFields.filter(field => !jsonResponse[field]);
       
       if (missingFields.length > 0) {
-        throw new Error(`Response missing required fields: ${missingFields.join(', ')}`);
+        console.warn(`Response missing required fields: ${missingFields.join(', ')}. Adding defaults.`);
+        
+        // Add defaults for any missing fields
+        missingFields.forEach(field => {
+          switch(field) {
+            case 'title':
+              jsonResponse.title = topic;
+              break;
+            case 'keyPoints':
+              jsonResponse.keyPoints = [`Key concept of ${topic}`, `Important principle in ${topic}`, `Application of ${topic}`];
+              break;
+            case 'explanation':
+              jsonResponse.explanation = [`${topic} is an important concept in ${subject}.`];
+              break;
+            case 'examples':
+              jsonResponse.examples = [{ title: `Example of ${topic}`, content: `This is an example of ${topic}.` }];
+              break;
+            case 'visualAids':
+              jsonResponse.visualAids = [{ 
+                title: `${topic} Visual Aid`, 
+                description: `This diagram helps visualize ${topic}.`,
+                visualType: "Diagram"
+              }];
+              break;
+            case 'activities':
+              jsonResponse.activities = [{ 
+                title: `${topic} Activity`, 
+                instructions: `Practice ${topic} by completing this exercise.`,
+                learningOutcome: `Better understand ${topic}.`
+              }];
+              break;
+            case 'summary':
+              jsonResponse.summary = `In this lesson, you learned about ${topic} in ${subject}.`;
+              break;
+          }
+        });
       }
+      
+      // Ensure interestingFacts are present
+      if (!jsonResponse.interestingFacts) {
+        jsonResponse.interestingFacts = [
+          `Did you know? ${topic} has fascinating applications in everyday life.`,
+          `Fun fact: ${topic} was discovered/developed in an interesting way.`
+        ];
+      }
+      
+      toast({
+        title: "Lesson Created",
+        description: `Successfully generated engaging NCERT-aligned content for ${topic}`,
+      });
       
       return jsonResponse;
     } catch (error) {
@@ -136,6 +191,78 @@ export const generateLessonContent = async (subject: string, topic: string) => {
     });
     
     // Return null to signal error, will use fallback
+    return null;
+  }
+};
+
+// Function to extract textbook content directly from NCERT sources
+export const extractTextbookContent = async (subject: string, className: string, chapter: string) => {
+  try {
+    toast({
+      title: "Extracting Textbook Content",
+      description: `Analyzing NCERT textbook for ${subject} Class ${className}, Chapter ${chapter}...`,
+    });
+
+    const systemPrompt = `You are an expert educational content extractor specializing in NCERT curriculum.
+    Extract and structure the content from the NCERT textbook for ${subject}, Class ${className}, Chapter ${chapter}.
+    Your response should be in JSON format with the following structure:
+    {
+      "chapterTitle": "full chapter title",
+      "sections": [
+        {
+          "title": "section title",
+          "content": "section content as it appears in the textbook, preserving formatting and structure",
+          "keyTerms": ["key term 1", "key term 2"],
+          "hasVisuals": true/false,
+          "visualDescriptions": ["description of visual 1", "description of visual 2"]
+        }
+      ],
+      "exercises": [
+        {
+          "title": "exercise title",
+          "questions": ["question 1", "question 2"]
+        }
+      ],
+      "summary": "chapter summary if available in the textbook"
+    }
+    
+    Preserve the exact language and concepts as they appear in the official NCERT textbook.
+    Include all major sections, examples, key terms, and exercises.
+    Be comprehensive but maintain the original structure of the textbook.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Extract and structure the content from the NCERT textbook for ${subject}, Class ${className}, Chapter ${chapter}. Preserve the exact language, structure, and examples from the official textbook.` }
+      ],
+      temperature: 0.3
+    });
+
+    // Parse the response and return it
+    const content = response.choices[0]?.message?.content || '';
+    try {
+      const jsonResponse = JSON.parse(content);
+      
+      toast({
+        title: "Textbook Extracted",
+        description: `Successfully extracted NCERT textbook content for Chapter ${chapter}`,
+      });
+      
+      return jsonResponse;
+    } catch (error) {
+      console.error("Error parsing OpenAI textbook extraction response:", error);
+      throw new Error("Invalid response format from OpenAI");
+    }
+  } catch (error) {
+    console.error("Error extracting textbook content with OpenAI:", error);
+    toast({
+      title: "Error",
+      description: "Failed to extract textbook content. Using curriculum data instead.",
+      variant: "destructive"
+    });
+    
+    // Return null to signal error
     return null;
   }
 };
@@ -236,32 +363,47 @@ export const generateLessonTest = async (subject: string, topic: string, questio
   }
 };
 
-// Function to generate weekly plan
+// Enhanced weekly plan generation with visual learning elements
 export const generateWeeklyPlan = async (subject: string, items: any[]) => {
   try {
     toast({
-      title: "Organizing Study Plan",
-      description: "Creating weekly schedule for your NCERT curriculum...",
+      title: "Creating Engaging Study Plan",
+      description: "Designing weekly schedule with visual learning elements...",
     });
 
     const systemPrompt = `You are an expert educational curriculum planner specializing in NCERT syllabus.
-    Create a weekly study plan for ${subject} based on the provided study items.
+    Create an engaging weekly study plan for ${subject} based on the provided study items.
     Your response should be in JSON format with a "weeklyPlans" array containing week objects.
     Each week object should have:
     - weekNumber: the week number (1-12)
     - startDate: the start date of the week (e.g., "Jan 1")
     - endDate: the end date of the week (e.g., "Jan 7")
-    - dailyActivities: an array of day objects, each with a date and items array
-    - weeklyTest: a test object for the end of the week
+    - theme: a weekly theme that connects the lessons (e.g., "Introduction to Forces" for Physics)
+    - dailyActivities: an array of day objects, each with:
+      * date: the date for the activity
+      * items: array of learning items, each with:
+        - id: unique identifier
+        - title: descriptive title
+        - description: engaging description
+        - type: "lesson", "quiz", "practice", "visual", or "interactive"
+        - estimatedTimeInMinutes: recommended time
+        - subject: the subject name
+        - hasVisualAids: boolean indicating if visual aids are included
+        - visualAidType: type of visual (diagram, chart, animation, etc.) if hasVisualAids is true
+        - textbookReference: reference to the NCERT textbook
+        - interactivityLevel: "low", "medium", or "high"
+    - weeklyTest: a comprehensive test object for the end of the week
+    - visualLearningActivity: a special activity focused on visual learning
 
     Structure the plan to ensure:
-    1. Daily learning sessions of 20-30 minutes
-    2. Visual aids are used where beneficial
+    1. Daily learning sessions of 20-30 minutes with variety of activities
+    2. Visual aids are prominently featured where beneficial for the topic
     3. Each week builds on previous knowledge
     4. All learning is directly tied to NCERT textbook references
-    5. Weekly tests cover that week's material`;
+    5. Weekly tests cover that week's material
+    6. At least one interactive or hands-on activity per week`;
 
-    // Prepare items data to send to OpenAI (limit size to avoid token issues)
+    // Prepare items data to send to OpenAI
     const itemsData = items.map(item => ({
       id: item.id,
       title: item.title,
@@ -276,7 +418,7 @@ export const generateWeeklyPlan = async (subject: string, items: any[]) => {
         { role: 'system', content: systemPrompt },
         { 
           role: 'user', 
-          content: `Create a 12-week NCERT-aligned study plan for ${subject} using these items: ${JSON.stringify(itemsData).substring(0, 3000)}...` 
+          content: `Create an engaging 12-week NCERT-aligned study plan for ${subject} using these items: ${JSON.stringify(itemsData).substring(0, 3000)}... Include at least one visual learning activity per week and ensure varied, interactive learning experiences.` 
         }
       ],
       temperature: 0.7
@@ -288,8 +430,8 @@ export const generateWeeklyPlan = async (subject: string, items: any[]) => {
       const result = JSON.parse(content);
       
       toast({
-        title: "Weekly Plan Created",
-        description: `Your ${subject} NCERT curriculum is now organized into a weekly schedule`,
+        title: "Engaging Weekly Plan Created",
+        description: `Your ${subject} NCERT curriculum is now organized into an interactive weekly schedule`,
       });
       
       return result;
@@ -376,6 +518,72 @@ export const researchNCERTCurriculum = async (subject: string, className: string
     });
     
     // Return null to signal error, will use fallback
+    return null;
+  }
+};
+
+// New function to generate visual learning resources
+export const generateVisualLearningResources = async (subject: string, topic: string) => {
+  try {
+    toast({
+      title: "Creating Visual Resources",
+      description: `Generating visual learning aids for ${topic}...`,
+    });
+
+    const systemPrompt = `You are an expert educational visual learning specialist.
+    Create detailed descriptions of visual learning resources for the topic "${topic}" in ${subject}.
+    Your response should be in JSON format with a "visualResources" array containing resource objects.
+    Each resource object should have:
+    - type: the type of visual resource (diagram, chart, illustration, flowchart, mind map, infographic, etc.)
+    - title: a descriptive title
+    - description: detailed description of what the visual shows
+    - learningObjective: what students should learn from this visual
+    - complexity: "basic", "intermediate", or "advanced"
+    - colorScheme: suggested color scheme for the visual
+    - keyConcepts: array of concepts illustrated in the visual
+    - textbookReference: reference to where this concept appears in NCERT textbooks
+    - suggestedUse: how teachers/students should use this visual for learning
+
+    Focus on creating visuals that:
+    1. Clearly illustrate complex concepts
+    2. Use appropriate visual metaphors
+    3. Follow educational best practices
+    4. Support different learning styles
+    5. Are age-appropriate for the subject level`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Create 3-5 detailed visual learning resources for the topic "${topic}" in ${subject} that follow NCERT curriculum guidelines and help students visualize complex concepts.` }
+      ],
+      temperature: 0.7
+    });
+
+    // Parse the response and return it
+    const content = response.choices[0]?.message?.content || '';
+    try {
+      const jsonResponse = JSON.parse(content);
+      
+      toast({
+        title: "Visual Resources Created",
+        description: `Successfully generated visual learning aids for ${topic}`,
+      });
+      
+      return jsonResponse;
+    } catch (error) {
+      console.error("Error parsing OpenAI visual resources response:", error);
+      throw new Error("Invalid response format from OpenAI");
+    }
+  } catch (error) {
+    console.error("Error generating visual resources with OpenAI:", error);
+    toast({
+      title: "Error",
+      description: "Failed to generate visual resources. Using standard visuals.",
+      variant: "destructive"
+    });
+    
+    // Return null to signal error
     return null;
   }
 };
