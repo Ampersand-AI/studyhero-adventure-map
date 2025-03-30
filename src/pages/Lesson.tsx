@@ -240,7 +240,7 @@ const Lesson = () => {
         }
         
         // Show toast for content loading
-        toast.loading(`Loading lesson: ${parsedStudyItem.title}`, {
+        toast("Loading lesson: " + parsedStudyItem.title, {
           description: "Retrieving NCERT-aligned learning content...",
         });
         
@@ -255,17 +255,9 @@ const Lesson = () => {
         } catch (apiError) {
           console.error("API Error:", apiError);
           // Use the appropriate sample data based on subject
-          result = parsedStudyItem.subject.toLowerCase().includes('math') 
-            ? mathLessonSample 
-            : scienceLessonSample;
+          result = await claudeService.getFallbackLessonContent(parsedStudyItem.subject, parsedStudyItem.title);
             
-          // Customize the title to match the requested topic
-          result.title = parsedStudyItem.title;
-          
-          toast({
-            title: "Using example lesson",
-            description: "Connected to sample data for demonstration",
-          });
+          toast("Using example lesson - Connected to sample data for demonstration");
         }
         
         if (result) {
@@ -290,10 +282,8 @@ const Lesson = () => {
           
           setLesson(formattedLesson);
           
-          // Dismiss loading toast and show success toast
-          toast.success("Lesson Ready", {
-            description: `${parsedStudyItem.title} content has been loaded successfully`,
-          });
+          // Show success toast
+          toast.success("Lesson Ready - " + parsedStudyItem.title + " content has been loaded successfully");
           
           // Award XP for viewing a lesson
           const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
@@ -305,15 +295,16 @@ const Lesson = () => {
         console.error("Error loading lesson content:", error);
         
         // Use sample data as fallback
-        const fallbackLesson = mathLessonSample;
-        fallbackLesson.title = studyItem?.title || "Mathematics Lesson";
+        const fallbackLesson = await claudeService.getFallbackLessonContent(
+          studyItem?.subject || "General", 
+          studyItem?.title || "Lesson"
+        );
+        
         setLesson(fallbackLesson);
         
         setError("Failed to load specific lesson content. Using sample data instead.");
         
-        toast.error("Using Sample Content", {
-          description: "There was a problem loading this lesson. Using example content.",
-        });
+        toast.error("Using Sample Content - There was a problem loading this lesson. Using example content.");
       } finally {
         setLoading(false);
       }

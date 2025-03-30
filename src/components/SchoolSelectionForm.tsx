@@ -87,49 +87,121 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComp
         
         setCities(mockCities);
         
-        // Generate mock schools for demonstration
+        // Generate realistic school names for demonstration
         const mockSchools: { [city: string]: string[] } = {};
         Object.values(mockCities).flat().forEach(city => {
           if (city === "Mumbai") {
             mockSchools[city] = [
-              "Don Bosco High School", 
-              "Cathedral and John Connon School", 
-              "Bombay Scottish School",
-              "St. Mary's School",
-              "Campion School",
-              "Jamnabai Narsee School",
-              "R.N. Podar School",
-              "Dhirubhai Ambani International School"
+              "Don Bosco High School, Matunga", 
+              "Cathedral and John Connon School, Fort", 
+              "Bombay Scottish School, Mahim",
+              "St. Mary's School, Mazagaon",
+              "Campion School, Cooperage",
+              "Jamnabai Narsee School, Juhu",
+              "R.N. Podar School, Santacruz",
+              "Dhirubhai Ambani International School, BKC",
+              "The Aditya Birla World Academy, Tardeo",
+              "Chatrabhuj Narsee School, Ville Parle",
+              "Greenlawns High School, Breach Candy",
+              "Arya Vidya Mandir, Bandra",
+              "G.D. Somani Memorial School, Cuffe Parade"
             ];
           } else if (city === "Delhi" || city === "New Delhi") {
             mockSchools[city] = [
               "Delhi Public School, R.K. Puram", 
               "Modern School, Barakhamba Road", 
-              "The Shri Ram School",
-              "Sanskriti School",
-              "Mother's International School",
-              "St. Columba's School",
-              "Vasant Valley School"
+              "The Shri Ram School, Vasant Vihar",
+              "Sanskriti School, Chanakyapuri",
+              "Mother's International School, Sri Aurobindo Marg",
+              "St. Columba's School, Ashok Place",
+              "Vasant Valley School, Vasant Kunj",
+              "Delhi Public School, Mathura Road",
+              "St. George's School, Alaknanda",
+              "Springdales School, Pusa Road",
+              "Amity International School, Saket",
+              "Mount St. Mary's School, Delhi Cantt",
+              "Army Public School, Dhaula Kuan"
             ];
           } else if (city === "Bangalore") {
             mockSchools[city] = [
-              "National Public School", 
-              "Bishop Cotton Boys' School", 
-              "Delhi Public School Bangalore",
-              "St. Joseph's Boys' High School",
-              "The Valley School",
-              "Inventure Academy"
+              "National Public School, Indiranagar", 
+              "Bishop Cotton Boys' School, St. Mark's Road", 
+              "Delhi Public School Bangalore, East",
+              "St. Joseph's Boys' High School, Museum Road",
+              "The Valley School, Kanakapura Road",
+              "Inventure Academy, Whitefield",
+              "Greenwood High International School, Bannerghatta",
+              "Vidyashilp Academy, Jakkur",
+              "New Horizon Public School, Indiranagar",
+              "Bethany High School, Koramangala",
+              "Ekya School, JP Nagar",
+              "Indus International School, Sarjapur Road",
+              "Mallya Aditi International School, Yelahanka"
+            ];
+          } else if (city === "Chennai") {
+            mockSchools[city] = [
+              "P.S. Senior Secondary School, Mylapore",
+              "Chettinad Vidyashram, RA Puram",
+              "DAV Boys Senior Secondary School, Gopalapuram",
+              "Don Bosco Matriculation Higher Secondary School, Egmore",
+              "Good Shepherd International School, Alwarpet",
+              "P.S.B.B. Senior Secondary School, KK Nagar",
+              "Vidya Mandir Senior Secondary School, Mylapore",
+              "St. Michael's Academy, Adyar",
+              "Lady Andal Venkatasubba Rao Matriculation School, Chetpet",
+              "Chennai Public School, Anna Nagar",
+              "SBOA School and Junior College, Anna Nagar",
+              "Maharishi Vidya Mandir, Chetpet"
+            ];
+          } else if (city === "Pune") {
+            mockSchools[city] = [
+              "The Bishop's School, Camp",
+              "St. Mary's School, Pune Cantonment",
+              "Delhi Public School, Pune",
+              "Symbiosis International School, Viman Nagar",
+              "The Orbis School, Keshavnagar",
+              "Lexicon International School, Kalyani Nagar",
+              "VIBGYOR High School, NIBM Road",
+              "Indus International School, Bhukum",
+              "City International School, Aundh",
+              "Sanskriti School, Bhugaon",
+              "The Orchid School, Baner",
+              "St. Helena's School, Pune"
+            ];
+          } else if (city === "Kolkata" || city.includes("West Bengal")) {
+            mockSchools[city] = [
+              "La Martiniere for Boys, Loudon Street",
+              "Don Bosco School, Park Circus",
+              "St. Xavier's Collegiate School, Park Street",
+              "South Point High School, Ballygunge",
+              "Modern High School for Girls, Syed Amir Ali Avenue",
+              "The Heritage School, Kolkata",
+              "Birla High School, Moira Street",
+              "Calcutta International School, Shakespeare Sarani",
+              "Delhi Public School Ruby Park, Kasba",
+              "St. James' School, AJC Bose Road",
+              "Lakshmipat Singhania Academy, Alipore",
+              "Mahadevi Birla World Academy, Hungerford Street"
             ];
           } else {
-            // Generate generic school names for other cities
+            // Generate generic school names for other cities with more realistic naming
             mockSchools[city] = [
               `${board} Model School, ${city}`,
               `NCERT Exemplar School, ${city}`,
-              `National High School, ${city}`,
-              `City Public School, ${city}`,
+              `National Public School, ${city}`,
+              `City International School, ${city}`,
               `${city} International School`,
               `St. Xavier's School, ${city}`,
-              `Modern Academy, ${city}`
+              `Modern Academy, ${city}`,
+              `Divine Public School, ${city}`,
+              `Holy Child School, ${city}`,
+              `Kendriya Vidyalaya, ${city}`,
+              `DAV Public School, ${city}`,
+              `Bharatiya Vidya Bhavan's School, ${city}`,
+              `Delhi Public School, ${city}`,
+              `Greenwood High School, ${city}`,
+              `St. Mary's Convent School, ${city}`,
+              `Bal Bharati Public School, ${city}`
             ];
           }
         });
@@ -137,9 +209,7 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComp
         setSchools(mockSchools);
       } catch (error) {
         console.error("Error loading location data:", error);
-        toast.error("Error", {
-          description: "Failed to load location data. Please try again.",
-        });
+        toast.error("Failed to load location data. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -180,9 +250,7 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComp
     localStorage.setItem('selectedCity', values.city);
     localStorage.setItem('selectedSchool', values.school);
     
-    toast.success("School Selected", {
-      description: `You've selected ${values.school} in ${values.city}, ${values.state}`,
-    });
+    toast.success(`School Selected - You've selected ${values.school} in ${values.city}, ${values.state}`);
   };
   
   // Filter cities and schools based on search
