@@ -506,4 +506,4 @@ class ClaudeService {
         "Poetry has evolved across cultures and time periods, reflecting social and historical contexts"
       ],
       explanation: [
-        "Poetry is a form of literature that uses aesthetic and rhythmic qualities of language to evoke meanings beyond literal interpretation. It employs various literary devices and techniques to convey emotions, ideas, and experiences in a condensed, evocative form. Unlike prose, which follows natural speech patterns, poetry often uses line breaks, stanzas, rhythm
+        "Poetry is a form of literature that uses aesthetic and rhythmic qualities of language to evoke meanings beyond literal interpretation. It employs various literary devices and techniques to convey emotions, ideas, and experiences in a condensed, evocative form. Unlike prose, which follows natural speech patterns, poetry often uses line breaks, st
