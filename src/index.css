@@ -28,14 +28,14 @@
     --accent: 0 0% 96%;
     --accent-foreground: 0 0% 10%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 0% 40%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 90%;
     --input: 0 0% 90%;
     --ring: 0 0% 70%;
 
-    --radius: 0.5rem;
+    --radius: 0.3rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 0 0% 25%;
@@ -62,7 +62,7 @@
     --muted-foreground: 0 0% 65%;
     --accent: 0 0% 15%;
     --accent-foreground: 0 0% 95%;
-    --destructive: 0 75% 40%;
+    --destructive: 0 0% 40%;
     --destructive-foreground: 0 0% 95%;
     --border: 0 0% 20%;
     --input: 0 0% 20%;
@@ -77,10 +77,11 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-sans;
+    @apply font-sans font-normal;
   }
 }
 
@@ -90,7 +91,7 @@
   }
   
   .gradient-button {
-    @apply relative inline-flex items-center justify-center px-4 py-2 overflow-hidden font-bold rounded-md shadow-sm;
+    @apply relative inline-flex items-center justify-center px-4 py-2 overflow-hidden font-normal rounded-md shadow-sm;
   }
   
   .gradient-button-bg {

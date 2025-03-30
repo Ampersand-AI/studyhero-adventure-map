@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
@@ -17,28 +18,32 @@ import NotFound from "./pages/NotFound";
 // Create a new query client
 const queryClient = new QueryClient();
 
-const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="light">
-    <ToastProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/quiz/:id" element={<Quiz />} />
-              <Route path="/lesson/:id" element={<Lesson />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ToastProvider>
-  </ThemeProvider>
-);
+const App = () => {
+  return (
+    <React.StrictMode>
+      <ThemeProvider attribute="class" defaultTheme="light">
+        <ToastProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/quiz/:id" element={<Quiz />} />
+                  <Route path="/lesson/:id" element={<Lesson />} />
+                  <Route path="/achievements" element={<Achievements />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Toaster />
+              </BrowserRouter>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;
