@@ -1,422 +1,382 @@
 
-import React, { useEffect, useState } from 'react';
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { School, MapPin, Search } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 
-// Define a schema for the form
-const formSchema = z.object({
-  state: z.string().min(1, { message: "Please select a state" }),
-  city: z.string().min(1, { message: "Please select a city" }),
-  school: z.string().min(1, { message: "Please select a school" }),
-});
-
-interface SchoolSelectionFormProps {
-  board: string;
-  onComplete: (schoolInfo: { state: string; city: string; school: string }) => void;
+// City data with real schools
+interface City {
+  id: string;
+  name: string;
+  schools: School[];
 }
 
-const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComplete }) => {
-  const [states, setStates] = useState<string[]>([]);
-  const [cities, setCities] = useState<{ [state: string]: string[] }>({});
-  const [schools, setSchools] = useState<{ [city: string]: string[] }>({});
-  const [loading, setLoading] = useState(true);
-  const [citySearchTerm, setCitySearchTerm] = useState("");
-  const [schoolSearchTerm, setSchoolSearchTerm] = useState("");
+interface School {
+  id: string;
+  name: string;
+  board: string;
+}
+
+// List of Indian cities with schools
+const cities: City[] = [
+  {
+    id: "delhi",
+    name: "Delhi",
+    schools: [
+      { id: "dps-rk", name: "Delhi Public School, R.K. Puram", board: "CBSE" },
+      { id: "modern-school", name: "Modern School, Barakhamba Road", board: "CBSE" },
+      { id: "st-columba", name: "St. Columba's School", board: "CBSE" },
+      { id: "vasant-valley", name: "Vasant Valley School", board: "CBSE" },
+      { id: "spv", name: "Sanskriti School", board: "CBSE" }
+    ]
+  },
+  {
+    id: "mumbai",
+    name: "Mumbai",
+    schools: [
+      { id: "cathedral", name: "Cathedral and John Connon School", board: "ICSE" },
+      { id: "dhirubhai", name: "Dhirubhai Ambani International School", board: "IB/IGCSE" },
+      { id: "jamnabai", name: "Jamnabai Narsee School", board: "ICSE" },
+      { id: "bombay-scottish", name: "Bombay Scottish School", board: "ICSE" },
+      { id: "rns", name: "R.N. Shah High School", board: "SSC" }
+    ]
+  },
+  {
+    id: "bangalore",
+    name: "Bangalore",
+    schools: [
+      { id: "bis", name: "Bishop Cotton Boys' School", board: "ICSE" },
+      { id: "nps", name: "National Public School, Indiranagar", board: "CBSE" },
+      { id: "dps-bangalore", name: "Delhi Public School, Bangalore East", board: "CBSE" },
+      { id: "christ-academy", name: "Christ Academy", board: "CBSE" },
+      { id: "inventure", name: "Inventure Academy", board: "ICSE/IGCSE" }
+    ]
+  },
+  {
+    id: "chennai",
+    name: "Chennai",
+    schools: [
+      { id: "dav", name: "DAV Boys Senior Secondary School", board: "CBSE" },
+      { id: "chettinad", name: "Chettinad Vidyashram", board: "CBSE" },
+      { id: "psbb", name: "PSBB Senior Secondary School", board: "CBSE" },
+      { id: "vidya-mandir", name: "Vidya Mandir Senior Secondary School", board: "CBSE" },
+      { id: "cs-academy", name: "CS Academy", board: "CBSE" }
+    ]
+  },
+  {
+    id: "kolkata",
+    name: "Kolkata",
+    schools: [
+      { id: "la-martiniere", name: "La Martiniere for Boys", board: "ICSE" },
+      { id: "modern-high", name: "Modern High School for Girls", board: "ICSE" },
+      { id: "don-bosco", name: "Don Bosco School, Park Circus", board: "ICSE" },
+      { id: "st-xaviers", name: "St. Xavier's Collegiate School", board: "ICSE" },
+      { id: "south-point", name: "South Point High School", board: "CBSE" }
+    ]
+  }
+];
+
+// Subject data with compulsory and optional subjects
+interface SubjectGroup {
+  id: string;
+  name: string;
+  subjects: Subject[];
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  isCompulsory: boolean;
+}
+
+const subjectGroups: SubjectGroup[] = [
+  {
+    id: "core",
+    name: "Core Subjects",
+    subjects: [
+      { id: "math", name: "Mathematics", isCompulsory: true },
+      { id: "english", name: "English", isCompulsory: true },
+      { id: "hindi", name: "Hindi", isCompulsory: true },
+      { id: "science", name: "Science", isCompulsory: true },
+      { id: "social", name: "Social Studies", isCompulsory: true }
+    ]
+  },
+  {
+    id: "science",
+    name: "Science Stream",
+    subjects: [
+      { id: "physics", name: "Physics", isCompulsory: false },
+      { id: "chemistry", name: "Chemistry", isCompulsory: false },
+      { id: "biology", name: "Biology", isCompulsory: false },
+      { id: "computer", name: "Computer Science", isCompulsory: false },
+      { id: "bio-tech", name: "Biotechnology", isCompulsory: false }
+    ]
+  },
+  {
+    id: "commerce",
+    name: "Commerce Stream",
+    subjects: [
+      { id: "accounts", name: "Accountancy", isCompulsory: false },
+      { id: "business", name: "Business Studies", isCompulsory: false },
+      { id: "economics", name: "Economics", isCompulsory: false },
+      { id: "statistics", name: "Statistics", isCompulsory: false },
+      { id: "finance", name: "Financial Markets", isCompulsory: false }
+    ]
+  },
+  {
+    id: "arts",
+    name: "Arts Stream",
+    subjects: [
+      { id: "history", name: "History", isCompulsory: false },
+      { id: "geography", name: "Geography", isCompulsory: false },
+      { id: "political", name: "Political Science", isCompulsory: false },
+      { id: "psychology", name: "Psychology", isCompulsory: false },
+      { id: "sociology", name: "Sociology", isCompulsory: false }
+    ]
+  }
+];
+
+const SchoolSelectionForm = () => {
+  const navigate = useNavigate();
+  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [selectedSchool, setSelectedSchool] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>("10");
+  const [selectedStream, setSelectedStream] = useState<string>("science");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   
-  // Initialize the form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      state: "",
-      city: "",
-      school: "",
-    },
-  });
-  
-  // Function to load states
-  useEffect(() => {
-    const loadStates = async () => {
-      setLoading(true);
-      try {
-        // In a real app, we would fetch from an API
-        // For now, using mock data for demo
-        const mockStates = [
-          "Andhra Pradesh", "Assam", "Bihar", "Delhi", "Gujarat", 
-          "Haryana", "Karnataka", "Kerala", "Madhya Pradesh", 
-          "Maharashtra", "Odisha", "Punjab", "Rajasthan", 
-          "Tamil Nadu", "Telangana", "Uttar Pradesh", "West Bengal"
-        ];
-        
-        setStates(mockStates);
-        
-        // Generate mock cities for each state
-        const mockCities: { [state: string]: string[] } = {};
-        mockStates.forEach(state => {
-          if (state === "Maharashtra") {
-            mockCities[state] = ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Aurangabad"];
-          } else if (state === "Karnataka") {
-            mockCities[state] = ["Bangalore", "Mysore", "Hubli", "Mangalore", "Belgaum"];
-          } else if (state === "Tamil Nadu") {
-            mockCities[state] = ["Chennai", "Coimbatore", "Madurai", "Salem", "Trichy"];
-          } else if (state === "Delhi") {
-            mockCities[state] = ["New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi"];
-          } else {
-            mockCities[state] = [`${state} City 1`, `${state} City 2`, `${state} City 3`];
-          }
-        });
-        
-        setCities(mockCities);
-        
-        // Generate realistic school names for demonstration
-        const mockSchools: { [city: string]: string[] } = {};
-        Object.values(mockCities).flat().forEach(city => {
-          if (city === "Mumbai") {
-            mockSchools[city] = [
-              "Don Bosco High School, Matunga", 
-              "Cathedral and John Connon School, Fort", 
-              "Bombay Scottish School, Mahim",
-              "St. Mary's School, Mazagaon",
-              "Campion School, Cooperage",
-              "Jamnabai Narsee School, Juhu",
-              "R.N. Podar School, Santacruz",
-              "Dhirubhai Ambani International School, BKC",
-              "The Aditya Birla World Academy, Tardeo",
-              "Chatrabhuj Narsee School, Ville Parle",
-              "Greenlawns High School, Breach Candy",
-              "Arya Vidya Mandir, Bandra",
-              "G.D. Somani Memorial School, Cuffe Parade"
-            ];
-          } else if (city === "Delhi" || city === "New Delhi") {
-            mockSchools[city] = [
-              "Delhi Public School, R.K. Puram", 
-              "Modern School, Barakhamba Road", 
-              "The Shri Ram School, Vasant Vihar",
-              "Sanskriti School, Chanakyapuri",
-              "Mother's International School, Sri Aurobindo Marg",
-              "St. Columba's School, Ashok Place",
-              "Vasant Valley School, Vasant Kunj",
-              "Delhi Public School, Mathura Road",
-              "St. George's School, Alaknanda",
-              "Springdales School, Pusa Road",
-              "Amity International School, Saket",
-              "Mount St. Mary's School, Delhi Cantt",
-              "Army Public School, Dhaula Kuan"
-            ];
-          } else if (city === "Bangalore") {
-            mockSchools[city] = [
-              "National Public School, Indiranagar", 
-              "Bishop Cotton Boys' School, St. Mark's Road", 
-              "Delhi Public School Bangalore, East",
-              "St. Joseph's Boys' High School, Museum Road",
-              "The Valley School, Kanakapura Road",
-              "Inventure Academy, Whitefield",
-              "Greenwood High International School, Bannerghatta",
-              "Vidyashilp Academy, Jakkur",
-              "New Horizon Public School, Indiranagar",
-              "Bethany High School, Koramangala",
-              "Ekya School, JP Nagar",
-              "Indus International School, Sarjapur Road",
-              "Mallya Aditi International School, Yelahanka"
-            ];
-          } else if (city === "Chennai") {
-            mockSchools[city] = [
-              "P.S. Senior Secondary School, Mylapore",
-              "Chettinad Vidyashram, RA Puram",
-              "DAV Boys Senior Secondary School, Gopalapuram",
-              "Don Bosco Matriculation Higher Secondary School, Egmore",
-              "Good Shepherd International School, Alwarpet",
-              "P.S.B.B. Senior Secondary School, KK Nagar",
-              "Vidya Mandir Senior Secondary School, Mylapore",
-              "St. Michael's Academy, Adyar",
-              "Lady Andal Venkatasubba Rao Matriculation School, Chetpet",
-              "Chennai Public School, Anna Nagar",
-              "SBOA School and Junior College, Anna Nagar",
-              "Maharishi Vidya Mandir, Chetpet"
-            ];
-          } else if (city === "Pune") {
-            mockSchools[city] = [
-              "The Bishop's School, Camp",
-              "St. Mary's School, Pune Cantonment",
-              "Delhi Public School, Pune",
-              "Symbiosis International School, Viman Nagar",
-              "The Orbis School, Keshavnagar",
-              "Lexicon International School, Kalyani Nagar",
-              "VIBGYOR High School, NIBM Road",
-              "Indus International School, Bhukum",
-              "City International School, Aundh",
-              "Sanskriti School, Bhugaon",
-              "The Orchid School, Baner",
-              "St. Helena's School, Pune"
-            ];
-          } else if (city === "Kolkata" || city.includes("West Bengal")) {
-            mockSchools[city] = [
-              "La Martiniere for Boys, Loudon Street",
-              "Don Bosco School, Park Circus",
-              "St. Xavier's Collegiate School, Park Street",
-              "South Point High School, Ballygunge",
-              "Modern High School for Girls, Syed Amir Ali Avenue",
-              "The Heritage School, Kolkata",
-              "Birla High School, Moira Street",
-              "Calcutta International School, Shakespeare Sarani",
-              "Delhi Public School Ruby Park, Kasba",
-              "St. James' School, AJC Bose Road",
-              "Lakshmipat Singhania Academy, Alipore",
-              "Mahadevi Birla World Academy, Hungerford Street"
-            ];
-          } else {
-            // Generate generic school names for other cities with more realistic naming
-            mockSchools[city] = [
-              `${board} Model School, ${city}`,
-              `NCERT Exemplar School, ${city}`,
-              `National Public School, ${city}`,
-              `City International School, ${city}`,
-              `${city} International School`,
-              `St. Xavier's School, ${city}`,
-              `Modern Academy, ${city}`,
-              `Divine Public School, ${city}`,
-              `Holy Child School, ${city}`,
-              `Kendriya Vidyalaya, ${city}`,
-              `DAV Public School, ${city}`,
-              `Bharatiya Vidya Bhavan's School, ${city}`,
-              `Delhi Public School, ${city}`,
-              `Greenwood High School, ${city}`,
-              `St. Mary's Convent School, ${city}`,
-              `Bal Bharati Public School, ${city}`
-            ];
-          }
-        });
-        
-        setSchools(mockSchools);
-      } catch (error) {
-        console.error("Error loading location data:", error);
-        toast.error("Failed to load location data. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Initialize with compulsory subjects
+  React.useEffect(() => {
+    const compulsorySubjects = subjectGroups
+      .flatMap(group => group.subjects)
+      .filter(subject => subject.isCompulsory)
+      .map(subject => subject.id);
     
-    loadStates();
-  }, [board]);
+    setSelectedSubjects(compulsorySubjects);
+  }, []);
   
-  // Watch for state changes to reset city and school
-  const watchState = form.watch("state");
-  const watchCity = form.watch("city");
-  
-  useEffect(() => {
-    form.setValue("city", "");
-    form.setValue("school", "");
-    setCitySearchTerm("");
-  }, [watchState, form]);
-  
-  useEffect(() => {
-    form.setValue("school", "");
-    setSchoolSearchTerm("");
-  }, [watchCity, form]);
-  
-  // Handle form submission
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Create a schoolInfo object with all required fields
-    const schoolInfo = {
-      state: values.state,
-      city: values.city,
-      school: values.school
-    };
-    
-    // Send complete school info to parent component
-    onComplete(schoolInfo);
-    
-    // Save to localStorage
-    localStorage.setItem('selectedState', values.state);
-    localStorage.setItem('selectedCity', values.city);
-    localStorage.setItem('selectedSchool', values.school);
-    
-    toast.success(`School Selected - You've selected ${values.school} in ${values.city}, ${values.state}`);
+  const handleCityChange = (value: string) => {
+    setSelectedCity(value);
+    setSelectedSchool("");
   };
   
-  // Filter cities and schools based on search
-  const filteredCities = watchState && cities[watchState] ? 
-    cities[watchState].filter(city => 
-      city.toLowerCase().includes(citySearchTerm.toLowerCase())
-    ) : [];
+  const handleSchoolChange = (value: string) => {
+    setSelectedSchool(value);
+  };
+  
+  const handleClassChange = (value: string) => {
+    setSelectedClass(value);
+  };
+  
+  const handleStreamChange = (value: string) => {
+    setSelectedStream(value);
+  };
+  
+  const handleSubjectToggle = (subjectId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSubjects([...selectedSubjects, subjectId]);
+    } else {
+      // Only allow unchecking if not compulsory
+      const subject = subjectGroups
+        .flatMap(group => group.subjects)
+        .find(s => s.id === subjectId);
+      
+      if (!subject?.isCompulsory) {
+        setSelectedSubjects(selectedSubjects.filter(id => id !== subjectId));
+      }
+    }
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     
-  const filteredSchools = watchCity && schools[watchCity] ? 
-    schools[watchCity].filter(school => 
-      school.toLowerCase().includes(schoolSearchTerm.toLowerCase())
-    ) : [];
+    if (!selectedCity || !selectedSchool || !selectedClass) {
+      toast.error("Please complete all required fields");
+      return;
+    }
+    
+    if (selectedSubjects.length < 5) {
+      toast.error("Please select at least 5 subjects");
+      return;
+    }
+    
+    // Get selected school info
+    const city = cities.find(c => c.id === selectedCity);
+    const school = city?.schools.find(s => s.id === selectedSchool);
+    
+    // Save selections to localStorage
+    localStorage.setItem('selectedCity', selectedCity);
+    localStorage.setItem('selectedSchool', JSON.stringify({
+      id: selectedSchool,
+      name: school?.name || selectedSchool,
+      board: school?.board || "CBSE"
+    }));
+    localStorage.setItem('selectedClass', selectedClass);
+    localStorage.setItem('selectedSubjects', JSON.stringify(selectedSubjects));
+    
+    toast.success("School information saved successfully!");
+    
+    // Navigate to dashboard
+    navigate('/dashboard');
+  };
   
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold">Select Your School</h2>
-        <p className="text-muted-foreground">Choose your location and school following {board} curriculum</p>
-      </div>
-      
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* State selection */}
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a state" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {states.map((state) => (
-                        <SelectItem key={state} value={state}>
-                          {state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* City selection with search */}
-            {watchState && (
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <div className="mb-2">
-                      <div className="relative">
-                        <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search cities..."
-                          className="pl-8"
-                          value={citySearchTerm}
-                          onChange={(e) => setCitySearchTerm(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a city" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredCities.length > 0 ? (
-                          filteredCities.map((city) => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-2 text-center text-muted-foreground">
-                            No cities found
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            
-            {/* School selection with search */}
-            {watchState && watchCity && (
-              <FormField
-                control={form.control}
-                name="school"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>School</FormLabel>
-                    <div className="mb-2">
-                      <div className="relative">
-                        <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search schools..."
-                          className="pl-8"
-                          value={schoolSearchTerm}
-                          onChange={(e) => setSchoolSearchTerm(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a school" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredSchools.length > 0 ? (
-                          filteredSchools.map((school) => (
-                            <SelectItem key={school} value={school}>
-                              {school}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-2 text-center text-muted-foreground">
-                            No schools found
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            
-            <div className="pt-4">
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={!watchState || !watchCity || !form.getValues("school")}
-              >
-                <School className="mr-2 h-4 w-4" />
-                Continue with Selected School
-              </Button>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>School Information</CardTitle>
+        <CardDescription>Please select your school and class to personalize your learning experience</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="city">City</Label>
+              <Select value={selectedCity} onValueChange={handleCityChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((city) => (
+                    <SelectItem key={city.id} value={city.id}>
+                      {city.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </form>
-        </Form>
-      )}
-    </div>
+            
+            <div>
+              <Label htmlFor="school">School</Label>
+              <Select 
+                value={selectedSchool} 
+                onValueChange={handleSchoolChange}
+                disabled={!selectedCity}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedCity ? "Select your school" : "Select a city first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedCity && cities
+                    .find(city => city.id === selectedCity)
+                    ?.schools.map(school => (
+                      <SelectItem key={school.id} value={school.id}>
+                        {school.name} ({school.board})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="class">Class</Label>
+              <Select value={selectedClass} onValueChange={handleClassChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[6, 7, 8, 9, 10, 11, 12].map(classNumber => (
+                    <SelectItem key={classNumber} value={classNumber.toString()}>
+                      Class {classNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="stream">Academic Stream (for class 11-12)</Label>
+              <Select 
+                value={selectedStream} 
+                onValueChange={handleStreamChange}
+                disabled={parseInt(selectedClass) < 11}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select academic stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="science">Science</SelectItem>
+                  <SelectItem value="commerce">Commerce</SelectItem>
+                  <SelectItem value="arts">Arts</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {parseInt(selectedClass) < 11 
+                  ? "Stream selection is available for Classes 11 and 12"
+                  : "Choose your academic stream for specialized subjects"
+                }
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <Label>Subjects</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Compulsory subjects are pre-selected. Choose additional optional subjects based on your interests.
+            </p>
+            
+            {/* Compulsory Subjects */}
+            <div className="bg-secondary/20 p-4 rounded-md mb-4">
+              <h3 className="font-medium mb-2">Compulsory Subjects</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {subjectGroups
+                  .flatMap(group => group.subjects)
+                  .filter(subject => subject.isCompulsory)
+                  .map(subject => (
+                    <div key={subject.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={subject.id} 
+                        checked={selectedSubjects.includes(subject.id)}
+                        disabled={true}
+                      />
+                      <Label htmlFor={subject.id} className="cursor-not-allowed">
+                        {subject.name}
+                      </Label>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+            
+            {/* Optional Subjects by Group */}
+            {subjectGroups
+              .filter(group => 
+                // Show science stream for classes 11-12 if selected
+                (group.id !== "science" && group.id !== "commerce" && group.id !== "arts") || 
+                (parseInt(selectedClass) >= 11 && group.id === selectedStream)
+              )
+              .map(group => (
+                <div key={group.id} className="bg-secondary/10 p-4 rounded-md mb-2">
+                  <h3 className="font-medium mb-2">{group.name}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {group.subjects
+                      .filter(subject => !subject.isCompulsory)
+                      .map(subject => (
+                        <div key={subject.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={subject.id} 
+                            checked={selectedSubjects.includes(subject.id)}
+                            onCheckedChange={(checked) => 
+                              handleSubjectToggle(subject.id, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={subject.id}>{subject.name}</Label>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+          
+          <Button type="submit" className="w-full">Continue to Dashboard</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

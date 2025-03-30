@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import StudyAIHeader from '@/components/StudyAIHeader';
 import LessonTest from '@/components/LessonTest';
 import { claudeService } from '@/services/claudeService';
+import { generateEnhancedContent } from '@/services/aiService';
 import { BookOpen, ChevronLeft, DownloadCloud, Lightbulb, PlayCircle, List, FileText, Star, Clock, BookCheck, Award } from "lucide-react";
 
 // Type for lesson content
@@ -51,166 +53,6 @@ interface LessonContent {
   }[];
 }
 
-// Sample mathematics lesson content for fallback
-const mathLessonSample: LessonContent = {
-  title: "Quadratic Equations and Their Applications",
-  keyPoints: [
-    "A quadratic equation has the form ax² + bx + c = 0, where a ≠ 0",
-    "The quadratic formula x = (-b ± √(b² - 4ac))/2a gives the solutions",
-    "The discriminant b² - 4ac determines the nature of roots",
-    "Quadratic equations can be solved by factoring, completing the square, or using the quadratic formula",
-    "Quadratic functions create parabolas when graphed",
-    "Real-world applications include projectile motion, area optimization, and economic modeling"
-  ],
-  explanation: [
-    "Quadratic equations are polynomial equations of the second degree, meaning the highest exponent of the variable is 2. The standard form is ax² + bx + c = 0, where a, b, and c are constants and a ≠ 0. These equations appear frequently in mathematics and have numerous applications in physics, engineering, and economics.",
-    "There are multiple methods to solve quadratic equations. The most common approaches are factoring (when the equation can be easily factored), completing the square (a technique that transforms the equation), and the quadratic formula x = (-b ± √(b² - 4ac))/2a which works for all quadratic equations.",
-    "The discriminant, calculated as b² - 4ac, helps determine the nature of the roots. If the discriminant is positive, there are two distinct real roots. If it equals zero, there is exactly one real root (a repeated root). If the discriminant is negative, there are two complex conjugate roots.",
-    "When graphed, a quadratic function f(x) = ax² + bx + c forms a parabola. The coefficient 'a' determines whether the parabola opens upward (a > 0) or downward (a < 0). The vertex of the parabola represents either the minimum or maximum value of the function."
-  ],
-  examples: [
-    {
-      title: "Solving by Factoring",
-      content: "Example: Solve x² - 5x + 6 = 0\n\nSolution: We can factor this as (x - 2)(x - 3) = 0\nUsing the zero product property: x - 2 = 0 or x - 3 = 0\nTherefore, x = 2 or x = 3"
-    },
-    {
-      title: "Using the Quadratic Formula",
-      content: "Example: Solve 2x² - 7x + 3 = 0\n\nSolution: Using the quadratic formula with a = 2, b = -7, and c = 3:\nx = (7 ± √(49 - 24))/4\nx = (7 ± √25)/4\nx = (7 ± 5)/4\nSo x = 3 or x = 0.5"
-    },
-    {
-      title: "Word Problem Application",
-      content: "Example: A farmer has 100 meters of fencing to enclose a rectangular garden adjacent to a river. If the river side needs no fencing, what dimensions will maximize the garden's area?\n\nSolution: Let x be the width. Then (100 - 2x)/2 is the length.\nArea = x × length = x(100 - 2x)/2 = 50x - x²\nTo maximize area, we take the derivative: dA/dx = 50 - 2x\nSetting equal to zero: 50 - 2x = 0\nSolving: x = 25\nSo the dimensions should be 25m × 25m for maximum area of 625 square meters."
-    }
-  ],
-  visualAids: [
-    {
-      title: "Parabola Graph",
-      description: "A visual representation of y = x² - 4x + 3, showing the parabola opening upward with vertex at (2, -1) and x-intercepts at x = 1 and x = 3",
-      visualType: "Graph"
-    },
-    {
-      title: "Discriminant Cases",
-      description: "Three parabolas showing the three cases for the discriminant: two distinct real roots (b² - 4ac > 0), one repeated real root (b² - 4ac = 0), and no real roots (b² - 4ac < 0)",
-      visualType: "Comparative Diagram"
-    },
-    {
-      title: "Completing the Square Method",
-      description: "Step-by-step visual showing the transformation of x² + 6x + 8 into (x + 3)² - 1, illustrating the geometric principle behind completing the square",
-      visualType: "Process Diagram"
-    }
-  ],
-  activities: [
-    {
-      title: "Projectile Motion Experiment",
-      instructions: "Using a ball launcher and measuring tape, launch a ball at different angles. Record the maximum height and distance traveled. Use quadratic equations to model the path and compare your theoretical predictions with actual measurements.",
-      learningOutcome: "Understanding how quadratic equations model real physical phenomena"
-    },
-    {
-      title: "Graphical Exploration",
-      instructions: "Using graphing software, investigate how changing the coefficients a, b, and c affects the shape, position, and orientation of the parabola y = ax² + bx + c. Record your observations about the vertex, axis of symmetry, and intercepts.",
-      learningOutcome: "Visualizing the relationship between algebraic expressions and their graphical representations"
-    }
-  ],
-  summary: "Quadratic equations form a fundamental part of algebra with extensive applications across various fields. The ability to recognize, manipulate, and solve these equations allows us to model curved relationships and optimize values in real-world scenarios. The various solution methods (factoring, completing the square, and the quadratic formula) provide flexibility in approaching different problems, while the discriminant offers quick insight into the nature of solutions. Understanding parabolas as the graphical representation of quadratic functions helps in visualizing and interpreting these mathematical relationships.",
-  textbookReferences: [
-    {
-      chapter: "8",
-      pageNumbers: "144-158",
-      description: "Quadratic Equations - Methods of Solution"
-    },
-    {
-      chapter: "9",
-      pageNumbers: "160-172",
-      description: "Applications of Quadratic Equations"
-    }
-  ],
-  interestingFacts: [
-    "Ancient Babylonian mathematicians could solve quadratic equations as early as 2000 BCE using geometric methods",
-    "The quadratic formula was first published in its modern form by Abraham bar Hiyya Ha-Nasi in his book 'Liber embadorum' published in 1145 CE",
-    "The word 'quadratic' comes from the Latin word 'quadratum' meaning square, referring to the squared term in the equation"
-  ]
-};
-
-// Sample science lesson content for fallback
-const scienceLessonSample: LessonContent = {
-  title: "Periodic Table and Element Classification",
-  keyPoints: [
-    "The periodic table organizes elements by increasing atomic number",
-    "Elements are arranged in periods (rows) and groups (columns)",
-    "Elements in the same group have similar chemical properties",
-    "The periodic table is divided into metals, nonmetals, and metalloids",
-    "Electron configuration determines an element's position in the periodic table",
-    "Periodic trends include atomic radius, ionization energy, and electronegativity"
-  ],
-  explanation: [
-    "The periodic table is one of the most significant achievements in science, offering a logical organization of all known chemical elements. Developed by Dmitri Mendeleev in 1869, the modern periodic table arranges elements by increasing atomic number (the number of protons in an atom's nucleus) from left to right and top to bottom.",
-    "Elements are organized into periods (horizontal rows) and groups (vertical columns). Elements in the same group have similar chemical properties because they have the same number of electrons in their outermost energy level or valence shell. This organization allows scientists to predict the behavior of elements based on their position in the table.",
-    "The periodic table is broadly divided into metals (left and middle of the table), nonmetals (upper right), and metalloids (along the zigzag line separating metals and nonmetals). Metals generally conduct electricity, are malleable and ductile, and tend to lose electrons in chemical reactions. Nonmetals typically do not conduct electricity well, are brittle in solid form, and tend to gain electrons. Metalloids have properties intermediate between metals and nonmetals.",
-    "The modern periodic table is based on the periodic law, which states that when elements are arranged by increasing atomic number, there is a periodic repetition of their physical and chemical properties. This periodicity is directly related to the electron configuration of atoms. Elements in the same group have similar valence electron configurations, which explains their similar chemical behavior."
-  ],
-  examples: [
-    {
-      title: "Group 1: Alkali Metals",
-      content: "Elements: Lithium (Li), Sodium (Na), Potassium (K), Rubidium (Rb), Cesium (Cs), Francium (Fr)\n\nCommon properties:\n- One valence electron\n- Highly reactive metals\n- React vigorously with water to produce hydrogen gas and metal hydroxides\n- Form +1 ions in compounds\n- Soft and have low melting points\n\nExample reaction: 2Na + 2H₂O → 2NaOH + H₂"
-    },
-    {
-      title: "Group 17: Halogens",
-      content: "Elements: Fluorine (F), Chlorine (Cl), Bromine (Br), Iodine (I), Astatine (At), Tennessine (Ts)\n\nCommon properties:\n- Seven valence electrons\n- Highly reactive nonmetals\n- Exist as diatomic molecules (F₂, Cl₂, etc.)\n- Form -1 ions (halides) in compounds\n- React with metals to form salts\n\nExample reaction: Cl₂ + 2KI → 2KCl + I₂"
-    },
-    {
-      title: "Transition Metals: Period 4",
-      content: "Elements: Scandium (Sc) through Zinc (Zn)\n\nCommon properties:\n- Electrons fill the d-orbital\n- Good conductors of heat and electricity\n- Many form colored compounds\n- Often exhibit multiple oxidation states\n- Generally hard and have high melting points\n\nExample: Copper (Cu) can form Cu⁺ (copper(I)) and Cu²⁺ (copper(II)) ions, giving different colored compounds (Cu₂O is red, CuO is black)"
-    }
-  ],
-  visualAids: [
-    {
-      title: "Modern Periodic Table",
-      description: "Color-coded periodic table showing metals, nonmetals, and metalloids, with atomic numbers, symbols, atomic weights, and electron configurations for each element",
-      visualType: "Chart"
-    },
-    {
-      title: "Electron Orbital Filling",
-      description: "Diagram showing the order of filling of electron orbitals (1s, 2s, 2p, etc.) and how this relates to the structure of the periodic table",
-      visualType: "Diagram"
-    },
-    {
-      title: "Periodic Trends",
-      description: "Visual representation of how atomic radius, ionization energy, and electronegativity change across periods and down groups in the periodic table",
-      visualType: "Trend Graph"
-    }
-  ],
-  activities: [
-    {
-      title: "Element Identification Lab",
-      instructions: "Observe the physical properties and chemical reactions of several unknown elemental samples. Based on your observations and reference to the periodic table, identify each element and explain your reasoning.",
-      learningOutcome: "Applying knowledge of periodic trends to identify elements based on their properties"
-    },
-    {
-      title: "Periodic Table Puzzle",
-      instructions: "Using a blank periodic table grid and element cards containing properties (but not names), place each element in its correct position based on the provided information about atomic number, electron configuration, and chemical behavior.",
-      learningOutcome: "Understanding the logical organization of the periodic table and the relationship between electron configuration and element position"
-    }
-  ],
-  summary: "The periodic table stands as one of science's most powerful organizational tools, arranging elements by atomic number in a way that reveals patterns in their properties. This arrangement into periods and groups creates a roadmap for understanding chemical behavior, as elements in the same group share similar properties due to their valence electron configurations. The division into metals, nonmetals, and metalloids further helps categorize elements by their physical and chemical characteristics. Periodic trends such as atomic radius, ionization energy, and electronegativity provide additional insights into element behavior. The predictive power of the periodic table has allowed scientists to discover new elements and understand the fundamental nature of matter.",
-  textbookReferences: [
-    {
-      chapter: "5",
-      pageNumbers: "98-115",
-      description: "Periodic Table and Periodic Properties"
-    },
-    {
-      chapter: "6",
-      pageNumbers: "116-130",
-      description: "Chemical Bonding and Molecular Structure"
-    }
-  ],
-  interestingFacts: [
-    "When Mendeleev created his periodic table, he left gaps for undiscovered elements and accurately predicted their properties, including gallium, scandium, and germanium",
-    "Technetium was the first artificially produced element and was discovered in 1937, filling a gap in the periodic table",
-    "Hydrogen is usually placed in Group 1 but doesn't fully belong there - it has properties similar to both alkali metals and halogens, making it unique in the periodic table"
-  ]
-};
-
 const Lesson = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -244,21 +86,62 @@ const Lesson = () => {
           description: "Retrieving NCERT-aligned learning content...",
         });
         
-        // Get lesson content from Claude API - with fallback to sample data
-        let result;
-        try {
-          result = await claudeService.getLessonContent(
-            parsedStudyItem.subject,
-            parsedStudyItem.title,
-            parsedStudyItem.className || '10'
-          );
-        } catch (apiError) {
-          console.error("API Error:", apiError);
-          // Use the appropriate sample data based on subject
-          result = await claudeService.getFallbackLessonContent(parsedStudyItem.subject, parsedStudyItem.title);
-            
-          toast("Using example lesson - Connected to sample data for demonstration");
+        // Try to get cached lesson first
+        const cachedLesson = localStorage.getItem(`lesson_${parsedStudyItem.subject}_${parsedStudyItem.title}`);
+        if (cachedLesson) {
+          setLesson(JSON.parse(cachedLesson));
+          setLoading(false);
+          return;
         }
+        
+        // Try to get lesson content from coordinated AI services
+        const prompt = `
+          Create a comprehensive educational lesson on "${parsedStudyItem.title}" for the subject "${parsedStudyItem.subject}" for students in class ${parsedStudyItem.className || '10'}.
+          
+          The lesson should include:
+          1. Key learning points (5-7 points)
+          2. Detailed explanation (3-5 paragraphs)
+          3. Practical examples (2-3)
+          4. Visual learning aids (3-4 descriptions)
+          5. Hands-on activities (2-3)
+          6. A concise summary
+          7. References to textbook chapters and pages
+          8. Interesting facts to engage students
+          
+          Format the response as a well-structured JSON object following this schema:
+          {
+            "title": "full topic title",
+            "keyPoints": ["point 1", "point 2", ...],
+            "explanation": ["paragraph 1", "paragraph 2", ...],
+            "examples": [{"title": "Example 1", "content": "..."}, ...],
+            "visualAids": [{"title": "Visual 1", "description": "...", "visualType": "diagram"}, ...],
+            "activities": [{"title": "Activity 1", "instructions": "...", "learningOutcome": "..."}, ...],
+            "summary": "summary text",
+            "textbookReferences": [{"chapter": "1", "pageNumbers": "10-15", "description": "..."}, ...],
+            "interestingFacts": ["fact 1", "fact 2", ...]
+          }
+          
+          Ensure the content is accurate, age-appropriate, and aligned with standard curriculum for ${parsedStudyItem.subject}.
+        `;
+        
+        // Create a context object for the AI service
+        const context = {
+          subject: parsedStudyItem.subject,
+          topic: parsedStudyItem.title,
+          className: parsedStudyItem.className || '10'
+        };
+        
+        // Get lesson content using the coordinated AI services
+        const result = await generateEnhancedContent(
+          prompt,
+          context,
+          (status) => {
+            // Update loading status
+            toast(`${status.stage} (${status.progress}%)`, {
+              description: `Using ${status.provider} AI service to generate content...`,
+            });
+          }
+        );
         
         if (result) {
           // Transform result if needed to match our expected format
@@ -282,6 +165,12 @@ const Lesson = () => {
           
           setLesson(formattedLesson);
           
+          // Cache the lesson for future use
+          localStorage.setItem(
+            `lesson_${parsedStudyItem.subject}_${parsedStudyItem.title}`, 
+            JSON.stringify(formattedLesson)
+          );
+          
           // Show success toast
           toast.success("Lesson Ready - " + parsedStudyItem.title + " content has been loaded successfully");
           
@@ -294,17 +183,27 @@ const Lesson = () => {
       } catch (error) {
         console.error("Error loading lesson content:", error);
         
-        // Use sample data as fallback
-        const fallbackLesson = await claudeService.getFallbackLessonContent(
-          studyItem?.subject || "General", 
-          studyItem?.title || "Lesson"
-        );
-        
-        setLesson(fallbackLesson);
-        
-        setError("Failed to load specific lesson content. Using sample data instead.");
-        
-        toast.error("Using Sample Content - There was a problem loading this lesson. Using example content.");
+        // Try one more time with claudeService as fallback
+        try {
+          toast("Attempting to load content from alternative source...");
+          
+          const fallbackResult = await claudeService.getLessonContent(
+            studyItem?.subject || "General", 
+            studyItem?.title || "Lesson",
+            studyItem?.className || "10"
+          );
+          
+          if (fallbackResult) {
+            setLesson(fallbackResult);
+            toast.success("Content loaded from alternative source");
+          } else {
+            throw new Error("Fallback source also failed");
+          }
+        } catch (fallbackError) {
+          console.error("Fallback error:", fallbackError);
+          setError("Failed to load lesson content. Please try refreshing the page.");
+          toast.error("Unable to load lesson content");
+        }
       } finally {
         setLoading(false);
       }
@@ -368,11 +267,11 @@ const Lesson = () => {
         ) : error ? (
           <Card className="w-full max-w-3xl mx-auto">
             <CardHeader>
-              <CardTitle>Using Sample Lesson Content</CardTitle>
-              <CardDescription>We're showing example materials</CardDescription>
+              <CardTitle>Error Loading Content</CardTitle>
+              <CardDescription>We encountered a problem</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-amber-500 mb-4">{error}</p>
+              <p className="text-red-500 mb-4">{error}</p>
               <Button 
                 variant="outline" 
                 onClick={() => navigate(`/subject/${studyItem?.subject || ''}`)}
