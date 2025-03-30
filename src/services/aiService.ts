@@ -1,4 +1,3 @@
-
 // src/services/aiService.ts
 import { toast } from "sonner";
 
@@ -220,7 +219,7 @@ const geminiProvider: AIProvider = {
   }
 };
 
-// Enhanced fallback content generator
+// Enhanced fallback content generator with broader educational focus
 const fallbackProvider: AIProvider = {
   name: "Fallback",
   generateContent: async (prompt: string, statusCallback: (status: AIStatus) => void, context?: any) => {
@@ -237,7 +236,7 @@ const fallbackProvider: AIProvider = {
       
       // Generate subject-specific fallback content
       statusCallback({
-        stage: `Generating ${context.subject} curriculum-aligned content`,
+        stage: `Generating ${context.subject} educational content from worldwide sources`,
         progress: 70,
         provider: "Fallback"
       });
@@ -268,7 +267,7 @@ const fallbackProvider: AIProvider = {
       .slice(0, 10);
       
     statusCallback({
-      stage: "Generating curriculum-aligned content",
+      stage: "Generating educational content from global resources",
       progress: 70,
       provider: "Fallback"
     });
@@ -681,7 +680,7 @@ export const generateEnhancedContent = async (
   // First try with the primary provider (Claude for rich content)
   try {
     onStatusUpdate({
-      stage: `Connecting to primary AI service`,
+      stage: `Connecting to AI research service`,
       progress: 5,
       provider: "Claude"
     });
@@ -701,7 +700,7 @@ export const generateEnhancedContent = async (
     // Try with OpenAI second
     try {
       onStatusUpdate({
-        stage: `Primary service unavailable, trying secondary AI service`,
+        stage: `Primary service unavailable, connecting to alternate research service`,
         progress: 5,
         provider: "OpenAI"
       });

@@ -1,3 +1,4 @@
+
 import { generateAIContent, generateEnhancedContent, AIStatus } from './aiService';
 import { toast } from "sonner";
 
@@ -68,7 +69,7 @@ export const generateLessonContent = async (
   try {
     // Show initial toast
     toast(`Generating ${context.subject} lesson content`, {
-      description: "Coordinating AI services to create comprehensive learning material..."
+      description: "Researching comprehensive educational content from various sources..."
     });
 
     // Update status if callback provided
@@ -94,24 +95,24 @@ export const generateLessonContent = async (
     }
 
     // Build the prompt for lesson content generation
-    const ncertAlignedPrompt = `
+    const comprehensivePrompt = `
       Create a comprehensive educational lesson on "${context.topic}" for the subject "${context.subject}" for students in class ${context.className || '10'}.
       
-      IMPORTANT: Base your response on ACTUAL NCERT textbook content for class ${context.className || '10'} ${context.subject} curriculum. Extract and structure the information to closely match what students would find in their actual textbooks.
+      IMPORTANT: Research and compile information from various educational sources and curriculums worldwide. Find the most engaging and effective teaching methods for this topic.
       
       The lesson should include:
-      1. Key learning points (5-7 points) that align with NCERT learning objectives
-      2. Detailed explanation (3-5 paragraphs) using language and concepts from the NCERT textbook
-      3. Practical examples (2-3) similar to those found in NCERT textbooks
-      4. Visual learning aids (3-4 descriptions) that would complement the textbook material
-      5. Hands-on activities (2-3) that reinforce curriculum concepts
-      6. A concise summary that highlights the most important NCERT curriculum points
-      7. References to specific textbook chapters and pages
-      8. Interesting facts to engage students that connect to the core curriculum
+      1. Key learning points (5-7 points) that align with standard educational objectives
+      2. Detailed explanation (3-5 paragraphs) using language appropriate for the age group
+      3. Practical examples (2-3) that demonstrate real-world applications
+      4. Visual learning aids (3-4 descriptions) that would enhance understanding
+      5. Hands-on activities (2-3) that reinforce learning through practical application
+      6. A concise summary that highlights the most important points
+      7. References to additional learning resources
+      8. Interesting facts to engage students and spark curiosity
 
       Format the response as a well-structured JSON object following this schema:
       {
-        "title": "full topic title as it appears in NCERT",
+        "title": "full topic title",
         "keyPoints": ["point 1", "point 2", ...],
         "explanation": ["paragraph 1", "paragraph 2", ...],
         "examples": [{"title": "Example 1", "content": "..."}, ...],
@@ -122,12 +123,12 @@ export const generateLessonContent = async (
         "interestingFacts": ["fact 1", "fact 2", ...]
       }
       
-      Remember: The goal is to create content that is directly aligned with the NCERT curriculum and feels like it was extracted directly from an official textbook.
+      Ensure the content is accurate, age-appropriate, and follows best educational practices from around the world.
     `;
 
     // Generate content using the service that coordinates multiple AI providers
     const result = await generateEnhancedContent(
-      ncertAlignedPrompt,
+      comprehensivePrompt,
       context,
       updateStatus
     );
@@ -198,7 +199,7 @@ export const generateQuizContent = async (
   try {
     // Show initial toast
     toast(`Generating ${context.subject} quiz questions`, {
-      description: "Creating assessment questions aligned with curriculum standards..."
+      description: "Creating assessment questions from comprehensive educational sources..."
     });
 
     // Update status if callback provided
@@ -227,7 +228,7 @@ export const generateQuizContent = async (
     const prompt = `
       Create a quiz with ${questionCount} questions to test understanding of "${context.topic}" for ${context.subject} at class ${context.className || '10'} level.
       
-      IMPORTANT: Base your questions on ACTUAL NCERT textbook content for this subject and class. The questions should assess understanding of key concepts as presented in the curriculum.
+      IMPORTANT: Research and draw from various educational resources, textbooks, and online learning platforms to create effective assessment questions.
       
       Each question should be multiple choice with 4 options.
       
@@ -247,7 +248,7 @@ export const generateQuizContent = async (
       Ensure questions are:
       1. Clear and unambiguous
       2. Appropriate difficulty for class ${context.className || '10'}
-      3. Focused on core concepts from the NCERT curriculum
+      3. Focused on core concepts from standard educational curricula worldwide
       4. Includes a mix of recall and application questions
       5. Contains helpful explanations that reinforce learning
     `;

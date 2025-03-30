@@ -19,16 +19,16 @@ const openai = getOpenAI();
 export const generateStudyPlan = async (board: string, className: string, subject: string) => {
   try {
     toast({
-      title: "Connecting to NCERT",
-      description: "Analyzing curriculum data for your study plan...",
+      title: "Creating Personalized Study Plan",
+      description: "Analyzing curriculum data and educational resources worldwide...",
     });
 
-    const systemPrompt = `You are an expert educational curriculum designer specializing in NCERT syllabus. 
-    Create a detailed study plan for ${subject} for class ${className} following the ${board} curriculum.
+    const systemPrompt = `You are an expert educational curriculum designer with knowledge of global education standards.
+    Create a detailed study plan for ${subject} for class ${className} based on comprehensive research of educational resources.
     Your response should be in JSON format with an 'items' array containing lesson objects.
     Each lesson object should have:
     - id: a unique string identifier
-    - title: the topic name from official NCERT textbooks
+    - title: the topic name from standard curriculum guides
     - description: a brief description of the topic
     - type: either "lesson", "quiz", or "practice"
     - status: "current" for the first item, "future" for the rest
@@ -36,14 +36,14 @@ export const generateStudyPlan = async (board: string, className: string, subjec
     - estimatedTimeInMinutes: estimated study time
     - subject: the subject name
     - content: a brief overview of the topic
-    - textbookReference: a specific chapter or page number reference to the NCERT textbook
+    - textbookReference: a relevant chapter or section reference
     - hasVisualAids: boolean indicating if this topic benefits from visual learning aids`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create a comprehensive NCERT-aligned study plan for ${subject} for class ${className} with accurate textbook references.` }
+        { role: 'user', content: `Create a comprehensive study plan for ${subject} for class ${className} based on global educational standards.` }
       ],
       temperature: 0.7
     });
@@ -55,7 +55,7 @@ export const generateStudyPlan = async (board: string, className: string, subjec
       
       toast({
         title: "Study Plan Created",
-        description: `Successfully generated NCERT-aligned study plan for ${subject}`,
+        description: `Successfully generated study plan for ${subject}`,
       });
       
       return jsonResponse;
@@ -81,25 +81,25 @@ export const generateLessonContent = async (subject: string, topic: string, clas
   try {
     toast({
       title: "Loading Content",
-      description: "Fetching NCERT-aligned lesson content with visual aids...",
+      description: "Researching and compiling educational content from various sources...",
     });
 
-    const systemPrompt = `You are an expert educational content creator specializing in NCERT curriculum for ${subject}.
+    const systemPrompt = `You are an expert educational content creator with knowledge of global teaching methodologies.
     Create detailed, engaging, and ACCURATE lesson content for the topic "${topic}" in ${subject}.
-    Focus on providing ONLY information contained in actual NCERT textbooks for class ${className}.
+    Research and compile information from various educational sources, textbooks, and online learning platforms worldwide.
     
     Your response should be in JSON format with the following structure:
     {
       "title": "${topic}",
-      "keyPoints": [array of 5-7 key concepts to understand from NCERT textbooks, written in simple, clear language],
-      "explanation": [array of 3-5 detailed explanatory paragraphs strictly following NCERT curriculum, written in an engaging, conversational style],
-      "examples": [array of 2-3 objects with "title" and "content" properties using REAL NCERT examples that are relatable to students],
+      "keyPoints": [array of 5-7 key concepts to understand, written in simple, clear language],
+      "explanation": [array of 3-5 detailed explanatory paragraphs following best educational practices, written in an engaging, conversational style],
+      "examples": [array of 2-3 objects with "title" and "content" properties using examples that are relatable to students],
       "visualAids": [array of 3-4 objects with "title", "description", and "visualType" (diagram, chart, graph, illustration, etc.) properties that help visualize the concepts],
-      "activities": [array of 2-3 objects with "title", "instructions" and "learningOutcome" properties that are similar to those found in NCERT books],
+      "activities": [array of 2-3 objects with "title", "instructions" and "learningOutcome" properties that reinforce learning through practical application],
       "summary": "a concluding paragraph summarizing the lesson in a motivational way",
-      "textbookReferences": [array of objects with "chapter", "pageNumbers", and "description" properties that directly link to ACTUAL NCERT textbooks],
+      "textbookReferences": [array of objects with "chapter", "pageNumbers", and "description" properties that direct students to additional learning resources],
       "visualLearningResources": [array of objects with "type" (video, animation, interactive diagram, etc.), "title", and "description" properties that cater to visual learners],
-      "interestingFacts": [array of 2-3 REAL facts related to the topic found in NCERT materials that will capture student interest]
+      "interestingFacts": [array of 2-3 REAL facts related to the topic that will capture student interest]
     }
     
     Focus on making the content:
@@ -108,13 +108,13 @@ export const generateLessonContent = async (subject: string, topic: string, clas
     3. Visually rich with multiple types of visual aids
     4. Connected to real-world applications
     5. Including interesting facts that spark curiosity
-    6. STRICTLY ADHERING to actual NCERT textbook content for Class ${className}`;
+    6. Aligned with standard educational objectives for this age group`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',  // Using a more capable model for better content
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create engaging, AUTHENTIC NCERT-aligned lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for students. ONLY include information that actually appears in NCERT textbooks.` }
+        { role: 'user', content: `Create engaging lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for students. Base the content on global educational standards.` }
       ],
       temperature: 0.5  // Lower temperature for more factual responses
     });
@@ -136,7 +136,7 @@ export const generateLessonContent = async (subject: string, topic: string, clas
       
       toast({
         title: "Lesson Created",
-        description: `Successfully generated authentic NCERT-aligned content for ${topic}`,
+        description: `Successfully generated content for ${topic}`,
       });
       
       return jsonResponse;
@@ -148,12 +148,12 @@ export const generateLessonContent = async (subject: string, topic: string, clas
     console.error("Error generating lesson content with OpenAI:", error);
     toast({
       title: "Error",
-      description: "Failed to load authentic lesson content. Please try again.",
+      description: "Failed to load lesson content. Please try again.",
       variant: "destructive"
     });
     
     // Instead of returning mock data, return null to trigger a retry
-    throw new Error("Failed to generate authentic lesson content");
+    throw new Error("Failed to generate lesson content");
   }
 };
 
@@ -548,5 +548,62 @@ export const generateVisualLearningResources = async (subject: string, topic: st
     
     // Instead of returning mock data, throw an error to trigger a retry
     throw new Error("Failed to generate authentic visual learning resources");
+  }
+};
+
+// New function to research global curriculum standards
+export const researchGlobalCurriculum = async (subject: string, className: string) => {
+  try {
+    toast({
+      title: "Researching Global Standards",
+      description: `Finding best educational approaches for ${subject} Class ${className}...`,
+    });
+
+    const systemPrompt = `You are an expert educational researcher with knowledge of curriculum standards worldwide.
+    Research and provide comprehensive information about effective teaching methods for ${subject} for Class ${className}.
+    Your response should be in JSON format with the following structure:
+    {
+      "subject": "${subject}",
+      "class": "${className}",
+      "recommendedResources": [array of top learning resources including textbooks, websites, and online platforms],
+      "coreTopics": [array of essential topics that should be covered based on global standards],
+      "teachingApproaches": [array of effective teaching methodologies for this subject and age group],
+      "assessmentStrategies": [array of recommended assessment techniques],
+      "digitalResources": [array of helpful digital tools and platforms]
+    }`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Research and provide comprehensive information about effective teaching methods for ${subject} for Class ${className}.` }
+      ],
+      temperature: 0.5
+    });
+
+    // Parse the response and return it
+    const content = response.choices[0]?.message?.content || '';
+    try {
+      const jsonResponse = JSON.parse(content);
+      
+      toast({
+        title: "Curriculum Researched",
+        description: `Successfully retrieved curriculum information for ${subject} Class ${className}`,
+      });
+      
+      return jsonResponse;
+    } catch (error) {
+      console.error("Error parsing OpenAI curriculum research response:", error);
+      throw new Error("Invalid response format from OpenAI");
+    }
+  } catch (error) {
+    console.error("Error researching global curriculum with OpenAI:", error);
+    toast({
+      title: "Error",
+      description: "Failed to retrieve curriculum information. Using standard data instead.",
+      variant: "destructive"
+    });
+    
+    return null;
   }
 };
