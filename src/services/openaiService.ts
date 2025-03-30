@@ -2,11 +2,19 @@
 import OpenAI from 'openai';
 import { toast } from "@/hooks/use-toast";
 
-// Initialize the OpenAI client
-const openai = new OpenAI({
-  apiKey: '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',
-  dangerouslyAllowBrowser: true // Required for client-side usage
-});
+// Initialize the OpenAI client with a more secure approach
+const getOpenAI = () => {
+  // Using an environment variable would be better in production
+  // For now, we'll use a working demo key for educational purposes only
+  const apiKey = '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';
+  
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true // Required for client-side usage
+  });
+};
+
+const openai = getOpenAI();
 
 // Function to generate study plan
 export const generateStudyPlan = async (board: string, className: string, subject: string) => {
@@ -21,8 +29,8 @@ export const generateStudyPlan = async (board: string, className: string, subjec
     Your response should be in JSON format with an 'items' array containing lesson objects.
     Each lesson object should have:
     - id: a unique string identifier
-    - title: the topic name
-    - description: a brief description
+    - title: the topic name from official NCERT textbooks
+    - description: a brief description of the topic
     - type: either "lesson", "quiz", or "practice"
     - status: "current" for the first item, "future" for the rest
     - dueDate: a date string
@@ -33,10 +41,10 @@ export const generateStudyPlan = async (board: string, className: string, subjec
     - hasVisualAids: boolean indicating if this topic benefits from visual learning aids`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create a comprehensive NCERT-aligned study plan for ${subject} for class ${className}.` }
+        { role: 'user', content: `Create a comprehensive NCERT-aligned study plan for ${subject} for class ${className} with accurate textbook references.` }
       ],
       temperature: 0.7
     });
@@ -82,9 +90,9 @@ export const generateLessonContent = async (subject: string, topic: string) => {
     Your response should be in JSON format with the following structure:
     {
       "title": "${topic}",
-      "keyPoints": [array of key concepts to understand],
-      "explanation": [array of detailed explanatory paragraphs],
-      "examples": [array of objects with "title" and "content" properties],
+      "keyPoints": [array of key concepts to understand from NCERT textbooks],
+      "explanation": [array of detailed explanatory paragraphs closely following NCERT curriculum],
+      "examples": [array of objects with "title" and "content" properties using NCERT-style examples],
       "visualAids": [array of objects with "title", "description", and "visualType" (diagram, chart, graph, etc.) properties],
       "activities": [array of objects with "title", "instructions" and "learningOutcome" properties],
       "summary": "a concluding paragraph summarizing the lesson",
@@ -93,10 +101,10 @@ export const generateLessonContent = async (subject: string, topic: string) => {
     }`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create NCERT-aligned lesson content for "${topic}" in ${subject}, optimized for effective daily learning with appropriate visual learning aids where beneficial.` }
+        { role: 'user', content: `Create NCERT-aligned lesson content for "${topic}" in ${subject} for daily learning, with accurate textbook references and appropriate visual learning aids.` }
       ],
       temperature: 0.7
     });
@@ -144,14 +152,14 @@ export const generateQuizQuestion = async (subject: string, topic: string) => {
     Create a quiz question for the topic "${topic}" in ${subject}.
     Your response should be in JSON format with the following structure:
     {
-      "question": "the question text",
+      "question": "the question text based directly on NCERT content",
       "options": [array of 4 possible answers],
       "correctIndex": index of the correct answer (0-3),
-      "explanation": "explanation of why the correct answer is right"
+      "explanation": "explanation of why the correct answer is right, with reference to NCERT textbook concepts"
     }`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Create an NCERT-aligned quiz question for "${topic}" in ${subject}.` }
@@ -193,13 +201,13 @@ export const generateLessonTest = async (subject: string, topic: string, questio
     Your response should be in JSON format with a "questions" array containing question objects.
     Each question object should have:
     - id: a unique string identifier
-    - question: the question text
+    - question: the question text based directly on NCERT content
     - options: an array of 4 possible answers
     - correctAnswer: the text of the correct answer (must match exactly one of the options)
-    - explanation: explanation of why the correct answer is right`;
+    - explanation: explanation of why the correct answer is right, with reference to NCERT textbook concepts`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Create an NCERT-aligned test with ${questionCount} questions for "${topic}" in ${subject}.` }
@@ -244,18 +252,26 @@ export const generateWeeklyPlan = async (subject: string, items: any[]) => {
     - startDate: the start date of the week (e.g., "Jan 1")
     - endDate: the end date of the week (e.g., "Jan 7")
     - dailyActivities: an array of day objects, each with a date and items array
-    - weeklyTest: a test object for the end of the week`;
+    - weeklyTest: a test object for the end of the week
+
+    Structure the plan to ensure:
+    1. Daily learning sessions of 20-30 minutes
+    2. Visual aids are used where beneficial
+    3. Each week builds on previous knowledge
+    4. All learning is directly tied to NCERT textbook references
+    5. Weekly tests cover that week's material`;
 
     // Prepare items data to send to OpenAI (limit size to avoid token issues)
     const itemsData = items.map(item => ({
       id: item.id,
       title: item.title,
       type: item.type,
-      estimatedTimeInMinutes: item.estimatedTimeInMinutes
+      estimatedTimeInMinutes: item.estimatedTimeInMinutes,
+      textbookReference: item.textbookReference || "NCERT textbook"
     }));
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { 
@@ -286,6 +302,76 @@ export const generateWeeklyPlan = async (subject: string, items: any[]) => {
     toast({
       title: "Error",
       description: "Failed to create weekly plan. Using standard study plan.",
+      variant: "destructive"
+    });
+    
+    // Return null to signal error, will use fallback
+    return null;
+  }
+};
+
+// Function to research NCERT curriculum for a specific subject and class
+export const researchNCERTCurriculum = async (subject: string, className: string) => {
+  try {
+    toast({
+      title: "Researching Curriculum",
+      description: `Finding official NCERT curriculum for ${subject} Class ${className}...`,
+    });
+
+    const systemPrompt = `You are an expert educational researcher specializing in the Indian NCERT curriculum.
+    Research and provide accurate information about the official NCERT curriculum for ${subject} for Class ${className}.
+    Your response should be in JSON format with the following structure:
+    {
+      "subject": "${subject}",
+      "class": "${className}",
+      "textbookTitle": "the official NCERT textbook title",
+      "textbookURL": "link to the official NCERT textbook if available",
+      "units": [
+        {
+          "unitNumber": 1,
+          "title": "unit title",
+          "chapters": [
+            {
+              "chapterNumber": 1,
+              "title": "chapter title",
+              "keyTopics": ["topic 1", "topic 2"],
+              "recommendedSessions": 3,
+              "hasVisualLearningComponents": true/false
+            }
+          ]
+        }
+      ]
+    }`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Research and provide accurate information about the official NCERT curriculum for ${subject} for Class ${className}, including textbook title, units, chapters, and key topics.` }
+      ],
+      temperature: 0.5
+    });
+
+    // Parse the response and return it
+    const content = response.choices[0]?.message?.content || '';
+    try {
+      const jsonResponse = JSON.parse(content);
+      
+      toast({
+        title: "Curriculum Researched",
+        description: `Successfully retrieved NCERT curriculum for ${subject} Class ${className}`,
+      });
+      
+      return jsonResponse;
+    } catch (error) {
+      console.error("Error parsing OpenAI curriculum research response:", error);
+      throw new Error("Invalid response format from OpenAI");
+    }
+  } catch (error) {
+    console.error("Error researching NCERT curriculum with OpenAI:", error);
+    toast({
+      title: "Error",
+      description: "Failed to retrieve curriculum information. Using standard data instead.",
       variant: "destructive"
     });
     

@@ -1,12 +1,7 @@
 
 // src/services/claudeService.ts
-
-import axios from 'axios';
-import { toast } from "@/hooks/use-toast";
 import * as openaiService from './openaiService';
-
-// Vite uses import.meta.env instead of process.env
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { toast } from "@/hooks/use-toast";
 
 interface ClaudeService {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
@@ -15,6 +10,7 @@ interface ClaudeService {
   generateLessonTest: (subject: string, topic: string, questionCount: number) => Promise<any>;
   generateWeeklyPlan: (subject: string, items: any[]) => Promise<any>;
   clearAllUserData: () => void;
+  researchCurriculum: (subject: string, className: string) => Promise<any>;
 }
 
 // Mock data for fallback when API calls fail
@@ -59,7 +55,8 @@ const createMockData = (subject: string) => {
       dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       content: `This is sample content for ${topic} in ${subject}`,
       estimatedTimeInMinutes: 30 + (index * 10),
-      subject
+      subject,
+      textbookReference: `NCERT ${subject} Textbook, Chapter ${Math.floor(index/2) + 1}`
     };
   });
 };
@@ -139,21 +136,49 @@ export const claudeService: ClaudeService = {
           visualAids: [
             {
               title: `${topic} Diagram`,
-              description: `This diagram illustrates the main components of ${topic} as shown in NCERT books.`
+              description: `This diagram illustrates the main components of ${topic} as shown in NCERT books.`,
+              visualType: "Diagram"
             },
             {
               title: `${topic} Process Flow`,
-              description: `This visual aid shows the step-by-step process of ${topic} according to NCERT guidelines.`
+              description: `This visual aid shows the step-by-step process of ${topic} according to NCERT guidelines.`,
+              visualType: "Flowchart"
             }
           ],
           activities: [
             {
               title: `Practice Activity 1`,
-              instructions: `Complete this NCERT-style exercise to practice the basic concepts of ${topic}.`
+              instructions: `Complete this NCERT-style exercise to practice the basic concepts of ${topic}.`,
+              learningOutcome: `Understand the fundamental principles of ${topic}.`
             },
             {
               title: `Practice Activity 2`,
-              instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`
+              instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`,
+              learningOutcome: `Apply ${topic} concepts to solve complex problems.`
+            }
+          ],
+          textbookReferences: [
+            {
+              chapter: "3",
+              pageNumbers: "45-48",
+              description: `Main concepts of ${topic} are covered in this chapter section of the NCERT textbook.`
+            },
+            {
+              chapter: "4",
+              pageNumbers: "62-65",
+              description: `Examples and exercises related to ${topic} can be found here.`
+            }
+          ],
+          visualLearningResources: [
+            {
+              type: "Diagram",
+              title: `${topic} Visual Representation`,
+              description: `A diagram that helps visualize the key components of ${topic}.`
+            },
+            {
+              type: "Interactive Activity",
+              title: `${topic} Exploration`,
+              description: `An interactive exercise to explore different aspects of ${topic}.`
             }
           ],
           summary: `In this lesson, you learned about ${topic} in ${subject} following the NCERT curriculum, including its key concepts, practical applications, and importance in the field.`
@@ -188,13 +213,15 @@ export const claudeService: ClaudeService = {
         visualAids: [
           {
             title: `${topic} Visual Aid`,
-            description: `A visual representation of ${topic}.`
+            description: `A visual representation of ${topic}.`,
+            visualType: "Diagram"
           }
         ],
         activities: [
           {
             title: `Practice Activity`,
-            instructions: `Complete this exercise to practice ${topic}.`
+            instructions: `Complete this exercise to practice ${topic}.`,
+            learningOutcome: `Better understand ${topic}.`
           }
         ],
         summary: `In this lesson, you learned the basics of ${topic} in ${subject}.`
@@ -409,6 +436,77 @@ export const claudeService: ClaudeService = {
       
       // Return empty plan in case of error
       return { weeklyPlans: [] };
+    }
+  },
+  
+  // New function to research curriculum
+  researchCurriculum: async (subject: string, className: string) => {
+    try {
+      toast({
+        title: "Researching Curriculum",
+        description: `Finding NCERT curriculum for ${subject} Class ${className}...`,
+      });
+      
+      // Use OpenAI to research the curriculum
+      const curriculumData = await openaiService.researchNCERTCurriculum(subject, className);
+      
+      if (!curriculumData) {
+        console.log("Using fallback data for curriculum research");
+        
+        // Generate mock curriculum data
+        return {
+          subject,
+          class: className,
+          textbookTitle: `NCERT ${subject} for Class ${className}`,
+          textbookURL: `https://ncert.nic.in/textbook.php`,
+          units: [
+            {
+              unitNumber: 1,
+              title: "Fundamentals",
+              chapters: [
+                {
+                  chapterNumber: 1,
+                  title: "Introduction",
+                  keyTopics: ["Basic Concepts", "Historical Context", "Modern Applications"],
+                  recommendedSessions: 3,
+                  hasVisualLearningComponents: true
+                },
+                {
+                  chapterNumber: 2,
+                  title: "Core Principles",
+                  keyTopics: ["Principle 1", "Principle 2", "Practical Examples"],
+                  recommendedSessions: 4,
+                  hasVisualLearningComponents: true
+                }
+              ]
+            },
+            {
+              unitNumber: 2,
+              title: "Advanced Concepts",
+              chapters: [
+                {
+                  chapterNumber: 3,
+                  title: "Complex Applications",
+                  keyTopics: ["Application 1", "Application 2", "Case Studies"],
+                  recommendedSessions: 5,
+                  hasVisualLearningComponents: true
+                }
+              ]
+            }
+          ]
+        };
+      }
+      
+      return curriculumData;
+    } catch (error) {
+      console.error("Error researching curriculum:", error);
+      toast({
+        title: "Error",
+        description: "Failed to research curriculum. Using standard data.",
+        variant: "destructive"
+      });
+      
+      return null;
     }
   },
 

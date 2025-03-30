@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
@@ -6,11 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from '@/hooks/use-toast';
 import { claudeService } from '@/services/claudeService';
 import LessonTest from '@/components/LessonTest';
-import { Award, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink } from 'lucide-react';
 
 interface LessonActivity {
   title: string;
   instructions: string;
+  learningOutcome?: string;
 }
 
 interface LessonExample {
@@ -19,6 +22,19 @@ interface LessonExample {
 }
 
 interface VisualAid {
+  title: string;
+  description: string;
+  visualType?: string;
+}
+
+interface TextbookReference {
+  chapter: string;
+  pageNumbers: string;
+  description: string;
+}
+
+interface VisualLearningResource {
+  type: string;
   title: string;
   description: string;
 }
@@ -31,6 +47,8 @@ interface LessonContent {
   visualAids: VisualAid[];
   activities: LessonActivity[];
   summary: string;
+  textbookReferences?: TextbookReference[];
+  visualLearningResources?: VisualLearningResource[];
 }
 
 const Lesson = () => {
@@ -42,6 +60,7 @@ const Lesson = () => {
   const [currentSection, setCurrentSection] = useState('content'); // 'content' or 'test'
   const [testContent, setTestContent] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Get the current study item from localStorage
   const currentStudyItem = JSON.parse(localStorage.getItem('currentStudyItem') || '{}');
@@ -103,6 +122,22 @@ const Lesson = () => {
         }
       } catch (error) {
         console.error("Error loading lesson content:", error);
+        
+        // If we've tried less than 2 times, retry with a delay
+        if (retryCount < 2) {
+          setRetryCount(prev => prev + 1);
+          toast({
+            title: "Retrying",
+            description: "Attempting to load lesson content again...",
+          });
+          
+          // Wait 2 seconds before retrying
+          setTimeout(() => {
+            loadLessonContent();
+          }, 2000);
+          return;
+        }
+        
         setError("Failed to load lesson content. Please try again.");
         toast({
           title: "Error",
@@ -220,6 +255,36 @@ const Lesson = () => {
     setCurrentSection('test');
   };
   
+  // Function to get textbook URL based on subject
+  const getTextbookUrl = (subject: string) => {
+    const subjectLower = subject.toLowerCase();
+    const baseUrl = "https://ncert.nic.in/textbook.php";
+    
+    if (subjectLower.includes('math')) {
+      return `${baseUrl}?lemh1=0-10`;
+    } else if (subjectLower.includes('physics')) {
+      return `${baseUrl}?leph1=0-8`;
+    } else if (subjectLower.includes('chemistry')) {
+      return `${baseUrl}?lech1=0-14`;
+    } else if (subjectLower.includes('english')) {
+      return `${baseUrl}?lefl1=0-11`;
+    } else if (subjectLower.includes('economics')) {
+      return `${baseUrl}?leec1=0-10`;
+    } else if (subjectLower.includes('geography')) {
+      return `${baseUrl}?legy1=0-7`;
+    } else if (subjectLower.includes('computer')) {
+      return `${baseUrl}?lecs1=0-10`;
+    } else if (subjectLower.includes('biology')) {
+      return `${baseUrl}?lebo1=0-16`;
+    } else if (subjectLower.includes('social')) {
+      return `${baseUrl}?less1=0-9`;
+    } else if (subjectLower.includes('science') && !subjectLower.includes('computer')) {
+      return `${baseUrl}?lesc1=0-18`;
+    } else {
+      return baseUrl;
+    }
+  };
+  
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: <ChevronLeft className="h-4 w-4" /> },
   ];
@@ -326,6 +391,27 @@ const Lesson = () => {
           </CardHeader>
           
           <CardContent className="space-y-8">
+            {/* Textbook Reference Notice */}
+            <Alert className="bg-blue-50 border-blue-200">
+              <div className="flex items-center">
+                <BookOpenText className="h-4 w-4 mr-2 text-blue-600" />
+                <div className="flex-1">
+                  <p className="text-sm text-blue-800">
+                    This lesson follows the NCERT curriculum for {currentStudyItem.subject}. Access the official textbook for additional reference.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className="ml-2 border-blue-300 text-blue-700 hover:bg-blue-100"
+                  onClick={() => window.open(getTextbookUrl(currentStudyItem.subject), '_blank')}
+                >
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  Open NCERT Textbook
+                </Button>
+              </div>
+            </Alert>
+            
             {/* Key Points */}
             <section>
               <h3 className="text-xl font-semibold mb-4">Key Points</h3>
@@ -351,7 +437,7 @@ const Lesson = () => {
               <h3 className="text-xl font-semibold mb-4">Examples</h3>
               <div className="space-y-4">
                 {lessonContent.examples && lessonContent.examples.map((example, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
+                  <div key={index} className="p-4 border rounded-lg bg-primary/5">
                     <h4 className="font-medium mb-2">{example.title}</h4>
                     <p>{example.content}</p>
                   </div>
@@ -361,16 +447,47 @@ const Lesson = () => {
             
             {/* Visual Aids */}
             <section>
-              <h3 className="text-xl font-semibold mb-4">Visual Aids</h3>
+              <h3 className="text-xl font-semibold mb-4">Visual Learning Aids</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {lessonContent.visualAids && lessonContent.visualAids.map((aid, index) => (
                   <div key={index} className="p-4 border rounded-lg bg-muted/50">
                     <h4 className="font-medium mb-2">{aid.title}</h4>
-                    <p>{aid.description}</p>
+                    <p className="mb-2">{aid.description}</p>
+                    {aid.visualType && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        {aid.visualType}
+                      </Badge>
+                    )}
                   </div>
                 ))}
               </div>
             </section>
+            
+            {/* Textbook References if available */}
+            {lessonContent.textbookReferences && lessonContent.textbookReferences.length > 0 && (
+              <section>
+                <h3 className="text-xl font-semibold mb-4">NCERT Textbook References</h3>
+                <div className="space-y-4">
+                  {lessonContent.textbookReferences.map((reference, index) => (
+                    <div key={index} className="p-4 border rounded-lg bg-blue-50">
+                      <h4 className="font-medium mb-2">
+                        Chapter {reference.chapter} {reference.pageNumbers ? `(Pages ${reference.pageNumbers})` : ''}
+                      </h4>
+                      <p>{reference.description}</p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mt-2 text-blue-700"
+                        onClick={() => window.open(getTextbookUrl(currentStudyItem.subject), '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View in Textbook
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             
             {/* Activities */}
             <section>
@@ -380,10 +497,39 @@ const Lesson = () => {
                   <div key={index} className="p-4 border rounded-lg bg-primary/5">
                     <h4 className="font-medium mb-2">{activity.title}</h4>
                     <p>{activity.instructions}</p>
+                    {activity.learningOutcome && (
+                      <div className="mt-2 p-2 bg-white rounded border">
+                        <span className="text-xs font-medium text-primary">Learning Outcome:</span>
+                        <p className="text-sm">{activity.learningOutcome}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </section>
+            
+            {/* Additional Visual Learning Resources if available */}
+            {lessonContent.visualLearningResources && lessonContent.visualLearningResources.length > 0 && (
+              <section>
+                <h3 className="text-xl font-semibold mb-4">Additional Visual Learning Resources</h3>
+                <div className="space-y-3">
+                  {lessonContent.visualLearningResources.map((resource, index) => (
+                    <div key={index} className="p-3 bg-primary/5 rounded-md">
+                      <div className="flex items-start">
+                        <Info className="h-5 w-5 text-primary mr-2 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium">{resource.title}</h4>
+                          <p className="text-sm">{resource.description}</p>
+                          <Badge variant="outline" className="mt-1">
+                            {resource.type}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             
             {/* Summary */}
             <section>
