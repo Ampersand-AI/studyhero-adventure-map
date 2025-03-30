@@ -45,6 +45,11 @@
     --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 0 0% 90%;
     --sidebar-ring: 0 0% 70%;
+
+    --study-blue: #4299e1;
+    --study-purple: #805ad5;
+    --study-green: #48bb78;
+    --study-orange: #ed8936;
   }
 
   .dark {

@@ -20,21 +20,21 @@ interface TimelineCardProps {
 
 const TimelineCard = ({ item, onStart }: TimelineCardProps) => {
   const statusIcon = {
-    completed: <CheckCircle className="h-5 w-5 text-study-green" />,
-    current: <PlayCircle className="h-5 w-5 text-study-blue animate-pulse" />,
+    completed: <CheckCircle className="h-5 w-5 text-green-500" />,
+    current: <PlayCircle className="h-5 w-5 text-blue-500 animate-pulse" />,
     future: <Circle className="h-5 w-5 text-gray-300" />,
   };
 
   const typeColors = {
-    lesson: "bg-study-blue text-white",
-    quiz: "bg-study-purple text-white",
-    practice: "bg-study-orange text-white",
+    lesson: "bg-blue-500 text-white",
+    quiz: "bg-purple-500 text-white",
+    practice: "bg-orange-500 text-white",
   };
 
   return (
     <Card className={`study-card relative border-l-4 ${
-      item.status === 'completed' ? 'border-l-study-green' : 
-      item.status === 'current' ? 'border-l-study-blue' : 
+      item.status === 'completed' ? 'border-l-green-500' : 
+      item.status === 'current' ? 'border-l-blue-500' : 
       'border-l-gray-300'
     }`}>
       <CardHeader className="pb-2">
