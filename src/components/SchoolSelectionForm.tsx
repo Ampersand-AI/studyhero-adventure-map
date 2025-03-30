@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -35,13 +36,22 @@ interface SchoolSelectionFormProps {
   userName: string;
   level: number;
   xp: number;
+  onComplete: (school: { state: string; city: string; school: string }) => void;
 }
 
-const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ userName, level, xp }) => {
+const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ 
+  userName = "Student", 
+  level = 1, 
+  xp = 0,
+  onComplete 
+}) => {
   const [board, setBoard] = useState<string>("");
   const [className, setClassName] = useState<string>("");
   const [subject, setSubject] = useState<string>("");
   const [stream, setStream] = useState<string>("");
+  const [state, setState] = useState<string>("");
+  const [city, setCity] = useState<string>("");
+  const [school, setSchool] = useState<string>("");
   const [studyPlan, setStudyPlan] = useState<{ items: StudyItem[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,11 +92,28 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ userName, lev
     localStorage.setItem('selectedStream', value);
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleStateChange = (value: string) => {
+    setState(value);
+    // Reset city and school when state changes
+    setCity("");
+    setSchool("");
+  };
+
+  const handleCityChange = (value: string) => {
+    setCity(value);
+    // Reset school when city changes
+    setSchool("");
+  };
+
+  const handleSchoolChange = (value: string) => {
+    setSchool(value);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
     // Validate form inputs
-    if (!board || !className || !subject) {
+    if (!state || !city || !school) {
       toast({
         title: "Required fields missing",
         description: "Please fill in all required fields.",
@@ -95,227 +122,112 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ userName, lev
       return;
     }
 
-    // Clear any previous errors
-    setError(null);
-    setLoading(true);
-    setProgress(0);
-    setGenerationStage("Initializing");
+    // Call the onComplete callback with the selected school data
+    onComplete({
+      state,
+      city,
+      school
+    });
+  };
 
-    try {
-      // Show initial toast
-      toast({
-        title: "Generating Study Plan",
-        description: "Creating a personalized study plan based on your selections...",
-      });
+  // States data
+  const states = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
+    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
+    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", 
+    "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", 
+    "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh", "Puducherry", 
+    "Chandigarh"
+  ];
 
-      // Update generation stage
-      setGenerationStage("Connecting to AI");
-      setProgress(10);
+  // Function to get cities based on state
+  const getCitiesForState = (state: string) => {
+    // This is a simplified example. In a real app, you would fetch this from an API
+    const citiesMap: Record<string, string[]> = {
+      "Delhi": ["New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi"],
+      "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik"],
+      "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangaluru", "Belgaum"],
+      "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Trichy"],
+      "Uttar Pradesh": ["Lucknow", "Kanpur", "Agra", "Varanasi", "Meerut"],
+      // Add more states and cities as needed
+    };
 
-      // Call OpenAI to generate study plan
-      const generatedStudyPlan = await generateStudyPlan(board, className, subject);
+    return citiesMap[state] || ["City 1", "City 2", "City 3"]; // Default cities if state is not in the map
+  };
 
-      if (!generatedStudyPlan || !generatedStudyPlan.items) {
-        throw new Error("Failed to generate study plan");
-      }
+  // Function to get schools based on city
+  const getSchoolsForCity = (city: string) => {
+    // This is a simplified example. In a real app, you would fetch this from an API
+    const schoolsMap: Record<string, string[]> = {
+      "Mumbai": ["St. Xavier's School", "Don Bosco High School", "R.N. Podar School", "Bombay Scottish School"],
+      "New Delhi": ["Delhi Public School", "Modern School", "Springdales School", "Sanskriti School"],
+      "Bengaluru": ["Bishop Cotton Boys' School", "National Public School", "The Valley School", "Inventure Academy"],
+      "Chennai": ["Don Bosco Matriculation School", "DAV Boys School", "Chettinad Vidyashram", "P.S. Senior Secondary School"],
+      // Add more cities and schools as needed
+    };
 
-      // Update generation stage
-      setGenerationStage("Processing Study Plan");
-      setProgress(75);
-
-      // Set the generated study plan
-      setStudyPlan(generatedStudyPlan);
-
-      // Store study plan in localStorage
-      localStorage.setItem('studyPlan', JSON.stringify(generatedStudyPlan));
-
-      // Update generation stage
-      setGenerationStage("Finalizing");
-      setProgress(90);
-
-      // Navigate to the study plan page
-      navigate('/study-plan');
-
-      // Show success toast
-      toast.success("Study plan generated successfully!");
-    } catch (e: any) {
-      console.error("Error generating study plan:", e);
-      setError(e.message || "Failed to generate study plan. Please try again.");
-      toast({
-        title: "Error",
-        description: "Failed to generate study plan. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setProgress(100);
-      setGenerationStage("Completed");
-    }
+    return schoolsMap[city] || ["School 1", "School 2", "School 3"]; // Default schools if city is not in the map
   };
 
   const navigationItems = [
     { name: "Back to Dashboard", href: "/", icon: <ChevronLeft className="h-4 w-4" /> },
   ];
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <StudyAIHeader
-        userName={userName}
-        level={level}
-        xp={xp}
-        navigation={navigationItems}
-      />
+  // Get relevant cities and schools based on selections
+  const cities = state ? getCitiesForState(state) : [];
+  const schools = city ? getSchoolsForCity(city) : [];
 
-      <main className="flex-1 container py-6 md:py-12">
-        <Card className="w-full max-w-3xl mx-auto">
-          <CardHeader>
-            <CardTitle>Personalize Your Study Plan</CardTitle>
-            <CardDescription>
-              Select your board, class, and subject to generate a personalized study plan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4">
-                <div>
-                  <Label htmlFor="board">Board</Label>
-                  <Select value={board} onValueChange={handleBoardChange} disabled={loading}>
-                    <SelectTrigger id="board">
-                      <SelectValue placeholder="Select Board" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CBSE">CBSE</SelectItem>
-                      <SelectItem value="ICSE">ICSE</SelectItem>
-                      <SelectItem value="State Board">State Board</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="class">Class</Label>
-                  <Select value={className} onValueChange={handleClassNameChange} disabled={loading}>
-                    <SelectTrigger id="class">
-                      <SelectValue placeholder="Select Class" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Class 1</SelectItem>
-                      <SelectItem value="2">Class 2</SelectItem>
-                      <SelectItem value="3">Class 3</SelectItem>
-                      <SelectItem value="4">Class 4</SelectItem>
-                      <SelectItem value="5">Class 5</SelectItem>
-                      <SelectItem value="6">Class 6</SelectItem>
-                      <SelectItem value="7">Class 7</SelectItem>
-                      <SelectItem value="8">Class 8</SelectItem>
-                      <SelectItem value="9">Class 9</SelectItem>
-                      <SelectItem value="10">Class 10</SelectItem>
-                      <SelectItem value="11">Class 11</SelectItem>
-                      <SelectItem value="12">Class 12</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="subject">Subject</Label>
-                  <Select value={subject} onValueChange={handleSubjectChange} disabled={loading}>
-                    <SelectTrigger id="subject">
-                      <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mathematics">Mathematics</SelectItem>
-                      <SelectItem value="Science">Science</SelectItem>
-                      <SelectItem value="Social Science">Social Science</SelectItem>
-                      <SelectItem value="English">English</SelectItem>
-                      <SelectItem value="Hindi">Hindi</SelectItem>
-                      {className === "11" || className === "12" ? (
-                        <>
-                          <SelectItem value="Physics">Physics</SelectItem>
-                          <SelectItem value="Chemistry">Chemistry</SelectItem>
-                          <SelectItem value="Biology">Biology</SelectItem>
-                          <SelectItem value="Economics">Economics</SelectItem>
-                          <SelectItem value="Accountancy">Accountancy</SelectItem>
-                          <SelectItem value="Business Studies">Business Studies</SelectItem>
-                          {/* Add stream selection based on subject */}
-                          {subject === "Physics" || subject === "Chemistry" || subject === "Biology" ? (
-                            <div>
-                              <Label htmlFor="stream">Stream</Label>
-                              <Select value={stream} onValueChange={handleStreamChange} disabled={loading}>
-                                <SelectTrigger id="stream">
-                                  <SelectValue placeholder="Select Stream" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="science">Science</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          ) : null}
-                          {subject === "Economics" || subject === "Accountancy" || subject === "Business Studies" ? (
-                            <div>
-                              <Label htmlFor="stream">Stream</Label>
-                              <Select value={stream} onValueChange={handleStreamChange} disabled={loading}>
-                                <SelectTrigger id="stream">
-                                  <SelectValue placeholder="Select Stream" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="commerce">Commerce</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {className === "11" || className === "12" ? (
-                  <div>
-                    {/* Conditionally render stream selection for Arts */}
-                    {subject === "History" || subject === "Political Science" || subject === "Geography" ? (
-                      <div>
-                        <Label htmlFor="stream">Stream</Label>
-                        <Select value={stream} onValueChange={handleStreamChange} disabled={loading}>
-                          <SelectTrigger id="stream">
-                            <SelectValue placeholder="Select Stream" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="arts">Arts</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : null}
-                    {/* Conditionally render stream selection for Languages */}
-                    {subject === "English" || subject === "Hindi" || subject === "Sanskrit" ? (
-                      <div>
-                        <Label htmlFor="stream">Stream</Label>
-                        <Select value={stream} onValueChange={handleStreamChange} disabled={loading}>
-                          <SelectTrigger id="stream">
-                            <SelectValue placeholder="Select Stream" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="languages">Languages</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Generating..." : "Generate Study Plan"}
-                </Button>
-              </div>
-            </form>
-            {loading && (
-              <div className="w-full">
-                <div className="mb-2 flex justify-between">
-                  <span className="text-sm font-medium">Generating Study Plan</span>
-                  <span className="text-sm text-muted-foreground">{generationStage} ({progress}%)</span>
-                </div>
-                <Progress value={progress} />
-              </div>
-            )}
-            {error && (
-              <p className="text-red-500 mt-4">Error: {error}</p>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+  return (
+    <div>
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-4">
+          <div>
+            <Label htmlFor="state">State</Label>
+            <Select value={state} onValueChange={handleStateChange} disabled={loading}>
+              <SelectTrigger id="state">
+                <SelectValue placeholder="Select State" />
+              </SelectTrigger>
+              <SelectContent>
+                {states.map((stateName) => (
+                  <SelectItem key={stateName} value={stateName}>{stateName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="city">City</Label>
+            <Select value={city} onValueChange={handleCityChange} disabled={loading || !state}>
+              <SelectTrigger id="city">
+                <SelectValue placeholder="Select City" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((cityName) => (
+                  <SelectItem key={cityName} value={cityName}>{cityName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="school">School</Label>
+            <Select value={school} onValueChange={handleSchoolChange} disabled={loading || !city}>
+              <SelectTrigger id="school">
+                <SelectValue placeholder="Select School" />
+              </SelectTrigger>
+              <SelectContent>
+                {schools.map((schoolName) => (
+                  <SelectItem key={schoolName} value={schoolName}>{schoolName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Button type="submit" disabled={loading || !state || !city || !school}>
+            Continue
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };

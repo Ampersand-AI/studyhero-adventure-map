@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -213,7 +214,9 @@ const Onboarding = () => {
               </CardHeader>
               <CardContent>
                 <SchoolSelectionForm 
-                  board={board} 
+                  userName="New Student"
+                  level={1}
+                  xp={0}
                   onComplete={handleSchoolSelection} 
                 />
               </CardContent>

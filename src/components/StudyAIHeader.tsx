@@ -16,12 +16,15 @@ interface StudyAIHeaderProps {
 }
 
 const StudyAIHeader = ({ 
-  userName, 
+  userName = "User", // Default value if userName is not provided
   avatarUrl, 
   level, 
   xp,
   navigation
 }: StudyAIHeaderProps) => {
+  // Ensure userName is a non-empty string for the avatar fallback
+  const fallbackInitial = (userName && userName.length > 0) ? userName[0] : "U";
+  
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="container flex h-16 items-center justify-between py-4">
@@ -38,11 +41,11 @@ const StudyAIHeader = ({
                   <h2 className="text-lg font-display mb-2 text-center text-primary">Study AI</h2>
                   <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={avatarUrl} alt={userName} />
-                      <AvatarFallback>{userName[0]}</AvatarFallback>
+                      <AvatarImage src={avatarUrl} alt={userName || "User"} />
+                      <AvatarFallback>{fallbackInitial}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium">{userName}</p>
+                      <p className="text-sm font-medium">{userName || "User"}</p>
                       <p className="text-xs text-muted-foreground">Level {level}</p>
                     </div>
                   </div>
@@ -89,8 +92,8 @@ const StudyAIHeader = ({
             </div>
           </div>
           <Avatar>
-            <AvatarImage src={avatarUrl} alt={userName} />
-            <AvatarFallback>{userName[0]}</AvatarFallback>
+            <AvatarImage src={avatarUrl} alt={userName || "User"} />
+            <AvatarFallback>{fallbackInitial}</AvatarFallback>
           </Avatar>
         </div>
       </div>
