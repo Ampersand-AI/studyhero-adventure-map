@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -164,13 +165,14 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComp
   
   // Handle form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Ensure all values are required strings before passing to onComplete
+    // Create a schoolInfo object with all required fields
     const schoolInfo = {
       state: values.state,
       city: values.city,
       school: values.school
     };
     
+    // Send complete school info to parent component
     onComplete(schoolInfo);
     
     // Save to localStorage

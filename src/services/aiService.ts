@@ -1,11 +1,12 @@
 
 // src/services/aiService.ts
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-// API Keys
-const CLAUDE_API_KEY = "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";
-const OPENAI_API_KEY = "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";
-const GEMINI_API_KEY = "AIzaSyCTRdzlULGXlmC7qXlt-aimyNVFFkl1rw4";
+// API Keys - In production, these should be stored securely
+// Note: These are placeholder keys and will not actually work
+const CLAUDE_API_KEY = "sk-ant-api03-sample-key-not-real-sample-key-not-real";
+const OPENAI_API_KEY = "sk-sample-key-not-real-sample-key-not-real";
+const GEMINI_API_KEY = "sample-key-not-real-sample-key-not-real";
 
 // Error tracking to prevent infinite loops
 let errorCount = 0;

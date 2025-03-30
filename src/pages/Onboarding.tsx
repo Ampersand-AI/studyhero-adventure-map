@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -21,7 +20,15 @@ import { toast } from "sonner";
 import StudyHeroHeader from '@/components/StudyHeroHeader';
 import OnboardingCard from '@/components/OnboardingCard';
 import SchoolSelectionForm from '@/components/SchoolSelectionForm';
-import { BookOpen, ChevronRight, GraduationCap, School } from "lucide-react";
+import { BookOpen, ChevronRight, GraduationCap, School, Home } from "lucide-react";
+
+// Define the props type for OnboardingCard if it doesn't exist
+interface CustomOnboardingCardProps {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -72,8 +79,26 @@ const Onboarding = () => {
     localStorage.setItem('currentXp', '0');
     localStorage.setItem('currentLevel', '1');
     
+    // Initialize an empty profile with selected subjects
+    const studyHeroProfile = {
+      subjects: ['Mathematics', 'Science', 'English', 'Social Studies'],
+      board,
+      class: className,
+      school: schoolInfo?.school,
+      city: schoolInfo?.city,
+      state: schoolInfo?.state
+    };
+    
+    // Save the profile to localStorage
+    localStorage.setItem('studyHeroProfile', JSON.stringify(studyHeroProfile));
+    
     navigate('/dashboard');
   };
+  
+  // Define navigation items for the header
+  const navigationItems = [
+    { name: "Home", href: "/", icon: <Home className="h-4 w-4" /> }
+  ];
   
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
@@ -114,30 +139,35 @@ const Onboarding = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <OnboardingCard
-                    title="CBSE"
-                    description="Central Board of Secondary Education"
-                    icon={<BookOpen className="h-8 w-8" />}
-                    onClick={() => handleBoardSelect('CBSE')}
-                  />
-                  <OnboardingCard
-                    title="ICSE"
-                    description="Indian Certificate of Secondary Education"
-                    icon={<BookOpen className="h-8 w-8" />}
-                    onClick={() => handleBoardSelect('ICSE')}
-                  />
-                  <OnboardingCard
-                    title="State Board"
-                    description="State Education Board Curriculum"
-                    icon={<BookOpen className="h-8 w-8" />}
-                    onClick={() => handleBoardSelect('State Board')}
-                  />
-                  <OnboardingCard
-                    title="International"
-                    description="IB, Cambridge & Other International Curricula"
-                    icon={<BookOpen className="h-8 w-8" />}
-                    onClick={() => handleBoardSelect('International')}
-                  />
+                  {/* Use the custom card component with onClick prop */}
+                  <div className="cursor-pointer" onClick={() => handleBoardSelect('CBSE')}>
+                    <OnboardingCard
+                      title="CBSE"
+                      description="Central Board of Secondary Education"
+                      icon={<BookOpen className="h-8 w-8" />}
+                    />
+                  </div>
+                  <div className="cursor-pointer" onClick={() => handleBoardSelect('ICSE')}>
+                    <OnboardingCard
+                      title="ICSE"
+                      description="Indian Certificate of Secondary Education"
+                      icon={<BookOpen className="h-8 w-8" />}
+                    />
+                  </div>
+                  <div className="cursor-pointer" onClick={() => handleBoardSelect('State Board')}>
+                    <OnboardingCard
+                      title="State Board"
+                      description="State Education Board Curriculum"
+                      icon={<BookOpen className="h-8 w-8" />}
+                    />
+                  </div>
+                  <div className="cursor-pointer" onClick={() => handleBoardSelect('International')}>
+                    <OnboardingCard
+                      title="International"
+                      description="IB, Cambridge & Other International Curricula"
+                      icon={<BookOpen className="h-8 w-8" />}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -152,13 +182,14 @@ const Onboarding = () => {
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
                   {[6, 7, 8, 9, 10, 11, 12].map(classNum => (
-                    <OnboardingCard
-                      key={classNum}
-                      title={`Class ${classNum}`}
-                      description={`${board} Curriculum`}
-                      icon={<GraduationCap className="h-8 w-8" />}
-                      onClick={() => handleClassSelect(classNum.toString())}
-                    />
+                    <div key={classNum} className="cursor-pointer" onClick={() => handleClassSelect(classNum.toString())}>
+                      <OnboardingCard
+                        key={classNum}
+                        title={`Class ${classNum}`}
+                        description={`${board} Curriculum`}
+                        icon={<GraduationCap className="h-8 w-8" />}
+                      />
+                    </div>
                   ))}
                 </div>
               </CardContent>
