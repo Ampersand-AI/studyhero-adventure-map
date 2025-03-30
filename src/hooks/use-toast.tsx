@@ -8,7 +8,6 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-// Remove incorrect import from @radix-ui/react-toast
 
 export interface ToastActionElement {
   altText?: string
@@ -19,6 +18,7 @@ export type ToastProps = React.ComponentPropsWithoutRef<typeof Toast> & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  progress?: number
 }
 
 const TOAST_LIMIT = 20
@@ -29,6 +29,7 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  progress?: number
 }
 
 const actionTypes = {

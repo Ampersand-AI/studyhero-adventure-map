@@ -78,6 +78,8 @@ const Dashboard = () => {
   const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -89,16 +91,39 @@ const Dashboard = () => {
     const loadDashboardData = async () => {
       setLoading(true);
       setError(null);
+      setLoadingProgress(0);
+      
+      // Show initial loading toast with progress bar
+      const loadingToast = toast({
+        title: "Loading Dashboard",
+        description: "Getting your study data ready...",
+        duration: 100000, // Long duration which we'll manually dismiss
+        progress: 0,
+      });
+      
+      setLoadingToastId(loadingToast.id);
       
       try {
+        // Increment progress
+        setLoadingProgress(10);
+        loadingToast.update({ progress: 10 });
+        
         // Load user data
         const userData = await userService.getUserProfile();
         setUser(userData);
+        
+        // Increment progress
+        setLoadingProgress(20);
+        loadingToast.update({ 
+          progress: 20,
+          description: "Loading your profile..."
+        });
         
         // Get user profile from localStorage
         const profileData = localStorage.getItem('studyHeroProfile');
         if (!profileData) {
           // If no profile exists, redirect to onboarding
+          loadingToast.dismiss();
           navigate('/onboarding');
           return;
         }
@@ -108,6 +133,7 @@ const Dashboard = () => {
         setSubjects(userSubjects);
         
         if (userSubjects.length === 0) {
+          loadingToast.dismiss();
           toast({
             title: "No subjects found",
             description: "Please add subjects to your profile to generate a study plan.",
@@ -115,6 +141,13 @@ const Dashboard = () => {
           navigate('/onboarding');
           return;
         }
+        
+        // Increment progress
+        setLoadingProgress(30);
+        loadingToast.update({ 
+          progress: 30,
+          description: "Checking existing study plans..."
+        });
         
         // Load study plans
         const savedPlans = localStorage.getItem('studyPlans');
@@ -125,15 +158,22 @@ const Dashboard = () => {
           setStudyPlans(existingPlans);
         }
         
+        // Increment progress
+        setLoadingProgress(50);
+        loadingToast.update({ 
+          progress: 50,
+          description: "Analyzing your curriculum needs..."
+        });
+        
         // Check if we need to generate plans for subjects that don't have one
         const existingSubjects = existingPlans.map(plan => plan.subject);
         const subjectsToGenerate = userSubjects.filter(subject => !existingSubjects.includes(subject));
         
-        // Show an initial loading notification
         if (subjectsToGenerate.length > 0) {
-          toast({
+          loadingToast.update({
             title: "Generating Study Plans",
             description: `Creating plans for ${subjectsToGenerate.length} subjects based on NCERT curriculum...`,
+            progress: 60
           });
           
           const newPlans: StudyPlan[] = [];
@@ -151,9 +191,18 @@ const Dashboard = () => {
           setStudyPlans(updatedPlans);
           localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
           
-          toast({
-            title: "Study Plans Ready",
-            description: `Created personalized plans for ${newPlans.length} subjects from NCERT curriculum.`,
+          // Increment progress
+          setLoadingProgress(70);
+          loadingToast.update({ 
+            progress: 70,
+            description: "Organizing your weekly schedule..."
+          });
+        } else {
+          // Skip ahead in the progress if we don't need to generate plans
+          setLoadingProgress(70);
+          loadingToast.update({ 
+            progress: 70,
+            description: "Organizing your weekly schedule..."
           });
         }
         
@@ -166,16 +215,19 @@ const Dashboard = () => {
           
           // Only show notification on first load
           if (!initialLoadComplete) {
-            toast({
-              title: "Weekly Schedule Loaded",
-              description: "Your personalized study schedule is ready.",
+            // Increment progress
+            setLoadingProgress(90);
+            loadingToast.update({ 
+              progress: 90,
+              description: "Finalizing your dashboard..."
             });
           }
         } else {
           // Generate new weekly plans
-          toast({
+          loadingToast.update({
             title: "Creating Weekly Schedule",
             description: "Organizing your study material into a weekly plan...",
+            progress: 80
           });
           
           const { weeklyPlans: newWeeklyPlans } = await studyPlanService.getWeeklyPlans();
@@ -183,9 +235,11 @@ const Dashboard = () => {
           setWeeklyPlans(newWeeklyPlans);
           localStorage.setItem('weeklyPlans', JSON.stringify(newWeeklyPlans));
           
-          toast({
-            title: "Weekly Plan Ready",
-            description: `Your ${newWeeklyPlans.length}-week personalized schedule is ready to use.`,
+          // Increment progress
+          setLoadingProgress(90);
+          loadingToast.update({ 
+            progress: 90,
+            description: "Finalizing your dashboard..."
           });
         }
         
@@ -200,18 +254,37 @@ const Dashboard = () => {
           setTestScores(scoresMap);
         }
         
+        // Increment progress to completion
+        setLoadingProgress(100);
+        loadingToast.update({ 
+          progress: 100,
+          description: "Dashboard ready!",
+          duration: 2000 // Auto dismiss after 2 seconds
+        });
+        
         setInitialLoadComplete(true);
         
       } catch (err: any) {
         console.error("Error loading dashboard data:", err);
         setError(err.message || "Failed to load dashboard data.");
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data. Please try again.",
-          variant: "destructive"
-        });
+        
+        // Update toast to show error
+        if (loadingToastId) {
+          loadingToast.update({
+            title: "Error",
+            description: "Failed to load dashboard data. Please try again.",
+            variant: "destructive",
+            progress: undefined // Remove progress bar for error
+          });
+        }
       } finally {
         setLoading(false);
+        // Ensure toast is dismissed if still showing
+        setTimeout(() => {
+          if (loadingToastId) {
+            toast.dismiss(loadingToastId);
+          }
+        }, 2000);
       }
     };
     
@@ -320,12 +393,13 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background flex flex-col">
         <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
         <main className="flex-1 container py-6">
-          <Card className="w-full">
+          <Card className="w-full mb-4">
             <CardHeader>
               <CardTitle>Loading Dashboard</CardTitle>
               <CardDescription>Fetching your study plans and progress...</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
+              <Progress value={loadingProgress} className="w-full" />
               <div className="grid gap-2">
                 <Skeleton className="h-4 w-[250px]" />
                 <Skeleton className="h-4 w-[200px]" />

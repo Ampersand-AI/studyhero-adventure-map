@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { claudeService } from '@/services/claudeService';
 import LessonTest from '@/components/LessonTest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink, Lightbulb, Sparkles, RefreshCw } from 'lucide-react';
+import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink, Lightbulb, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface LessonActivity {
   title: string;
@@ -23,8 +24,8 @@ interface LessonExample {
 
 interface VisualAid {
   title: string;
-  description: string;
   visualType?: string;
+  description: string;
 }
 
 interface TextbookReference {
@@ -62,6 +63,8 @@ const Lesson = () => {
   const [testContent, setTestContent] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   
   // Get the current study item from localStorage
   const currentStudyItem = JSON.parse(localStorage.getItem('currentStudyItem') || '{}');
@@ -70,14 +73,39 @@ const Lesson = () => {
     const loadLessonContent = async () => {
       setIsLoading(true);
       setError(null);
+      setLoadingProgress(0);
+      
+      // Show loading toast with progress bar
+      const loadingToast = toast({
+        title: "Loading Lesson",
+        description: "Connecting to NCERT database...",
+        duration: 100000, // Long duration which we'll manually dismiss
+        progress: 0,
+      });
+      
+      setLoadingToastId(loadingToast.id);
       
       try {
         if (!currentStudyItem || !currentStudyItem.subject || !currentStudyItem.title) {
           throw new Error("Missing study item information");
         }
         
+        // Increment progress
+        setLoadingProgress(20);
+        loadingToast.update({ 
+          progress: 20,
+          description: "Retrieving NCERT curriculum data..."
+        });
+        
         // Attempt to retrieve lesson content
         try {
+          // Increment progress
+          setLoadingProgress(40);
+          loadingToast.update({ 
+            progress: 40,
+            description: "Extracting authentic NCERT content..."
+          });
+          
           // Get class info (defaulting to '10' if not specified)
           const className = currentStudyItem.className || currentStudyItem.class || '10';
           
@@ -87,6 +115,13 @@ const Lesson = () => {
             currentStudyItem.title,
             className
           );
+          
+          // Increment progress
+          setLoadingProgress(80);
+          loadingToast.update({ 
+            progress: 80,
+            description: "Formatting lesson materials..."
+          });
           
           // Verify we have all required data
           if (content && 
@@ -100,11 +135,35 @@ const Lesson = () => {
             
             // Store in localStorage for offline access, but don't rely on it as primary source
             localStorage.setItem(`lesson_${id}_content`, JSON.stringify(content));
+            
+            // Finish progress
+            setLoadingProgress(100);
+            loadingToast.update({ 
+              progress: 100,
+              description: "Lesson ready!",
+              duration: 2000 // Auto dismiss after 2 seconds
+            });
           } else {
             throw new Error("Incomplete lesson content received");
           }
         } catch (lessonError) {
           console.error("Error loading fresh NCERT lesson content:", lessonError);
+          
+          // Check if this is an API key error
+          if (lessonError instanceof Error && 
+              (lessonError.message.includes('API key') || 
+               lessonError.message.includes('authentication'))) {
+            
+            loadingToast.update({
+              title: "API Configuration Error",
+              description: "Please check your API key in settings.",
+              variant: "destructive",
+              progress: undefined
+            });
+            
+            setError("API Configuration Error: Please check your API key settings. The current key appears to be incorrect or expired.");
+            return;
+          }
           
           // Check if we have a cached version as fallback
           const cachedContent = localStorage.getItem(`lesson_${id}_content`);
@@ -119,9 +178,11 @@ const Lesson = () => {
               setLessonContent(parsedContent);
               
               // Inform user we're using cached content
-              toast({
+              loadingToast.update({
                 title: "Using cached content",
                 description: "Couldn't connect to NCERT database. Using previously loaded content.",
+                progress: 100,
+                duration: 3000
               });
             } else {
               throw new Error("Cached content is also incomplete");
@@ -132,6 +193,16 @@ const Lesson = () => {
         }
       } catch (error) {
         console.error("Error loading lesson content:", error);
+        
+        // Update toast to show error
+        if (loadingToastId) {
+          loadingToast.update({
+            title: "Error",
+            description: "Failed to load lesson content. Please try again.",
+            variant: "destructive",
+            progress: undefined
+          });
+        }
         
         // If we've tried less than 2 times, retry with a delay
         if (retryCount < 2) {
@@ -148,14 +219,15 @@ const Lesson = () => {
           return;
         }
         
-        setError("Failed to load authentic NCERT lesson content. Please try again.");
-        toast({
-          title: "Error",
-          description: "Failed to load authentic NCERT lesson content. Please try again.",
-          variant: "destructive"
-        });
+        setError("Failed to load authentic NCERT lesson content. Please check your internet connection and API configuration.");
       } finally {
         setIsLoading(false);
+        // Ensure toast is dismissed if still showing after 3 seconds
+        setTimeout(() => {
+          if (loadingToastId) {
+            toast.dismiss(loadingToastId);
+          }
+        }, 3000);
       }
     };
     
@@ -343,11 +415,17 @@ const Lesson = () => {
           navigation={navigationItems}
         />
         <main className="flex-1 container py-12 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading authentic NCERT lesson content...</p>
-            <p className="text-sm text-muted-foreground mt-2">This may take a moment as we extract content from NCERT textbooks.</p>
-          </div>
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle>Loading Lesson</CardTitle>
+              <CardDescription>Retrieving authentic NCERT content</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress value={loadingProgress} className="w-full mb-4" />
+              <p className="text-center">Loading authentic NCERT lesson content...</p>
+              <p className="text-sm text-muted-foreground mt-2 text-center">This may take a moment as we extract content from NCERT textbooks.</p>
+            </CardContent>
+          </Card>
         </main>
       </div>
     );
@@ -365,10 +443,24 @@ const Lesson = () => {
         <main className="flex-1 container py-12 flex items-center justify-center">
           <Card className="w-full max-w-lg">
             <CardHeader>
-              <CardTitle>Error Loading Lesson</CardTitle>
+              <CardTitle className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                Error Loading Lesson
+              </CardTitle>
               <CardDescription>We couldn't load the authentic NCERT lesson content</CardDescription>
             </CardHeader>
             <CardContent>
+              <Alert className="mb-4 bg-amber-50 border-amber-200">
+                <div className="flex items-start">
+                  <Info className="h-5 w-5 text-amber-600 mr-2 mt-0.5" />
+                  <div>
+                    <p className="text-amber-800 font-medium">API Configuration Issue</p>
+                    <p className="text-amber-700 text-sm">
+                      The system is unable to connect to the OpenAI API. Please check your API key configuration.
+                    </p>
+                  </div>
+                </div>
+              </Alert>
               <p>{error || "Something went wrong while loading this lesson from NCERT databases."}</p>
             </CardContent>
             <CardFooter className="flex justify-between">

@@ -19,33 +19,44 @@ const createMinimalContent = (subject: string, topic: string) => {
   return {
     title: topic,
     keyPoints: [
-      `This content could not be loaded from NCERT sources. Please try again later.`
+      `This content could not be loaded from NCERT sources. Please check your API configuration.`
     ],
     explanation: [
-      `We experienced difficulties retrieving the authentic NCERT content for ${topic} in ${subject}. Please try refreshing the page or select a different topic.`
+      `We experienced difficulties retrieving the authentic NCERT content for ${topic} in ${subject}. This is likely due to an API configuration issue.`
     ],
     examples: [
       {
-        title: `Connection issue`,
-        content: `We couldn't connect to the NCERT database. This is a temporary issue.`
+        title: `API Configuration Issue`,
+        content: `Please check your OpenAI API key configuration. The current key appears to be invalid or expired.`
       }
     ],
     visualAids: [
       {
-        title: `Temporary unavailable`,
-        description: `Visual aids for this topic are temporarily unavailable.`,
+        title: `Configuration Required`,
+        description: `Visual aids for this topic require a valid API configuration.`,
         visualType: "None"
       }
     ],
     activities: [
       {
-        title: `Please try again`,
-        instructions: `Please try again later when the connection to NCERT resources is restored.`,
+        title: `Configuration Steps`,
+        instructions: `To fix this issue, please update your API key in the application settings.`,
         learningOutcome: `N/A`
       }
     ],
-    summary: `We apologize for the inconvenience. The authentic NCERT content for this lesson could not be loaded at this time.`
+    summary: `We apologize for the inconvenience. The authentic NCERT content for this lesson could not be loaded due to an API configuration issue.`
   };
+};
+
+// Check if the error is due to an API key issue
+const isApiKeyError = (error: any): boolean => {
+  if (!error) return false;
+  
+  const errorMessage = error.message || '';
+  return errorMessage.includes('API key') || 
+         errorMessage.includes('invalid_api_key') || 
+         errorMessage.includes('401') ||
+         errorMessage.includes('authentication');
 };
 
 export const claudeService: ClaudeService = {
@@ -75,11 +86,19 @@ export const claudeService: ClaudeService = {
     } catch (error) {
       console.error("Error generating study plan:", error);
       
-      toast({
-        title: "Error",
-        description: "Failed to retrieve authentic NCERT study plan. Please try again.",
-        variant: "destructive"
-      });
+      if (isApiKeyError(error)) {
+        toast({
+          title: "API Configuration Error",
+          description: "Please check your API key configuration in settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to retrieve authentic NCERT study plan. Please try again.",
+          variant: "destructive"
+        });
+      }
       
       // Rethrow the error so the UI can handle it
       throw new Error("Could not generate authentic NCERT study plan");
@@ -113,6 +132,17 @@ export const claudeService: ClaudeService = {
         retryCount++;
         console.error(`Error generating lesson content (attempt ${retryCount}):`, error);
         
+        // Check if this is an API key error
+        if (isApiKeyError(error)) {
+          toast({
+            title: "API Configuration Error",
+            description: "Please check your API key configuration in settings.",
+            variant: "destructive"
+          });
+          // Return the API error content to inform the user
+          return createMinimalContent(subject, topic);
+        }
+        
         if (retryCount < maxRetries) {
           toast({
             title: "Retrying",
@@ -130,7 +160,7 @@ export const claudeService: ClaudeService = {
           variant: "destructive"
         });
         
-        // Return minimal error-state content instead of mock data
+        // Return minimal error-state content
         return createMinimalContent(subject, topic);
       }
     };
@@ -169,11 +199,19 @@ export const claudeService: ClaudeService = {
       return quizQuestion;
     } catch (error) {
       console.error("Error generating quiz question:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate quiz. Using sample question.",
-        variant: "destructive"
-      });
+      if (isApiKeyError(error)) {
+        toast({
+          title: "API Configuration Error",
+          description: "Please check your API key configuration in settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate quiz. Using sample question.",
+          variant: "destructive"
+        });
+      }
       
       // Fallback content
       return {
@@ -224,11 +262,19 @@ export const claudeService: ClaudeService = {
       return lessonTest;
     } catch (error) {
       console.error("Error generating lesson test:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate test. Using sample questions.",
-        variant: "destructive"
-      });
+      if (isApiKeyError(error)) {
+        toast({
+          title: "API Configuration Error",
+          description: "Please check your API key configuration in settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate test. Using sample questions.",
+          variant: "destructive"
+        });
+      }
       
       // Fallback content
       const questions = Array.from({ length: Math.min(questionCount, 3) }, (_, i) => ({
@@ -337,11 +383,19 @@ export const claudeService: ClaudeService = {
       return weeklyPlan;
     } catch (error) {
       console.error("Error generating weekly plan:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create weekly plan. Using standard study plan.",
-        variant: "destructive"
-      });
+      if (isApiKeyError(error)) {
+        toast({
+          title: "API Configuration Error",
+          description: "Please check your API key configuration in settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create weekly plan. Using standard study plan.",
+          variant: "destructive"
+        });
+      }
       
       // Return empty plan in case of error
       return { weeklyPlans: [] };
@@ -409,11 +463,20 @@ export const claudeService: ClaudeService = {
       return curriculumData;
     } catch (error) {
       console.error("Error researching curriculum:", error);
-      toast({
-        title: "Error",
-        description: "Failed to research curriculum. Using standard data.",
-        variant: "destructive"
-      });
+      
+      if (isApiKeyError(error)) {
+        toast({
+          title: "API Configuration Error",
+          description: "Please check your API key configuration in settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to research curriculum. Using standard data.",
+          variant: "destructive"
+        });
+      }
       
       return null;
     }
@@ -445,6 +508,29 @@ export const claudeService: ClaudeService = {
         retryCount++;
         console.error(`Error extracting textbook content (attempt ${retryCount}):`, error);
         
+        if (isApiKeyError(error)) {
+          toast({
+            title: "API Configuration Error",
+            description: "Please check your API key configuration in settings.",
+            variant: "destructive"
+          });
+          // Return the API error content to inform the user
+          return {
+            chapterTitle: `Chapter ${chapter}: Content Temporarily Unavailable`,
+            sections: [
+              {
+                title: "Connection Issue",
+                content: `We couldn't access the authentic NCERT textbook for ${subject} Class ${className} at this time. Please try again later.`,
+                keyTerms: ["Connection issue"],
+                hasVisuals: false,
+                visualDescriptions: []
+              }
+            ],
+            exercises: [],
+            summary: `We apologize for the inconvenience. Please try accessing this content again later.`
+          };
+        }
+
         if (retryCount < maxRetries) {
           toast({
             title: "Retrying",
@@ -506,6 +592,30 @@ export const claudeService: ClaudeService = {
         retryCount++;
         console.error(`Error generating visual resources (attempt ${retryCount}):`, error);
         
+        if (isApiKeyError(error)) {
+          toast({
+            title: "API Configuration Error",
+            description: "Please check your API key configuration in settings.",
+            variant: "destructive"
+          });
+          // Return the API error content to inform the user
+          return { 
+            visualResources: [
+              {
+                type: "Unavailable",
+                title: "Visual Resources Temporarily Unavailable",
+                description: "We couldn't connect to the NCERT visual database at this time.",
+                learningObjective: "Please try again later",
+                complexity: "N/A",
+                colorScheme: "N/A",
+                keyConcepts: ["Connection issue"],
+                textbookReference: "N/A",
+                suggestedUse: "Please refresh or try again later"
+              }
+            ]
+          };
+        }
+
         if (retryCount < maxRetries) {
           toast({
             title: "Retrying",
