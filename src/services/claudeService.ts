@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface ClaudeService {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
-  generateLessonContent: (subject: string, topic: string) => Promise<any>;
+  generateLessonContent: (subject: string, topic: string, className?: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
   generateLessonTest: (subject: string, topic: string, questionCount: number) => Promise<any>;
   generateWeeklyPlan: (subject: string, items: any[]) => Promise<any>;
@@ -96,15 +96,15 @@ export const claudeService: ClaudeService = {
     }
   },
 
-  generateLessonContent: async (subject: string, topic: string) => {
+  generateLessonContent: async (subject: string, topic: string, className: string = '10') => {
     try {
       toast({
         title: "Loading Enhanced Content",
         description: "Fetching NCERT-aligned lesson content with visual aids...",
       });
       
-      // Use OpenAI to generate the enhanced lesson content
-      const lessonContent = await openaiService.generateLessonContent(subject, topic);
+      // Use OpenAI to generate the enhanced lesson content - pass className
+      const lessonContent = await openaiService.generateLessonContent(subject, topic, className);
       
       // If OpenAI returns null (error occurred), fall back to mock data
       if (!lessonContent) {

@@ -1,3 +1,4 @@
+
 import OpenAI from 'openai';
 import { toast } from "@/hooks/use-toast";
 
@@ -77,7 +78,7 @@ export const generateStudyPlan = async (board: string, className: string, subjec
 };
 
 // Function to generate lesson content with enhanced visual elements
-export const generateLessonContent = async (subject: string, topic: string) => {
+export const generateLessonContent = async (subject: string, topic: string, className: string = '10') => {
   try {
     toast({
       title: "Loading Content",
