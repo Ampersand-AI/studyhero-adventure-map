@@ -19,17 +19,15 @@ export type ToastProps = React.ComponentPropsWithoutRef<typeof Toast> & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
-  progress?: number
 }
 
 // Update the toast function to use Sonner's toast
 function toast(props: ToastProps) {
-  const { title, description, variant, progress, ...restProps } = props
+  const { title, description, variant, ...restProps } = props
 
   return sonnerToast(title as string, {
     description,
     className: variant === "destructive" ? "destructive" : undefined,
-    progress: progress !== undefined ? progress : undefined,
   })
 }
 

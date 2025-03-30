@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudyAIHeader from '@/components/StudyAIHeader';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { claudeService } from '@/services/claudeService';
 import LessonTest from '@/components/LessonTest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -77,14 +76,12 @@ const Lesson = () => {
       setLoadingProgress(0);
       
       // Show loading toast with progress bar
-      const loadingToast = toast({
-        title: "Loading Lesson",
+      const toastId = toast.loading("Loading Lesson", {
         description: "Connecting to NCERT database...",
         duration: 100000, // Long duration which we'll manually dismiss
-        progress: 0,
       });
       
-      setLoadingToastId(loadingToast.id);
+      setLoadingToastId(toastId);
       
       try {
         if (!currentStudyItem || !currentStudyItem.subject || !currentStudyItem.title) {
@@ -93,9 +90,8 @@ const Lesson = () => {
         
         // Increment progress
         setLoadingProgress(20);
-        loadingToast.update({
-          id: loadingToast.id,
-          progress: 20,
+        toast.loading("Loading Lesson", {
+          id: toastId,
           description: "Retrieving NCERT curriculum data..."
         });
         
@@ -103,9 +99,8 @@ const Lesson = () => {
         try {
           // Increment progress
           setLoadingProgress(40);
-          loadingToast.update({
-            id: loadingToast.id,
-            progress: 40,
+          toast.loading("Loading Lesson", {
+            id: toastId,
             description: "Extracting authentic NCERT content..."
           });
           
@@ -121,9 +116,8 @@ const Lesson = () => {
           
           // Increment progress
           setLoadingProgress(80);
-          loadingToast.update({
-            id: loadingToast.id,
-            progress: 80,
+          toast.loading("Loading Lesson", {
+            id: toastId,
             description: "Formatting lesson materials..."
           });
           
@@ -142,10 +136,8 @@ const Lesson = () => {
             
             // Finish progress
             setLoadingProgress(100);
-            loadingToast.update({
-              id: loadingToast.id,
-              progress: 100,
-              description: "Lesson ready!",
+            toast.success("Lesson ready!", {
+              id: toastId,
               duration: 2000 // Auto dismiss after 2 seconds
             });
           } else {
@@ -159,12 +151,9 @@ const Lesson = () => {
               (lessonError.message.includes('API key') || 
                lessonError.message.includes('authentication'))) {
             
-            loadingToast.update({
-              id: loadingToast.id,
-              title: "API Configuration Error",
-              description: "Please check your API key in settings.",
-              variant: "destructive",
-              progress: undefined
+            toast.error("API Configuration Error", {
+              id: toastId,
+              description: "Please check your API key in settings."
             });
             
             setError("API Configuration Error: Please check your API key settings. The current key appears to be incorrect or expired.");
@@ -184,11 +173,9 @@ const Lesson = () => {
               setLessonContent(parsedContent);
               
               // Inform user we're using cached content
-              loadingToast.update({
-                id: loadingToast.id,
-                title: "Using cached content",
+              toast.info("Using cached content", {
+                id: toastId,
                 description: "Couldn't connect to NCERT database. Using previously loaded content.",
-                progress: 100,
                 duration: 3000
               });
             } else {
@@ -203,20 +190,16 @@ const Lesson = () => {
         
         // Update toast to show error
         if (loadingToastId) {
-          loadingToast.update({
-            id: loadingToast.id,
-            title: "Error",
-            description: "Failed to load lesson content. Please try again.",
-            variant: "destructive",
-            progress: undefined
+          toast.error("Error", {
+            id: toastId,
+            description: "Failed to load lesson content. Please try again."
           });
         }
         
         // If we've tried less than 2 times, retry with a delay
         if (retryCount < 2) {
           setRetryCount(prev => prev + 1);
-          toast({
-            title: "Retrying",
+          toast.info("Retrying", {
             description: "Attempting to load authentic NCERT lesson content again...",
           });
           
@@ -233,7 +216,7 @@ const Lesson = () => {
         // Ensure toast is dismissed if still showing after 3 seconds
         setTimeout(() => {
           if (loadingToastId) {
-            toast.dismiss(loadingToastId);
+            toast.dismiss(toastId);
           }
         }, 3000);
       }
@@ -298,14 +281,12 @@ const Lesson = () => {
         const newLevel = currentLevel + 1;
         localStorage.setItem('currentLevel', newLevel.toString());
         
-        toast({
-          title: "Level Up!",
+        toast.success("Level Up!", {
           description: `Congratulations! You've reached level ${newLevel}`,
         });
       }
       
-      toast({
-        title: "Lesson Completed!",
+      toast.success("Lesson Completed!", {
         description: "You've earned 50 XP",
       });
     }
@@ -331,10 +312,8 @@ const Lesson = () => {
         }
       } catch (error) {
         console.error("Error generating test:", error);
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: "Failed to generate test. Please try again.",
-          variant: "destructive"
         });
       } finally {
         setIsLoading(false);
