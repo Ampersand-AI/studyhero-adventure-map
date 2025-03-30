@@ -1,3 +1,4 @@
+
 // src/services/claudeService.ts
 
 import axios from 'axios';
@@ -8,6 +9,7 @@ interface ClaudeService {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateLessonContent: (subject: string, topic: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
+  generateLessonTest: (subject: string, topic: string, questionCount: number) => Promise<any>;
   clearAllUserData: () => void;
 }
 
@@ -48,6 +50,20 @@ export const claudeService: ClaudeService = {
       return response.data;
     } catch (error) {
       console.error("Error generating quiz question:", error);
+      throw error;
+    }
+  },
+
+  generateLessonTest: async (subject: string, topic: string, questionCount: number) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/claude/lessonTest`, {
+        subject,
+        topic,
+        questionCount
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error generating lesson test:", error);
       throw error;
     }
   },
