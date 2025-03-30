@@ -25,7 +25,7 @@ interface TestContent {
     id: string;
     question: string;
     options: string[];
-    correctAnswer: number;
+    correctAnswer: string;
     explanation: string;
   }[];
 }
@@ -100,20 +100,50 @@ class ClaudeService {
     console.log(`Generating test for ${subject}: ${title} with ${questionCount} questions`);
     
     // Mock test generation
-    const questions = Array(questionCount).fill(0).map((_, index) => ({
-      id: `q${index + 1}`,
-      question: `Question ${index + 1} about ${title}?`,
-      options: [
+    const questions = Array(questionCount).fill(0).map((_, index) => {
+      const options = [
         `Option A for question ${index + 1}`,
         `Option B for question ${index + 1}`,
         `Option C for question ${index + 1}`,
         `Option D for question ${index + 1}`
-      ],
-      correctAnswer: Math.floor(Math.random() * 4),
-      explanation: `Explanation for why option ${['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)]} is correct for question ${index + 1}.`
-    }));
+      ];
+      const correctAnswerIndex = Math.floor(Math.random() * 4);
+      return {
+        id: `q${index + 1}`,
+        question: `Question ${index + 1} about ${title}?`,
+        options: options,
+        correctAnswer: options[correctAnswerIndex],
+        explanation: `Explanation for why option ${['A', 'B', 'C', 'D'][correctAnswerIndex]} is correct for question ${index + 1}.`
+      };
+    });
     
     return { questions };
+  }
+
+  async generateQuizQuestion(subject: string, topic: string): Promise<{
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+  }> {
+    console.log(`Generating quiz question for ${subject}: ${topic}`);
+    
+    // Mock question generation
+    const options = [
+      `Option A for ${topic}`,
+      `Option B for ${topic}`,
+      `Option C for ${topic}`,
+      `Option D for ${topic}`
+    ];
+    
+    const correctAnswerIndex = Math.floor(Math.random() * 4);
+    
+    return {
+      question: `What is a key concept in ${topic}?`,
+      options: options,
+      correctAnswer: options[correctAnswerIndex],
+      explanation: `Option ${['A', 'B', 'C', 'D'][correctAnswerIndex]} is correct because it correctly explains an aspect of ${topic} within ${subject}.`,
+    };
   }
 
   async generateStudyPlan(board: string, className: string, subject: string): Promise<StudyPlan> {
