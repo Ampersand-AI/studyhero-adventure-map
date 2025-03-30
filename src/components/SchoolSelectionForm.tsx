@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
+
+// Props interface for SchoolSelectionForm
+interface SchoolSelectionFormProps {
+  board?: string;
+  onComplete: (school: { state: string; city: string; school: string; }) => void;
+}
 
 // City data with real schools
 interface City {
@@ -141,7 +146,7 @@ const subjectGroups: SubjectGroup[] = [
   }
 ];
 
-const SchoolSelectionForm = () => {
+const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComplete }) => {
   const navigate = useNavigate();
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [selectedSchool, setSelectedSchool] = useState<string>("");
@@ -208,20 +213,24 @@ const SchoolSelectionForm = () => {
     const city = cities.find(c => c.id === selectedCity);
     const school = city?.schools.find(s => s.id === selectedSchool);
     
+    // Call the onComplete callback with the school info
+    onComplete({
+      state: "India", // Default state for now
+      city: city?.name || selectedCity,
+      school: school?.name || selectedSchool
+    });
+    
     // Save selections to localStorage
     localStorage.setItem('selectedCity', selectedCity);
     localStorage.setItem('selectedSchool', JSON.stringify({
       id: selectedSchool,
       name: school?.name || selectedSchool,
-      board: school?.board || "CBSE"
+      board: school?.board || board || "CBSE"
     }));
     localStorage.setItem('selectedClass', selectedClass);
     localStorage.setItem('selectedSubjects', JSON.stringify(selectedSubjects));
     
     toast.success("School information saved successfully!");
-    
-    // Navigate to dashboard
-    navigate('/dashboard');
   };
   
   return (
@@ -373,7 +382,7 @@ const SchoolSelectionForm = () => {
             }
           </div>
           
-          <Button type="submit" className="w-full">Continue to Dashboard</Button>
+          <Button type="submit" className="w-full">Continue</Button>
         </form>
       </CardContent>
     </Card>
