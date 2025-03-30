@@ -157,7 +157,7 @@ const generateWeeklyPlans = (): WeeklyPlan[] => {
   return weeklyPlans;
 };
 
-// Sample data for demonstration - now updated to be more subject-specific
+// Sample data for demonstration - now updated to be more subject-specific and based on NCERT curriculum
 const generateMockStudyPlans = (subjects: string[] = []): StudyPlan[] => {
   if (subjects.length === 0) {
     subjects = ['Mathematics', 'Physics'];
@@ -174,7 +174,7 @@ const generateMockStudyPlans = (subjects: string[] = []): StudyPlan[] => {
   });
 };
 
-// Generate study items specific to each subject
+// Generate study items specific to each subject based on NCERT curriculum
 const generateItemsForSubject = (subject: string): StudyItem[] => {
   const topics = getTopicsForSubject(subject);
   const now = new Date();
@@ -188,44 +188,164 @@ const generateItemsForSubject = (subject: string): StudyItem[] => {
     return {
       id: uuidv4(),
       title: topic,
-      description: `Learn about ${topic} in ${subject}`,
+      description: `Learn about ${topic} in ${subject} based on NCERT curriculum`,
       type: types[index % 3],
       status: index === 0 ? "current" : "future",
       dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      content: `This is sample content for ${topic} in ${subject}`,
+      content: `This is NCERT-aligned content for ${topic} in ${subject}`,
       estimatedTimeInMinutes: 30 + (index * 10),
       subject
     };
   });
 };
 
-// Get topics based on subject
+// Get topics based on subject - extended with more NCERT-aligned topics
 const getTopicsForSubject = (subject: string): string[] => {
   switch(subject.toLowerCase()) {
     case 'mathematics':
-      return ['Algebra', 'Geometry', 'Calculus', 'Statistics', 'Trigonometry', 'Number Theory'];
+      return [
+        'Numbers and Number Systems', 
+        'Algebra: Linear Equations', 
+        'Geometry: Triangles and Quadrilaterals', 
+        'Statistics: Data Handling',
+        'Mensuration: Areas and Volumes', 
+        'Trigonometry: Introduction',
+        'Coordinate Geometry',
+        'Quadratic Equations',
+        'Probability'
+      ];
     case 'science':
-      return ['Physics', 'Chemistry', 'Biology', 'Astronomy', 'Earth Science', 'Ecology'];
+      return [
+        'Matter in Our Surroundings', 
+        'Cell Structure and Functions', 
+        'Force and Laws of Motion', 
+        'Work and Energy',
+        'Sound and Wave Motion', 
+        'Natural Resources and Conservation',
+        'Human Body Systems',
+        'Light: Reflection and Refraction',
+        'Chemical Reactions and Equations'
+      ];
     case 'english':
-      return ['Grammar', 'Literature', 'Writing', 'Comprehension', 'Poetry', 'Vocabulary'];
+      return [
+        'Reading Comprehension', 
+        'Grammar: Parts of Speech', 
+        'Essay Writing', 
+        'Literature: Poetry Analysis',
+        'Vocabulary Building', 
+        'Oral Communication',
+        'Creative Writing',
+        'Literature: Prose Analysis',
+        'Letter Writing'
+      ];
     case 'social studies':
-      return ['History', 'Geography', 'Civics', 'Economics', 'Sociology', 'Political Science'];
+      return [
+        'The French Revolution', 
+        'Physical Features of India', 
+        'Democracy and Constitution', 
+        'Resources and Development',
+        'The Industrial Revolution', 
+        'Climate and Weather Patterns',
+        'Agriculture and Food Security',
+        'Indian National Movement',
+        'Modern World History'
+      ];
     case 'physics':
-      return ['Mechanics', 'Electromagnetism', 'Thermodynamics', 'Optics', 'Modern Physics', 'Waves'];
+      return [
+        'Mechanics: Laws of Motion', 
+        'Electrostatics and Current Electricity', 
+        'Magnetism and Electromagnetic Induction', 
+        'Optics: Light and Reflection',
+        'Thermodynamics', 
+        'Waves and Sound',
+        'Modern Physics: Atoms and Nuclei',
+        'Energy and Work',
+        'Semiconductor Devices'
+      ];
     case 'chemistry':
-      return ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry', 'Analytical Chemistry', 'Biochemistry', 'Nuclear Chemistry'];
+      return [
+        'Classification of Elements: Periodic Table', 
+        'Chemical Bonding and Molecular Structure', 
+        'Acids, Bases and Salts', 
+        'Organic Chemistry: Hydrocarbons',
+        'Electrochemistry', 
+        'Chemical Kinetics',
+        'States of Matter',
+        'Coordination Compounds',
+        'Environmental Chemistry'
+      ];
     case 'biology':
-      return ['Cell Biology', 'Genetics', 'Ecology', 'Evolution', 'Human Physiology', 'Microbiology'];
+      return [
+        'Cell Biology and Cell Division', 
+        'Plant Physiology', 
+        'Human Physiology: Digestive System', 
+        'Genetics and Evolution',
+        'Ecology and Ecosystem', 
+        'Reproduction in Organisms',
+        'Molecular Basis of Inheritance',
+        'Biotechnology: Principles and Applications',
+        'Human Health and Disease'
+      ];
     case 'history':
-      return ['Ancient Civilizations', 'Medieval Period', 'Renaissance', 'Industrial Revolution', 'World Wars', 'Modern History'];
+      return [
+        'Ancient India: Harappan Civilization', 
+        'Medieval India: Delhi Sultanate', 
+        'Modern India: British Colonialism', 
+        'Indian National Movement',
+        'World War I and its Impact', 
+        'World War II and its Aftermath',
+        'Post-Independence India',
+        'The Cold War Era',
+        'Contemporary World History'
+      ];
     case 'geography':
-      return ['Physical Geography', 'Human Geography', 'Cartography', 'Climate', 'Natural Resources', 'Population Studies'];
+      return [
+        'Physical Geography of India', 
+        'Climate and Weather Patterns', 
+        'Natural Vegetation and Wildlife', 
+        'Water Resources',
+        'Agriculture and Food Security', 
+        'Mineral and Energy Resources',
+        'Industries and Economic Development',
+        'Population: Distribution and Density',
+        'Human Settlements'
+      ];
     case 'economics':
-      return ['Microeconomics', 'Macroeconomics', 'International Trade', 'Economic Systems', 'Financial Markets', 'Development Economics'];
+      return [
+        'Introduction to Economics', 
+        'Consumer Behavior and Demand', 
+        'Production and Supply', 
+        'Market Structures',
+        'National Income Accounting', 
+        'Money and Banking',
+        'Government Budget and Economy',
+        'Balance of Payments',
+        'Indian Economic Development'
+      ];
     case 'computer science':
-      return ['Programming', 'Data Structures', 'Algorithms', 'Computer Systems', 'Networking', 'Databases'];
+      return [
+        'Introduction to Programming', 
+        'Data Structures', 
+        'Algorithms and Problem Solving', 
+        'Database Management Systems',
+        'Computer Networks', 
+        'Web Technologies',
+        'Object-Oriented Programming',
+        'Software Engineering',
+        'Information Security'
+      ];
     default:
-      return ['Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Topic 5', 'Topic 6'];
+      return [
+        'Fundamental Concepts', 
+        'Advanced Theory', 
+        'Practical Applications', 
+        'Historical Development',
+        'Modern Perspectives', 
+        'Problem Solving Methods',
+        'Analysis Techniques',
+        'Case Studies',
+        'Future Trends'
+      ];
   }
 };
 
@@ -245,7 +365,7 @@ export const studyPlanService = {
     
     toast({
       title: "Loading study plans",
-      description: "Fetching your personalized study plans...",
+      description: "Fetching your NCERT-aligned study plans...",
     });
     
     return new Promise<StudyPlan[]>((resolve) => {
@@ -254,7 +374,7 @@ export const studyPlanService = {
         
         toast({
           title: "Study plans loaded",
-          description: `Successfully loaded ${plans.length} study plans.`,
+          description: `Successfully loaded ${plans.length} study plans based on NCERT curriculum.`,
         });
         
         resolve(plans);
@@ -268,7 +388,7 @@ export const studyPlanService = {
   getWeeklyPlans: async () => {
     toast({
       title: "Generating weekly schedule",
-      description: "Creating your optimized weekly study plan...",
+      description: "Creating your optimized weekly study plan from NCERT curriculum...",
     });
     
     return new Promise<{weeklyPlans: WeeklyPlan[]}>(resolve => {
@@ -277,7 +397,7 @@ export const studyPlanService = {
         
         toast({
           title: "Weekly plan ready",
-          description: `Successfully created a ${weeklyPlans.length}-week study plan with all your subjects.`,
+          description: `Successfully created a ${weeklyPlans.length}-week study plan with all your NCERT subjects.`,
         });
         
         localStorage.setItem('weeklyPlans', JSON.stringify(weeklyPlans));
@@ -292,7 +412,7 @@ export const studyPlanService = {
   createStudyPlan: async (subject: string) => {
     toast({
       title: "Generating study plan",
-      description: `Creating personalized content for ${subject}...`,
+      description: `Creating NCERT-aligned content for ${subject}...`,
     });
     
     return new Promise<StudyPlan>((resolve) => {
@@ -307,7 +427,7 @@ export const studyPlanService = {
         
         toast({
           title: "Subject Added",
-          description: `${subject} has been added to your study plan with ${items.length} lessons.`,
+          description: `${subject} has been added to your study plan with ${items.length} NCERT-aligned lessons.`,
         });
         
         resolve(newPlan);

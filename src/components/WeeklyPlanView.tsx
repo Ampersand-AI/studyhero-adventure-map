@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, BookOpen, Award, BookType, ChevronLeft, ChevronRight } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar, BookOpen, Award, ChevronLeft, ChevronRight, Info } from "lucide-react";
 
 interface DailyActivity {
   date: string;
@@ -45,7 +45,12 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
     return (
       <Card className="w-full">
         <CardContent className="pt-6 text-center">
-          <p className="text-muted-foreground">No weekly plan available yet. Generate a study plan first.</p>
+          <Alert className="my-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              No weekly plans available for this subject yet. Try selecting a different subject.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );
@@ -63,6 +68,8 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
   };
   
   const getSubjectColor = (subject: string) => {
+    if (!subject) return 'bg-gray-100 text-gray-800';
+    
     const colors: Record<string, string> = {
       'Mathematics': 'bg-green-100 text-green-800',
       'Physics': 'bg-blue-100 text-blue-800',
@@ -74,7 +81,8 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
       'Economics': 'bg-red-100 text-red-800',
       'Computer Science': 'bg-cyan-100 text-cyan-800',
       'Science': 'bg-emerald-100 text-emerald-800',
-      'Social Studies': 'bg-amber-100 text-amber-800'
+      'Social Studies': 'bg-amber-100 text-amber-800',
+      'All Subjects': 'bg-gray-100 text-gray-800'
     };
     
     return colors[subject] || 'bg-gray-100 text-gray-800';
@@ -117,7 +125,7 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
               </Badge>
             )}
           </div>
-          <CardDescription>Your daily learning activities for this week</CardDescription>
+          <CardDescription>Your NCERT-aligned learning activities for this week</CardDescription>
         </CardHeader>
         <CardContent>
           {/* First show the weekly test card */}
@@ -127,6 +135,11 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
                 <div className="flex items-center">
                   <Award className="h-4 w-4 mr-2 text-primary" />
                   <CardTitle className="text-base">Weekly Test</CardTitle>
+                  {currentWeek.weeklyTest.subject && (
+                    <Badge className={`ml-2 ${getSubjectColor(currentWeek.weeklyTest.subject)}`}>
+                      {currentWeek.weeklyTest.subject}
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
@@ -171,7 +184,7 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
                             )}
                             <span className="font-medium">{item.title}</span>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap justify-end">
                             {item.subject && (
                               <Badge className={getSubjectColor(item.subject)}>
                                 {item.subject}

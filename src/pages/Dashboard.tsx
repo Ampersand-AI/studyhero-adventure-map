@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, User } from '@/services/userService';
 import { studyPlanService } from '@/services/studyPlanService';
-import { claudeService } from '@/services/claudeService';
 import StudyAIHeader from '@/components/StudyAIHeader';
+import SubjectCardGrid from '@/components/SubjectCardGrid';
 import WeeklyPlanView from '@/components/WeeklyPlanView';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ interface StudyItem {
   type: "lesson" | "quiz" | "practice";
   status: "completed" | "current" | "future";
   dueDate: string;
-  content?: string; // Make content optional
+  content?: string;
   estimatedTimeInMinutes: number;
   subject?: string;
   isWeeklyTest?: boolean;
@@ -77,6 +77,7 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   
   const navigationItems = [
     { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
@@ -132,7 +133,7 @@ const Dashboard = () => {
         if (subjectsToGenerate.length > 0) {
           toast({
             title: "Generating Study Plans",
-            description: `Creating plans for ${subjectsToGenerate.length} subjects...`,
+            description: `Creating plans for ${subjectsToGenerate.length} subjects based on NCERT curriculum...`,
           });
           
           const newPlans: StudyPlan[] = [];
@@ -152,7 +153,7 @@ const Dashboard = () => {
           
           toast({
             title: "Study Plans Ready",
-            description: `Created personalized plans for ${newPlans.length} subjects.`,
+            description: `Created personalized plans for ${newPlans.length} subjects from NCERT curriculum.`,
           });
         }
         
@@ -279,8 +280,39 @@ const Dashboard = () => {
     }
   };
   
+  const handleSelectSubject = (subject: string) => {
+    setSelectedSubject(subject === selectedSubject ? null : subject);
+  };
+  
   const handleGenerateStudyPlan = () => {
     navigate('/onboarding');
+  };
+  
+  const getFilteredWeeklyPlans = () => {
+    if (!selectedSubject) return [];
+    
+    // Filter the weekly plans to only include items related to the selected subject
+    return weeklyPlans.map(weekPlan => {
+      // Create a copy of the weekly plan
+      const filteredWeekPlan = { ...weekPlan };
+      
+      // Filter daily activities to only include items for the selected subject
+      filteredWeekPlan.dailyActivities = weekPlan.dailyActivities.map(day => {
+        return {
+          ...day,
+          items: day.items.filter(item => item.subject === selectedSubject)
+        };
+      }).filter(day => day.items.length > 0); // Only include days that have items
+      
+      return filteredWeekPlan;
+    }).filter(weekPlan => {
+      // Include week if it has daily activities or if the weekly test is for the selected subject
+      const hasActivities = weekPlan.dailyActivities.length > 0;
+      const testIsForSubject = weekPlan.weeklyTest.subject === selectedSubject || 
+                              weekPlan.weeklyTest.subject === "All Subjects";
+      
+      return hasActivities || testIsForSubject;
+    });
   };
   
   if (loading) {
@@ -339,15 +371,6 @@ const Dashboard = () => {
           <div className="mb-4 md:mb-0">
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back! Let's continue your learning journey.</p>
-            {subjects.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {subjects.map(subject => (
-                  <span key={subject} className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    {subject}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
           <Button onClick={handleGenerateStudyPlan}>
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -355,32 +378,43 @@ const Dashboard = () => {
           </Button>
         </div>
         
-        {initialLoadComplete && weeklyPlans.length === 0 && (
+        {initialLoadComplete && subjects.length === 0 && (
           <Alert className="my-4">
             <Info className="h-4 w-4" />
-            <AlertTitle>No study plan found</AlertTitle>
+            <AlertTitle>No subjects found</AlertTitle>
             <AlertDescription>
-              You haven't generated a study plan yet. Click "Update Study Plan" to create one.
+              You haven't added any subjects yet. Click "Update Study Plan" to add subjects.
             </AlertDescription>
           </Alert>
         )}
         
         <div className="mt-4">
-          {weeklyPlans && weeklyPlans.length > 0 ? (
-            <WeeklyPlanView weeklyPlans={weeklyPlans} onStartItem={handleStartItem} testScores={testScores} />
+          {!selectedSubject ? (
+            // Show subject cards when no subject is selected
+            <SubjectCardGrid 
+              subjects={subjects} 
+              onSelectSubject={handleSelectSubject} 
+            />
           ) : (
-            <Card className="w-full">
-              <CardContent className="pt-6 text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <BookOpen className="h-12 w-12 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">No weekly plan available yet. Generate a study plan to get started.</p>
-                  <Button onClick={handleGenerateStudyPlan} className="mt-2">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Generate Study Plan
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            // Show weekly plan for selected subject
+            <>
+              <div className="mb-4 flex items-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedSubject(null)}
+                  className="mr-2"
+                >
+                  ← Back to Subjects
+                </Button>
+                <h2 className="text-xl font-semibold">{selectedSubject} Curriculum</h2>
+              </div>
+              
+              <WeeklyPlanView 
+                weeklyPlans={getFilteredWeeklyPlans()} 
+                onStartItem={handleStartItem} 
+                testScores={testScores}
+              />
+            </>
           )}
         </div>
       </main>

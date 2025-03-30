@@ -1,4 +1,3 @@
-
 // src/services/claudeService.ts
 
 import axios from 'axios';
@@ -88,7 +87,7 @@ export const claudeService: ClaudeService = {
       
       toast({
         title: "Study Plan Created",
-        description: `Successfully generated study plan for ${subject}`,
+        description: `Successfully generated NCERT-aligned study plan for ${subject}`,
       });
       
       return { items: mockItems };
@@ -110,7 +109,7 @@ export const claudeService: ClaudeService = {
     try {
       toast({
         title: "Loading Content",
-        description: "Fetching lesson content...",
+        description: "Fetching NCERT-aligned lesson content...",
       });
       
       // In a production environment, uncomment this to use the actual API
@@ -127,47 +126,47 @@ export const claudeService: ClaudeService = {
       const lessonContent = {
         title: topic,
         keyPoints: [
-          `Key point 1 about ${topic} in ${subject}`,
-          `Key point 2 about ${topic} in ${subject}`,
-          `Key point 3 about ${topic} in ${subject}`,
-          `Key point 4 about ${topic} in ${subject}`
+          `Key point 1 about ${topic} in ${subject} from NCERT`,
+          `Key point 2 about ${topic} in ${subject} from NCERT`,
+          `Key point 3 about ${topic} in ${subject} from NCERT`,
+          `Key point 4 about ${topic} in ${subject} from NCERT`
         ],
         explanation: [
-          `${topic} is an important concept in ${subject}. This paragraph provides an overview of the topic.`,
-          `This paragraph explains the theoretical foundations of ${topic} and its significance in ${subject}.`,
-          `Here we discuss practical applications of ${topic} in real-world scenarios.`
+          `${topic} is an important concept in ${subject}. This paragraph provides an overview of the topic based on NCERT curriculum.`,
+          `This paragraph explains the theoretical foundations of ${topic} and its significance in ${subject} as per NCERT guidelines.`,
+          `Here we discuss practical applications of ${topic} in real-world scenarios following the NCERT approach.`
         ],
         examples: [
           {
             title: `Example 1: Basic ${topic}`,
-            content: `This is a basic example of ${topic} in ${subject}.`
+            content: `This is a basic example of ${topic} in ${subject} from NCERT textbooks.`
           },
           {
             title: `Example 2: Advanced ${topic}`,
-            content: `This is a more advanced example showing how ${topic} works in complex scenarios.`
+            content: `This is a more advanced example showing how ${topic} works in complex scenarios as taught in NCERT curriculum.`
           }
         ],
         visualAids: [
           {
             title: `${topic} Diagram`,
-            description: `This diagram illustrates the main components of ${topic}.`
+            description: `This diagram illustrates the main components of ${topic} as shown in NCERT books.`
           },
           {
             title: `${topic} Process Flow`,
-            description: `This visual aid shows the step-by-step process of ${topic}.`
+            description: `This visual aid shows the step-by-step process of ${topic} according to NCERT guidelines.`
           }
         ],
         activities: [
           {
             title: `Practice Activity 1`,
-            instructions: `Complete this exercise to practice the basic concepts of ${topic}.`
+            instructions: `Complete this NCERT-style exercise to practice the basic concepts of ${topic}.`
           },
           {
             title: `Practice Activity 2`,
-            instructions: `This advanced activity will help you master ${topic}.`
+            instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`
           }
         ],
-        summary: `In this lesson, you learned about ${topic} in ${subject}, including its key concepts, practical applications, and importance in the field.`
+        summary: `In this lesson, you learned about ${topic} in ${subject} following the NCERT curriculum, including its key concepts, practical applications, and importance in the field.`
       };
       
       return lessonContent;
@@ -216,22 +215,15 @@ export const claudeService: ClaudeService = {
     try {
       toast({
         title: "Loading Quiz",
-        description: "Generating quiz question...",
+        description: "Generating NCERT-aligned quiz question...",
       });
-      
-      // In a production environment, uncomment this to use the actual API
-      // const response = await axios.post(`${API_BASE_URL}/api/claude/quiz`, {
-      //   subject,
-      //   topic
-      // });
-      // return response.data;
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Return mock quiz question
       return {
-        question: `What is the main concept behind ${topic} in ${subject}?`,
+        question: `What is the main concept behind ${topic} in ${subject} according to NCERT?`,
         options: [
           "The correct answer for this topic",
           "An incorrect but plausible answer",
@@ -239,7 +231,7 @@ export const claudeService: ClaudeService = {
           "Yet another wrong answer"
         ],
         correctIndex: 0,
-        explanation: `The main concept of ${topic} in ${subject} is explained here in detail.`
+        explanation: `The main concept of ${topic} in ${subject} is explained here in detail as per NCERT curriculum.`
       };
     } catch (error) {
       console.error("Error generating quiz question:", error);
@@ -268,16 +260,8 @@ export const claudeService: ClaudeService = {
     try {
       toast({
         title: "Preparing Test",
-        description: `Creating a ${questionCount}-question test for ${topic}...`,
+        description: `Creating a ${questionCount}-question NCERT-aligned test for ${topic}...`,
       });
-      
-      // In a production environment, uncomment this to use the actual API
-      // const response = await axios.post(`${API_BASE_URL}/api/claude/lessonTest`, {
-      //   subject,
-      //   topic,
-      //   questionCount
-      // });
-      // return response.data;
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -285,7 +269,7 @@ export const claudeService: ClaudeService = {
       // Generate mock test questions
       const questions = Array.from({ length: questionCount }, (_, i) => ({
         id: `q-${i + 1}`,
-        question: `Question ${i + 1} about ${topic} in ${subject}?`,
+        question: `Question ${i + 1} about ${topic} in ${subject} based on NCERT curriculum?`,
         options: [
           "The correct answer",
           "Wrong answer 1",
@@ -293,7 +277,7 @@ export const claudeService: ClaudeService = {
           "Wrong answer 3"
         ],
         correctAnswer: "The correct answer",
-        explanation: `Explanation for question ${i + 1} about ${topic}.`
+        explanation: `Explanation for question ${i + 1} about ${topic} as per NCERT guidelines.`
       }));
       
       return { questions };
@@ -327,15 +311,8 @@ export const claudeService: ClaudeService = {
     try {
       toast({
         title: "Organizing Study Plan",
-        description: "Creating weekly schedule for your curriculum...",
+        description: "Creating weekly schedule for your NCERT curriculum...",
       });
-      
-      // In a production environment, uncomment this to use the actual API
-      // const response = await axios.post(`${API_BASE_URL}/api/claude/weeklyPlan`, {
-      //   subject,
-      //   items
-      // });
-      // return response.data;
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -380,7 +357,7 @@ export const claudeService: ClaudeService = {
         const weeklyTest = {
           id: `test-week-${weekIndex + 1}`,
           title: `Week ${weekIndex + 1} Review Test`,
-          description: `Test covering all topics from week ${weekIndex + 1}`,
+          description: `NCERT-aligned test covering all topics from week ${weekIndex + 1}`,
           type: "quiz",
           status: weekIndex === 0 ? "current" : "future",
           dueDate: testDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -406,7 +383,7 @@ export const claudeService: ClaudeService = {
       
       toast({
         title: "Weekly Plan Created",
-        description: `Your ${subject} curriculum is now organized into a weekly schedule`,
+        description: `Your ${subject} NCERT curriculum is now organized into a weekly schedule`,
       });
       
       return { weeklyPlans };
