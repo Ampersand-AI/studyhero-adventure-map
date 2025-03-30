@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Medal } from "lucide-react";
+import { CheckCircle, XCircle, Medal, Clock, BookOpen, Award } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { claudeService } from '@/services/claudeService';
 import { toast } from 'sonner';
@@ -16,6 +15,106 @@ interface TestQuestion {
   correctAnswer: string;
   explanation: string;
 }
+
+// Sample test questions for fallback when API fails
+const sampleQuestions: TestQuestion[] = [
+  {
+    id: "q1",
+    question: "What is the quadratic formula used to solve equations in the form ax² + bx + c = 0?",
+    options: [
+      "x = (-b ± √(b² - 4ac))/2a",
+      "x = -b/2a ± √(b² - 4ac)/2a",
+      "x = (-b ± √(b² + 4ac))/2a",
+      "x = (-b ± √(4ac - b²))/2a"
+    ],
+    correctAnswer: "x = (-b ± √(b² - 4ac))/2a",
+    explanation: "The quadratic formula x = (-b ± √(b² - 4ac))/2a is derived by completing the square for a general quadratic equation ax² + bx + c = 0, where a ≠ 0."
+  },
+  {
+    id: "q2",
+    question: "What does the discriminant (b² - 4ac) tell us about the roots of a quadratic equation?",
+    options: [
+      "The type and number of roots",
+      "Only the number of roots",
+      "Only whether the roots are real or complex",
+      "The sum and product of the roots"
+    ],
+    correctAnswer: "The type and number of roots",
+    explanation: "The discriminant (b² - 4ac) determines both the number and type of roots: if positive, there are two distinct real roots; if zero, there is one repeated real root; if negative, there are two complex conjugate roots."
+  },
+  {
+    id: "q3",
+    question: "Which method for solving quadratic equations works for all quadratic equations regardless of whether they can be factored?",
+    options: [
+      "Factoring",
+      "Completing the square",
+      "Quadratic formula",
+      "Graphical method"
+    ],
+    correctAnswer: "Quadratic formula",
+    explanation: "The quadratic formula can be applied to any quadratic equation, while factoring only works when the polynomial has rational roots and can be factored easily."
+  },
+  {
+    id: "q4",
+    question: "If a quadratic function f(x) = ax² + bx + c has a graph that opens downward, what can we say about the coefficient a?",
+    options: [
+      "a > 0",
+      "a < 0",
+      "a = 0",
+      "Nothing can be determined about a"
+    ],
+    correctAnswer: "a < 0",
+    explanation: "When a < 0, the parabola opens downward. The sign of a determines the direction: positive opens upward, negative opens downward."
+  },
+  {
+    id: "q5",
+    question: "What is the vertex of a parabola with equation f(x) = ax² + bx + c?",
+    options: [
+      "(-b/2a, f(-b/2a))",
+      "(b/2a, f(b/2a))",
+      "(a/2b, f(a/2b))",
+      "(c, f(c))"
+    ],
+    correctAnswer: "(-b/2a, f(-b/2a))",
+    explanation: "The x-coordinate of the vertex is -b/2a, which can be found by taking the derivative of f(x) and setting it equal to zero. The y-coordinate is then f(-b/2a)."
+  },
+  {
+    id: "q6",
+    question: "Which of the following real-world scenarios can be modeled using quadratic equations?",
+    options: [
+      "Projectile motion",
+      "Population growth with unlimited resources",
+      "Simple interest calculations",
+      "Constant-velocity motion"
+    ],
+    correctAnswer: "Projectile motion",
+    explanation: "Projectile motion follows a parabolic path that can be described by quadratic equations. This is due to the constant acceleration of gravity acting on the projectile."
+  },
+  {
+    id: "q7",
+    question: "If the discriminant of a quadratic equation is zero, what can we conclude?",
+    options: [
+      "The equation has two distinct real roots",
+      "The equation has one repeated real root",
+      "The equation has two complex conjugate roots",
+      "The equation has no solution"
+    ],
+    correctAnswer: "The equation has one repeated real root",
+    explanation: "When the discriminant (b² - 4ac) equals zero, the quadratic formula gives x = -b/2a for both roots, which means there is one repeated real root."
+  },
+  {
+    id: "q8",
+    question: "What is the relationship between the roots of a quadratic equation ax² + bx + c = 0 and its coefficients?",
+    options: [
+      "Sum of roots = -b/a, product of roots = c/a",
+      "Sum of roots = b/a, product of roots = c/a",
+      "Sum of roots = -b/a, product of roots = -c/a",
+      "Sum of roots = b/a, product of roots = -c/a"
+    ],
+    correctAnswer: "Sum of roots = -b/a, product of roots = c/a",
+    explanation: "For a quadratic equation ax² + bx + c = 0, if r and s are the roots, then r + s = -b/a and r × s = c/a. These are Vieta's formulas for quadratic equations."
+  }
+];
 
 interface LessonTestProps {
   lessonId?: string;
@@ -49,14 +148,24 @@ const LessonTest = ({
     const fetchQuestions = async () => {
       setLoading(true);
       try {
+        // First, check if we were directly provided with questions
         if (initialQuestions && initialQuestions.length > 0) {
           setQuestions(initialQuestions);
           setSelectedAnswers(Array(initialQuestions.length).fill(''));
-        } else {
+          setLoading(false);
+          return;
+        }
+        
+        // Otherwise, try to fetch questions from Claude service
+        toast.loading("Preparing test questions...", {
+          description: `Creating questions for ${topicName}`,
+        });
+        
+        try {
           // Fetch questions from Claude service
-          const result = await claudeService.getQuizQuestions(subjectName, topicName, 10);
+          const result = await claudeService.getQuizQuestions(subjectName, topicName, 8);
           
-          if (result && result.questions) {
+          if (result && result.questions && result.questions.length > 0) {
             // Process questions to ensure they have the correct structure
             const processedQuestions: TestQuestion[] = result.questions.map((q: any, i: number) => ({
               id: q.id || `q${i+1}`,
@@ -68,23 +177,34 @@ const LessonTest = ({
             
             setQuestions(processedQuestions);
             setSelectedAnswers(Array(processedQuestions.length).fill(''));
-          } else {
-            toast.error("Error", {
-              description: "Failed to load quiz questions. Please try again.",
-            });
             
-            // Set empty array to avoid errors
-            setQuestions([]);
+            toast.success("Test ready", {
+              description: `${processedQuestions.length} questions prepared for ${topicName}`,
+            });
+          } else {
+            throw new Error("Failed to load quiz questions");
           }
+        } catch (apiError) {
+          console.error("API Error:", apiError);
+          
+          // Use sample questions as fallback
+          toast({
+            description: "Using example questions for this test",
+          });
+          
+          // Use subject-specific sample questions if available in the future
+          setQuestions(sampleQuestions);
+          setSelectedAnswers(Array(sampleQuestions.length).fill(''));
         }
       } catch (error) {
         console.error("Error loading questions:", error);
         toast.error("Error", {
-          description: "Failed to load quiz questions. Please try again.",
+          description: "Failed to load quiz questions. Using sample questions.",
         });
         
-        // Set empty array to avoid errors
-        setQuestions([]);
+        // Use sample questions as fallback
+        setQuestions(sampleQuestions);
+        setSelectedAnswers(Array(sampleQuestions.length).fill(''));
       } finally {
         setLoading(false);
       }
@@ -129,6 +249,10 @@ const LessonTest = ({
     // Award XP for completing a quiz
     const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
     localStorage.setItem('currentXp', (currentXp + 25).toString());
+    
+    toast.success("Test completed!", {
+      description: `You've earned 25 XP for completing this test`
+    });
   };
 
   if (loading) {
@@ -174,6 +298,7 @@ const LessonTest = ({
       <Card className="w-full max-w-3xl mx-auto animate-scale-in">
         <CardHeader className="text-center">
           <CardTitle className="font-display text-2xl">Test Results</CardTitle>
+          <div className="text-muted-foreground">{topicName}</div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex justify-center">
@@ -248,6 +373,17 @@ const LessonTest = ({
               </div>
             ))}
           </div>
+          
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="font-medium mb-2">Test Completion</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <Award className="h-5 w-5 text-amber-500" />
+              <p className="text-sm">You've earned 25 XP for completing this test!</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Keep learning and testing your knowledge to level up faster.
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button onClick={onFinish}>
@@ -274,6 +410,11 @@ const LessonTest = ({
         <Progress value={(currentQuestionIndex / questions.length) * 100} className="h-2 mt-2" />
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <Clock className="h-4 w-4" />
+          <span>Expected time: 1-2 minutes per question</span>
+        </div>
+      
         <div>
           <h3 className="text-lg font-medium mb-4">{currentQuestion.question}</h3>
           

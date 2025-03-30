@@ -1,261 +1,160 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { claudeService } from '@/services/claudeService';
-import QuizCard from '@/components/QuizCard';
-import StudyAIHeader from '@/components/StudyAIHeader';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, ChevronLeft, ChevronRight, Home, Trophy, Award, BarChart } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-interface QuizQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
-}
-
-interface StudyItem {
-  id: string;
-  title: string;
-  description: string;
-  type: "lesson" | "quiz" | "practice";
-  status: "completed" | "current" | "future";
-  dueDate: string;
-  content: string;
-  estimatedTimeInMinutes: number;
-  subject?: string;
-  isWeeklyTest?: boolean;
-  weekNumber?: number;
-}
-
-interface TestScore {
-  id: string;
-  subject: string;
-  weekNumber: number;
-  score: number;
-  date: string;
-}
+import StudyAIHeader from '@/components/StudyAIHeader';
+import { claudeService } from '@/services/claudeService';
 
 const Quiz = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [quizItem, setQuizItem] = useState<StudyItem | null>(null);
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
-  const [isQuizCompleted, setIsQuizCompleted] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
-  
-  const navigationItems = [
-    { name: "Home", href: "/dashboard", icon: <Home className="h-4 w-4" /> },
-    { name: "Achievements", href: "/achievements", icon: <Trophy className="h-4 w-4" /> },
-    { name: "Analytics", href: "/analytics", icon: <BarChart className="h-4 w-4" /> },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [quiz, setQuiz] = useState<any>(null);
+  const [studyItem, setStudyItem] = useState<any>(null);
   
   useEffect(() => {
-    const loadQuizContent = async () => {
+    const loadQuiz = async () => {
       setLoading(true);
-      setError(null);
       
       try {
-        // Check if we have a saved item matching the ID in the URL
-        const savedItem = localStorage.getItem('currentStudyItem');
-        if (!savedItem) {
-          throw new Error("Quiz item not found. Please return to the dashboard and try again.");
+        // Get study item from localStorage
+        const storedStudyItem = localStorage.getItem('currentStudyItem');
+        
+        if (!storedStudyItem) {
+          throw new Error("Missing study item information");
         }
         
-        const parsedItem = JSON.parse(savedItem) as StudyItem;
-        if (parsedItem.id !== id) {
-          throw new Error("Quiz item ID mismatch. Please return to the dashboard and try again.");
-        }
+        const parsedStudyItem = JSON.parse(storedStudyItem);
+        setStudyItem(parsedStudyItem);
         
-        setQuizItem(parsedItem);
+        // Show toast for quiz loading
+        toast({
+          description: `Loading quiz for ${parsedStudyItem.title}...`,
+        });
         
-        // Get subject from the item
-        const subject = parsedItem.subject || '';
-        const topic = parsedItem.title || '';
+        // Get quiz from Claude API
+        const result = await claudeService.getQuizQuestions(
+          parsedStudyItem.subject,
+          parsedStudyItem.title,
+          5
+        );
         
-        // For weekly tests, we need more questions
-        const questionCount = parsedItem.isWeeklyTest ? 10 : 5;
-        
-        // Generate quiz questions
-        if (parsedItem.isWeeklyTest) {
+        if (result && result.questions && result.questions.length > 0) {
+          setQuiz({
+            title: parsedStudyItem.title,
+            questions: result.questions
+          });
+        } else {
+          // If no questions returned, use placeholder
+          setQuiz({
+            title: parsedStudyItem.title,
+            questions: [
+              {
+                id: "q1",
+                question: "What is the main concept of this topic?",
+                options: ["Option A", "Option B", "Option C", "Option D"],
+                correctAnswer: "Option A",
+                explanation: "This is the correct explanation for this question."
+              }
+            ]
+          });
+          
           toast({
-            title: "Loading Weekly Test",
-            description: `Preparing your Week ${parsedItem.weekNumber} assessment...`,
+            title: "Using demo questions",
+            description: "Couldn't load specific questions for this topic.",
+            variant: "destructive"
           });
         }
+      } catch (error) {
+        console.error("Error loading quiz:", error);
         
-        // Fix: Pass only two arguments to generateLessonTest
-        const quizData = await claudeService.generateLessonTest(subject, topic);
+        // Use placeholder data on error
+        setQuiz({
+          title: studyItem?.title || "Quiz",
+          questions: [
+            {
+              id: "q1",
+              question: "Sample question about this topic?",
+              options: ["Option A", "Option B", "Option C", "Option D"],
+              correctAnswer: "Option A",
+              explanation: "This is the explanation for the sample question."
+            }
+          ]
+        });
         
-        if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
-          throw new Error("Failed to load quiz questions.");
-        }
-        
-        setQuestions(quizData.questions);
-        
-      } catch (err: any) {
-        console.error("Error loading quiz:", err);
-        setError(err.message || "Failed to load quiz content.");
         toast({
-          variant: "destructive",
           title: "Error",
-          description: "Failed to load quiz content. Please try again.",
+          description: "There was a problem loading this quiz. Using sample questions.",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
       }
     };
     
-    loadQuizContent();
+    loadQuiz();
   }, [id]);
   
-  const handleOptionSelect = (optionIndex: number) => {
-    if (!isAnswerSubmitted) {
-      setSelectedOption(optionIndex);
-    }
-  };
-  
-  const handleSubmitAnswer = () => {
-    if (selectedOption === null) return;
-    
-    setIsAnswerSubmitted(true);
-    const isCorrect = selectedOption === questions[currentQuestionIndex].correctIndex;
-    
-    if (isCorrect) {
-      setCorrectAnswers(prev => prev + 1);
-    }
+  const handleSelectAnswer = (answer: string) => {
+    setSelectedAnswer(answer);
   };
   
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedOption(null);
-      setIsAnswerSubmitted(false);
-    } else {
-      // Calculate final score
-      const finalScore = Math.round((correctAnswers / questions.length) * 100);
-      setScore(finalScore);
-      setIsQuizCompleted(true);
-      
-      // Handle completion rewards
-      const xpGained = questions.length * 10;
-      const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
-      const newXp = currentXp + xpGained;
-      localStorage.setItem('currentXp', newXp.toString());
-      
-      // Update weekly test score if this is a weekly test
-      if (quizItem?.isWeeklyTest && quizItem.weekNumber) {
-        saveWeeklyTestScore(quizItem.id, quizItem.subject || '', quizItem.weekNumber, finalScore);
-      }
-      
-      // Mark as completed in the study plan
-      updateStudyItemStatus();
-      
-      toast({
-        title: `Quiz Completed!`,
-        description: `Your score: ${finalScore}%. You earned ${xpGained} XP!`,
-      });
+    // Check if the answer is correct
+    if (selectedAnswer === quiz.questions[currentQuestion].correctAnswer) {
+      setScore(score + 1);
     }
-  };
-  
-  const saveWeeklyTestScore = (testId: string, subject: string, weekNumber: number, testScore: number) => {
-    try {
-      // Get existing scores
-      const savedScores = localStorage.getItem('weeklyTestScores');
-      let scores: TestScore[] = savedScores ? JSON.parse(savedScores) : [];
-      
-      // Check if this test score already exists
-      const existingScoreIndex = scores.findIndex(s => s.id === testId);
-      
-      const newScore: TestScore = {
-        id: testId,
-        subject,
-        weekNumber,
-        score: testScore,
-        date: new Date().toISOString()
-      };
-      
-      if (existingScoreIndex >= 0) {
-        // Update existing score
-        scores[existingScoreIndex] = newScore;
-      } else {
-        // Add new score
-        scores.push(newScore);
-      }
-      
-      // Save back to localStorage
-      localStorage.setItem('weeklyTestScores', JSON.stringify(scores));
-      
-    } catch (err) {
-      console.error("Error saving test score:", err);
-    }
-  };
-  
-  const updateStudyItemStatus = () => {
-    if (!quizItem) return;
     
-    try {
-      // Get all study plans
-      const savedPlans = localStorage.getItem('studyPlans');
-      if (!savedPlans) return;
+    // Move to next question or end quiz
+    if (currentQuestion < quiz.questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setSelectedAnswer("");
+    } else {
+      setIsSubmitted(true);
       
-      const plans = JSON.parse(savedPlans);
-      
-      // Find the current subject plan
-      const subjectPlan = plans.find((p: any) => p.subject === quizItem.subject);
-      if (!subjectPlan) return;
-      
-      // Update item status to completed
-      const updatedItems = subjectPlan.items.map((item: any) => {
-        if (item.id === quizItem.id) {
-          return { ...item, status: "completed" };
-        }
-        return item;
-      });
-      
-      // Update the subject plan
-      const updatedPlans = plans.map((p: any) => {
-        if (p.subject === quizItem.subject) {
-          return { ...p, items: updatedItems };
-        }
-        return p;
-      });
-      
-      // Save back to localStorage
-      localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
-      
-    } catch (err) {
-      console.error("Error updating study item status:", err);
+      // Award XP for completing a quiz
+      const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
+      localStorage.setItem('currentXp', (currentXp + 15).toString());
     }
   };
   
-  const handleReturnToDashboard = () => {
-    navigate('/dashboard');
+  const handleRetry = () => {
+    setCurrentQuestion(0);
+    setSelectedAnswer("");
+    setIsSubmitted(false);
+    setScore(0);
   };
+  
+  const navigationItems = [
+    { name: "Back to Dashboard", href: "/dashboard" },
+  ];
   
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
-        <main className="flex-1 container py-6 flex justify-center items-center">
-          <Card className="w-full max-w-3xl text-center p-8">
+        <StudyAIHeader
+          userName="Student"
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
+          navigation={navigationItems}
+        />
+        <main className="flex-1 container py-6 md:py-12">
+          <Card className="w-full max-w-3xl mx-auto">
             <CardHeader>
               <CardTitle>Loading Quiz</CardTitle>
               <CardDescription>Preparing your questions...</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-center my-8">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+              <div className="h-64 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
             </CardContent>
           </Card>
@@ -264,93 +163,28 @@ const Quiz = () => {
     );
   }
   
-  if (error) {
+  if (!quiz) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
-        <main className="flex-1 container py-6 flex justify-center items-center">
-          <Card className="w-full max-w-3xl text-center">
+        <StudyAIHeader
+          userName="Student"
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
+          navigation={navigationItems}
+        />
+        <main className="flex-1 container py-6 md:py-12">
+          <Card className="w-full max-w-3xl mx-auto">
             <CardHeader>
-              <CardTitle>Error Loading Quiz</CardTitle>
-              <CardDescription>{error}</CardDescription>
+              <CardTitle>Quiz Unavailable</CardTitle>
+              <CardDescription>We couldn't load this quiz</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleReturnToDashboard}>Return to Dashboard</Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
-  
-  if (isQuizCompleted) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
-        <main className="flex-1 container py-6 flex justify-center items-center">
-          <Card className="w-full max-w-3xl">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Quiz Completed!</CardTitle>
-              <CardDescription>
-                {quizItem?.isWeeklyTest 
-                  ? `You've completed the Week ${quizItem.weekNumber} assessment for ${quizItem.subject}`
-                  : `You've completed the quiz on ${quizItem?.title}`
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col items-center justify-center my-8">
-                <div className="relative h-36 w-36 flex items-center justify-center mb-4">
-                  <svg className="w-full h-full" viewBox="0 0 100 100">
-                    <circle
-                      className="text-gray-200"
-                      strokeWidth="8"
-                      stroke="currentColor"
-                      fill="transparent"
-                      r="40"
-                      cx="50"
-                      cy="50"
-                    />
-                    <circle
-                      className={`${
-                        score >= 80 ? "text-green-500" : 
-                        score >= 60 ? "text-yellow-500" : 
-                        "text-red-500"
-                      }`}
-                      strokeWidth="8"
-                      strokeDasharray={`${score * 2.51} 1000`}
-                      strokeLinecap="round"
-                      stroke="currentColor"
-                      fill="transparent"
-                      r="40"
-                      cx="50"
-                      cy="50"
-                    />
-                  </svg>
-                  <div className="absolute flex flex-col items-center justify-center">
-                    <span className="text-4xl font-bold">{score}%</span>
-                    <span className="text-sm text-muted-foreground">Score</span>
-                  </div>
-                </div>
-                
-                <div className="text-center mb-6">
-                  <p className="text-lg font-medium">
-                    You answered {correctAnswers} out of {questions.length} questions correctly.
-                  </p>
-                  {score >= 80 ? (
-                    <p className="text-green-600 flex items-center justify-center mt-2">
-                      <Award className="h-5 w-5 mr-1" /> Excellent work!
-                    </p>
-                  ) : score >= 60 ? (
-                    <p className="text-yellow-600">Good job! Keep practicing to improve.</p>
-                  ) : (
-                    <p className="text-red-600">You might need to review this material again.</p>
-                  )}
-                </div>
-              </div>
+              <p className="text-center text-muted-foreground mb-4">
+                Sorry, there was a problem loading the quiz. Please try again later.
+              </p>
             </CardContent>
             <CardFooter className="flex justify-center">
-              <Button size="lg" onClick={handleReturnToDashboard}>
+              <Button onClick={() => navigate('/dashboard')}>
                 Return to Dashboard
               </Button>
             </CardFooter>
@@ -360,74 +194,117 @@ const Quiz = () => {
     );
   }
   
-  const currentQuestion = questions[currentQuestionIndex];
+  if (isSubmitted) {
+    const percentage = Math.round((score / quiz.questions.length) * 100);
+    
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader
+          userName="Student"
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
+          navigation={navigationItems}
+        />
+        <main className="flex-1 container py-6 md:py-12">
+          <Card className="w-full max-w-3xl mx-auto">
+            <CardHeader>
+              <CardTitle>Quiz Results</CardTitle>
+              <CardDescription>{quiz.title}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-3xl font-bold">{score} / {quiz.questions.length}</h2>
+                <p className="text-lg text-muted-foreground">Your Score: {percentage}%</p>
+                
+                {percentage >= 80 ? (
+                  <p className="text-green-600 font-medium mt-2">Excellent!</p>
+                ) : percentage >= 60 ? (
+                  <p className="text-blue-600 font-medium mt-2">Good job!</p>
+                ) : (
+                  <p className="text-amber-600 font-medium mt-2">Keep practicing!</p>
+                )}
+              </div>
+              
+              <div className="space-y-4 pt-4">
+                <h3 className="font-medium">Question Review:</h3>
+                {quiz.questions.map((q: any, i: number) => (
+                  <div key={i} className="p-4 rounded-lg border">
+                    <p className="font-medium">{q.question}</p>
+                    <p className="text-sm mt-2">Correct answer: <span className="text-green-600">{q.correctAnswer}</span></p>
+                    <p className="text-sm text-muted-foreground mt-1">{q.explanation}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={handleRetry}>
+                Try Again
+              </Button>
+              <Button onClick={() => navigate('/dashboard')}>
+                Return to Dashboard
+              </Button>
+            </CardFooter>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+  
+  const currentQ = quiz.questions[currentQuestion];
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <StudyAIHeader userName="Student" level={1} xp={0} navigation={navigationItems} />
-      <main className="flex-1 container py-6">
-        <div className="mb-6">
-          <Button variant="outline" size="sm" onClick={handleReturnToDashboard}>
-            <ChevronLeft className="mr-1 h-4 w-4" /> Back to Dashboard
-          </Button>
-        </div>
-        
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {quizItem?.isWeeklyTest 
-                ? `Week ${quizItem.weekNumber} Assessment` 
-                : `Quiz: ${quizItem?.title}`}
-            </h1>
-            <p className="text-muted-foreground">
-              {quizItem?.subject} • Question {currentQuestionIndex + 1} of {questions.length}
-            </p>
-          </div>
-        </div>
-        
-        <div className="mb-6">
-          <Progress value={(currentQuestionIndex / questions.length) * 100} />
-        </div>
-        
-        {currentQuestion && (
-          <QuizCard
-            question={currentQuestion.question}
-            options={currentQuestion.options}
-            selectedAnswer={selectedOption !== null ? currentQuestion.options[selectedOption] : null}
-            correctAnswer={isAnswerSubmitted ? currentQuestion.options[currentQuestion.correctIndex] : null}
-            onSelectAnswer={(answer) => {
-              const index = currentQuestion.options.indexOf(answer);
-              if (index !== -1) {
-                handleOptionSelect(index);
-              }
-            }}
-            onSubmitAnswer={isAnswerSubmitted ? handleNextQuestion : handleSubmitAnswer}
-            isAnswered={isAnswerSubmitted}
-          />
-        )}
-        
-        <div className="mt-6 flex justify-end">
-          {isAnswerSubmitted ? (
-            <Button onClick={handleNextQuestion}>
-              {currentQuestionIndex < questions.length - 1 ? (
-                <>
-                  Next Question <ChevronRight className="ml-1 h-4 w-4" />
-                </>
-              ) : (
-                <>
-                  Complete Quiz <Check className="ml-1 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSubmitAnswer} 
-              disabled={selectedOption === null}
+      <StudyAIHeader
+        userName="Student"
+        level={parseInt(localStorage.getItem('currentLevel') || '1')}
+        xp={parseInt(localStorage.getItem('currentXp') || '0')}
+        navigation={navigationItems}
+      />
+      <main className="flex-1 container py-6 md:py-12">
+        <Card className="w-full max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle>{quiz.title} - Quiz</CardTitle>
+            <CardDescription>
+              Question {currentQuestion + 1} of {quiz.questions.length}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <h3 className="text-lg font-medium">{currentQ.question}</h3>
+            
+            <RadioGroup value={selectedAnswer} className="space-y-3">
+              {currentQ.options.map((option: string, i: number) => (
+                <div
+                  key={i}
+                  className={`flex items-center space-x-2 p-3 rounded-lg border-2 ${
+                    selectedAnswer === option ? 'border-primary/70' : 'border-gray-200 hover:border-primary/50'
+                  } transition-colors`}
+                >
+                  <RadioGroupItem
+                    value={option}
+                    id={`option-${i}`}
+                    onClick={() => handleSelectAnswer(option)}
+                  />
+                  <Label htmlFor={`option-${i}`} className="flex-grow cursor-pointer">
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <div>
+              <span className="text-sm text-muted-foreground">
+                Score: {score}/{currentQuestion}
+              </span>
+            </div>
+            <Button
+              onClick={handleNextQuestion}
+              disabled={!selectedAnswer}
             >
-              Submit Answer
+              {currentQuestion === quiz.questions.length - 1 ? "Finish" : "Next"}
             </Button>
-          )}
-        </div>
+          </CardFooter>
+        </Card>
       </main>
     </div>
   );
