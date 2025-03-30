@@ -134,7 +134,7 @@ const Lesson = () => {
             lessonTitle={studyItem?.title || 'Lesson Test'}
             onFinish={() => navigate(`/subject/${studyItem?.subject}`)}
             topicName={studyItem?.title || ''}
-            lessonSubject={studyItem?.subject || ''}
+            subjectName={studyItem?.subject || ''}
           />
         </main>
       </div>
