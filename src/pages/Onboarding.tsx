@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -217,6 +216,7 @@ const Onboarding = () => {
                   userName="New Student"
                   level={1}
                   xp={0}
+                  board={board}
                   onComplete={handleSchoolSelection} 
                 />
               </CardContent>

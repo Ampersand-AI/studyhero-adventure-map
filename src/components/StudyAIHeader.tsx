@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 
 interface StudyAIHeaderProps {
-  userName: string;
+  userName?: string;
   avatarUrl?: string;
   level: number;
   xp: number;
@@ -41,11 +41,11 @@ const StudyAIHeader = ({
                   <h2 className="text-lg font-display mb-2 text-center text-primary">Study AI</h2>
                   <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={avatarUrl} alt={userName || "User"} />
+                      <AvatarImage src={avatarUrl} alt={userName} />
                       <AvatarFallback>{fallbackInitial}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium">{userName || "User"}</p>
+                      <p className="text-sm font-medium">{userName}</p>
                       <p className="text-xs text-muted-foreground">Level {level}</p>
                     </div>
                   </div>
@@ -92,7 +92,7 @@ const StudyAIHeader = ({
             </div>
           </div>
           <Avatar>
-            <AvatarImage src={avatarUrl} alt={userName || "User"} />
+            <AvatarImage src={avatarUrl} alt={userName} />
             <AvatarFallback>{fallbackInitial}</AvatarFallback>
           </Avatar>
         </div>

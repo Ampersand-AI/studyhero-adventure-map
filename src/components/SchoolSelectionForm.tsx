@@ -1,41 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import React, { useState } from 'react';
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { generateStudyPlan } from '@/services/openaiService';
-import { Progress } from "@/components/ui/progress";
-import StudyAIHeader from '@/components/StudyAIHeader';
 import { ChevronLeft } from "lucide-react";
-
-interface StudyItem {
-  id: string;
-  title: string;
-  description: string;
-  type: "lesson" | "quiz" | "practice";
-  status: "current" | "future";
-  dueDate: string;
-  estimatedTimeInMinutes: number;
-  subject: string;
-  content: string;
-  textbookReference: string;
-  hasVisualAids: boolean;
-}
 
 interface SchoolSelectionFormProps {
   userName: string;
   level: number;
   xp: number;
+  board?: string;
   onComplete: (school: { state: string; city: string; school: string }) => void;
 }
 
@@ -43,54 +18,13 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   userName = "Student", 
   level = 1, 
   xp = 0,
+  board,
   onComplete 
 }) => {
-  const [board, setBoard] = useState<string>("");
-  const [className, setClassName] = useState<string>("");
-  const [subject, setSubject] = useState<string>("");
-  const [stream, setStream] = useState<string>("");
   const [state, setState] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [school, setSchool] = useState<string>("");
-  const [studyPlan, setStudyPlan] = useState<{ items: StudyItem[] } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const [progress, setProgress] = useState(0);
-  const [generationStage, setGenerationStage] = useState<string>("Initializing");
-
-  useEffect(() => {
-    // Load values from localStorage if available
-    const storedBoard = localStorage.getItem('selectedBoard');
-    const storedClassName = localStorage.getItem('selectedClassName');
-    const storedSubject = localStorage.getItem('selectedSubject');
-    const storedStream = localStorage.getItem('selectedStream');
-
-    if (storedBoard) setBoard(storedBoard);
-    if (storedClassName) setClassName(storedClassName);
-    if (storedSubject) setSubject(storedSubject);
-    if (storedStream) setStream(storedStream);
-  }, []);
-
-  const handleBoardChange = (value: string) => {
-    setBoard(value);
-    localStorage.setItem('selectedBoard', value);
-  };
-
-  const handleClassNameChange = (value: string) => {
-    setClassName(value);
-    localStorage.setItem('selectedClassName', value);
-  };
-
-  const handleSubjectChange = (value: string) => {
-    setSubject(value);
-    localStorage.setItem('selectedSubject', value);
-  };
-
-  const handleStreamChange = (value: string) => {
-    setStream(value);
-    localStorage.setItem('selectedStream', value);
-  };
 
   const handleStateChange = (value: string) => {
     setState(value);
@@ -114,8 +48,8 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
 
     // Validate form inputs
     if (!state || !city || !school) {
-      toast({
-        title: "Required fields missing",
+      // Fix the toast call to use the correct properties
+      toast("Required fields missing", {
         description: "Please fill in all required fields.",
         variant: "destructive",
       });
