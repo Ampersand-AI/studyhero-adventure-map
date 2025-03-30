@@ -1,8 +1,17 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+// Define User type
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  level: number;
+  xp: number;
+}
+
 // Mock user data
-const mockUser = {
+const mockUser: User = {
   id: uuidv4(),
   name: "Student User",
   email: "student@example.com",
@@ -14,7 +23,7 @@ export const userService = {
   /**
    * Get the current user's profile
    */
-  getUserProfile: async () => {
+  getUserProfile: async (): Promise<User> => {
     // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -26,7 +35,7 @@ export const userService = {
   /**
    * Update user XP
    */
-  updateUserXP: async (xpAmount: number) => {
+  updateUserXP: async (xpAmount: number): Promise<User> => {
     // In a real app, this would call an API
     mockUser.xp += xpAmount;
     

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userService } from '@/services/userService';
+import { userService, User } from '@/services/userService';
 import { studyPlanService } from '@/services/studyPlanService';
 import StudyAIHeader from '@/components/StudyAIHeader';
 import WeeklyPlanView from '@/components/WeeklyPlanView';
@@ -9,14 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Home, Trophy, BarChart, PlusCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  level: number;
-  xp: number;
-}
 
 interface StudyItem {
   id: string;
@@ -95,7 +87,7 @@ const Dashboard = () => {
       try {
         // Load user data
         const userData = await userService.getUserProfile();
-        setUser(userData);
+        setUser(userData); // This line should now have proper typing
         
         // Load study plans
         const savedPlans = localStorage.getItem('studyPlans');
