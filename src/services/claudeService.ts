@@ -254,6 +254,7 @@ class ClaudeService {
   }
 
   getFallbackLessonContent(subject: string, topic: string) {
+    // Create a more complete fallback lesson structure that matches our expected format
     return {
       title: topic,
       keyPoints: [
@@ -263,26 +264,62 @@ class ClaudeService {
         "Practical application of the theory",
         "Common misconception clarified"
       ],
-      summary: `This is a brief summary of the lesson on ${topic} in ${subject}. It covers the main ideas and key concepts.`,
-      exampleProblems: [
+      explanation: [
+        `${topic} is a fundamental concept in ${subject} that covers many important principles.`,
+        "Understanding this topic requires careful attention to the underlying theories and their practical applications.",
+        "Many students find this topic challenging at first, but with practice, the concepts become clearer."
+      ],
+      examples: [
         {
-          problem: "Solve this problem related to the topic.",
-          solution: "Step-by-step solution to the problem."
+          title: "Basic Example",
+          content: "Here's a simple example that demonstrates the core concept."
         },
         {
-          problem: "Another problem to reinforce understanding.",
-          solution: "Detailed explanation of the solution."
+          title: "Advanced Application",
+          content: "This example shows how the concept works in a more complex scenario."
         }
       ],
-      furtherReading: [
+      visualAids: [
         {
-          title: "Textbook Chapter",
-          link: "#"
+          title: "Concept Diagram",
+          visualType: "Flowchart",
+          description: "This diagram illustrates the relationship between key components."
         },
         {
-          title: "Online Resource",
-          link: "#"
+          title: "Process Visualization",
+          visualType: "Infographic",
+          description: "A step-by-step visualization of how the process works."
         }
+      ],
+      activities: [
+        {
+          title: "Hands-on Exercise",
+          instructions: "Follow these steps to complete the exercise and reinforce your understanding.",
+          learningOutcome: "Apply theoretical knowledge to practical situations"
+        },
+        {
+          title: "Group Discussion",
+          instructions: "Discuss these questions with peers to explore different perspectives.",
+          learningOutcome: "Develop critical thinking skills"
+        }
+      ],
+      summary: `This lesson covered ${topic} in ${subject}, explaining the key concepts, providing examples, and offering activities for practice.`,
+      textbookReferences: [
+        {
+          chapter: "4",
+          pageNumbers: "45-52",
+          description: "Fundamentals and basic explanations"
+        },
+        {
+          chapter: "7",
+          pageNumbers: "98-103",
+          description: "Advanced applications and examples"
+        }
+      ],
+      interestingFacts: [
+        `An interesting historical fact about ${topic} and its development`,
+        "Recent discoveries that have changed our understanding of this concept",
+        "Real-world applications you might not have expected"
       ]
     };
   }
@@ -299,7 +336,7 @@ class ClaudeService {
             "An unrelated concept",
             "A partially correct statement"
           ],
-          correctIndex: 0,
+          correctAnswer: "The correct definition based on curriculum",
           explanation: "This is the standard definition as per the textbook and curriculum requirements."
         },
         {
@@ -311,7 +348,7 @@ class ClaudeService {
             "A different concept altogether",
             "A historical event unrelated to the topic"
           ],
-          correctIndex: 0,
+          correctAnswer: "A relevant real-world application",
           explanation: "This application directly demonstrates how the concept is used practically."
         },
         {
@@ -323,7 +360,7 @@ class ClaudeService {
             "A method for a different type of problem",
             "A made-up procedure"
           ],
-          correctIndex: 0,
+          correctAnswer: "The correct step-by-step approach",
           explanation: "This follows the standard methodology taught in the curriculum."
         }
       ]

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +19,12 @@ interface LessonContent {
     title: string;
     content: string;
   }[];
-  visualAids: {
+  visualAids?: {
     title: string;
     description: string;
     visualType: string;
   }[];
-  activities: {
+  activities?: {
     title: string;
     instructions: string;
     learningOutcome: string;
@@ -40,6 +41,15 @@ interface LessonContent {
     description: string;
   }[];
   interestingFacts?: string[];
+  // Add fallback properties that might be in the API response
+  exampleProblems?: {
+    problem: string;
+    solution: string;
+  }[];
+  furtherReading?: {
+    title: string;
+    link: string;
+  }[];
 }
 
 const Lesson = () => {
@@ -83,7 +93,25 @@ const Lesson = () => {
         );
         
         if (result) {
-          setLesson(result);
+          // Transform result if needed to match our expected format
+          const formattedLesson: LessonContent = {
+            title: result.title || parsedStudyItem.title,
+            keyPoints: result.keyPoints || [],
+            explanation: Array.isArray(result.explanation) ? result.explanation : 
+              (typeof result.summary === 'string' ? [result.summary] : []),
+            examples: Array.isArray(result.examples) ? result.examples : 
+              (result.exampleProblems ? result.exampleProblems.map(ep => ({
+                title: "Example",
+                content: `Problem: ${ep.problem}\nSolution: ${ep.solution}`
+              })) : []),
+            summary: result.summary || "",
+            visualAids: result.visualAids || [],
+            activities: result.activities || [],
+            textbookReferences: result.textbookReferences || [],
+            interestingFacts: result.interestingFacts || []
+          };
+          
+          setLesson(formattedLesson);
           
           // Dismiss loading toast and show success toast
           toast.success("Lesson Ready", {
@@ -211,87 +239,97 @@ const Lesson = () => {
               
               <CardContent className="space-y-8">
                 {/* Key Points */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <List className="mr-2 h-5 w-5 text-primary" />
-                    Key Points to Remember
-                  </h3>
-                  <ul className="space-y-2 pl-6 list-disc">
-                    {lesson.keyPoints.map((point, index) => (
-                      <li key={index} className="text-muted-foreground">{point}</li>
-                    ))}
-                  </ul>
-                </div>
+                {lesson.keyPoints && lesson.keyPoints.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <List className="mr-2 h-5 w-5 text-primary" />
+                      Key Points to Remember
+                    </h3>
+                    <ul className="space-y-2 pl-6 list-disc">
+                      {lesson.keyPoints.map((point, index) => (
+                        <li key={index} className="text-muted-foreground">{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 
                 {/* Explanation */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Detailed Explanation</h3>
-                  {lesson.explanation.map((paragraph, index) => (
-                    <p key={index} className="mb-4 text-muted-foreground">{paragraph}</p>
-                  ))}
-                </div>
+                {lesson.explanation && lesson.explanation.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Detailed Explanation</h3>
+                    {lesson.explanation.map((paragraph, index) => (
+                      <p key={index} className="mb-4 text-muted-foreground">{paragraph}</p>
+                    ))}
+                  </div>
+                )}
                 
                 {/* Examples */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <BookOpen className="mr-2 h-5 w-5 text-primary" />
-                    Examples
-                  </h3>
-                  <div className="space-y-4">
-                    {lesson.examples.map((example, index) => (
-                      <Card key={index} className="bg-secondary/30">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">{example.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">{example.content}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
+                {lesson.examples && lesson.examples.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <BookOpen className="mr-2 h-5 w-5 text-primary" />
+                      Examples
+                    </h3>
+                    <div className="space-y-4">
+                      {lesson.examples.map((example, index) => (
+                        <Card key={index} className="bg-secondary/30">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">{example.title}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-muted-foreground whitespace-pre-line">{example.content}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Visual Aids */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <PlayCircle className="mr-2 h-5 w-5 text-primary" />
-                    Visual Learning Aids
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {lesson.visualAids.map((aid, index) => (
-                      <Card key={index} className="bg-primary/5">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">{aid.title}</CardTitle>
-                          <CardDescription>{aid.visualType}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">{aid.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
+                {lesson.visualAids && lesson.visualAids.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <PlayCircle className="mr-2 h-5 w-5 text-primary" />
+                      Visual Learning Aids
+                    </h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {lesson.visualAids.map((aid, index) => (
+                        <Card key={index} className="bg-primary/5">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">{aid.title}</CardTitle>
+                            <CardDescription>{aid.visualType}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-muted-foreground">{aid.description}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Activities */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <Lightbulb className="mr-2 h-5 w-5 text-primary" />
-                    Learning Activities
-                  </h3>
-                  <div className="space-y-4">
-                    {lesson.activities.map((activity, index) => (
-                      <Card key={index} className="bg-green-50">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base">{activity.title}</CardTitle>
-                          <CardDescription>Learning outcome: {activity.learningOutcome}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">{activity.instructions}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
+                {lesson.activities && lesson.activities.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <Lightbulb className="mr-2 h-5 w-5 text-primary" />
+                      Learning Activities
+                    </h3>
+                    <div className="space-y-4">
+                      {lesson.activities.map((activity, index) => (
+                        <Card key={index} className="bg-green-50">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base">{activity.title}</CardTitle>
+                            <CardDescription>Learning outcome: {activity.learningOutcome}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-muted-foreground">{activity.instructions}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Interesting Facts */}
                 {lesson.interestingFacts && lesson.interestingFacts.length > 0 && (
@@ -306,10 +344,12 @@ const Lesson = () => {
                 )}
                 
                 {/* Summary */}
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-2">Summary</h3>
-                  <p className="text-muted-foreground">{lesson.summary}</p>
-                </div>
+                {lesson.summary && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                    <p className="text-muted-foreground">{lesson.summary}</p>
+                  </div>
+                )}
                 
                 {/* Textbook References */}
                 {lesson.textbookReferences && lesson.textbookReferences.length > 0 && (

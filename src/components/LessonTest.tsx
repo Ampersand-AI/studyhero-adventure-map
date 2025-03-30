@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -54,13 +55,26 @@ const LessonTest = ({
         } else {
           // Fetch questions from Claude service
           const result = await claudeService.getQuizQuestions(subjectName, topicName, 10);
+          
           if (result && result.questions) {
-            setQuestions(result.questions);
-            setSelectedAnswers(Array(result.questions.length).fill(''));
+            // Process questions to ensure they have the correct structure
+            const processedQuestions: TestQuestion[] = result.questions.map((q: any, i: number) => ({
+              id: q.id || `q${i+1}`,
+              question: q.question || `Question ${i+1}`,
+              options: q.options || ["Option A", "Option B", "Option C", "Option D"],
+              correctAnswer: q.correctAnswer || q.options?.[0] || "Option A",
+              explanation: q.explanation || "Explanation not provided"
+            }));
+            
+            setQuestions(processedQuestions);
+            setSelectedAnswers(Array(processedQuestions.length).fill(''));
           } else {
             toast.error("Error", {
               description: "Failed to load quiz questions. Please try again.",
             });
+            
+            // Set empty array to avoid errors
+            setQuestions([]);
           }
         }
       } catch (error) {
@@ -68,6 +82,9 @@ const LessonTest = ({
         toast.error("Error", {
           description: "Failed to load quiz questions. Please try again.",
         });
+        
+        // Set empty array to avoid errors
+        setQuestions([]);
       } finally {
         setLoading(false);
       }
