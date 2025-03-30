@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -23,6 +24,8 @@ interface SubjectCardGridProps {
 }
 
 const SubjectCardGrid: React.FC<SubjectCardGridProps> = ({ subjects, onSelectSubject }) => {
+  const navigate = useNavigate();
+  
   // Function to get an appropriate icon for each subject
   const getSubjectIcon = (subject: string) => {
     const subjectLower = subject.toLowerCase();
@@ -153,13 +156,24 @@ const SubjectCardGrid: React.FC<SubjectCardGridProps> = ({ subjects, onSelectSub
     window.open(getTextbookUrl(subject), '_blank');
   };
   
+  const handleSubjectSelect = (subject: string) => {
+    // Save subject to localStorage
+    localStorage.setItem('selectedSubject', JSON.stringify(subject));
+    localStorage.setItem('selectedClass', '10'); // Default class
+    
+    // Navigate to subject details page
+    navigate(`/subject/${subject.toLowerCase().replace(/\s+/g, '-')}`, {
+      state: { subject, className: '10' }
+    });
+  };
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {subjects.map((subject) => (
         <Card 
           key={subject} 
           className={`overflow-hidden transition-all hover:shadow-md cursor-pointer h-full ${getSubjectBackground(subject)}`}
-          onClick={() => onSelectSubject(subject)}
+          onClick={() => handleSubjectSelect(subject)}
         >
           <CardHeader className="pb-2">
             <div className="flex justify-between items-start">
@@ -187,9 +201,9 @@ const SubjectCardGrid: React.FC<SubjectCardGridProps> = ({ subjects, onSelectSub
             <Button 
               variant="default" 
               className="w-full"
-              onClick={() => onSelectSubject(subject)}
+              onClick={() => handleSubjectSelect(subject)}
             >
-              Start Learning
+              View All Topics
             </Button>
           </CardFooter>
         </Card>

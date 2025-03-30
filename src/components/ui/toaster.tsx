@@ -9,6 +9,7 @@ export function Toaster() {
         className: "group border-border bg-background text-foreground",
         descriptionClassName: "text-muted-foreground",
       }}
+      richColors
     />
   )
 }

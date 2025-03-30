@@ -71,17 +71,30 @@ const Lesson = () => {
   
   useEffect(() => {
     const loadLessonContent = async () => {
+      // Check if we already have an existing content to prevent unnecessary loads
+      const cachedContent = localStorage.getItem(`lesson_${id}_content`);
+      if (cachedContent && JSON.parse(cachedContent).title) {
+        try {
+          const parsedContent = JSON.parse(cachedContent);
+          setLessonContent(parsedContent);
+          setIsLoading(false);
+          return;
+        } catch (e) {
+          // If parsing fails, continue with normal load
+          console.log("Cached content parsing failed, loading fresh content");
+        }
+      }
+      
       setIsLoading(true);
       setError(null);
       setLoadingProgress(0);
       
       // Show loading toast with progress bar
       const toastId = toast.loading("Loading Lesson", {
-        description: "Connecting to NCERT database...",
-        duration: 100000, // Long duration which we'll manually dismiss
+        description: "Connecting to NCERT database..."
       });
       
-      setLoadingToastId(toastId);
+      setLoadingToastId(toastId as string);
       
       try {
         if (!currentStudyItem || !currentStudyItem.subject || !currentStudyItem.title) {
@@ -137,8 +150,7 @@ const Lesson = () => {
             // Finish progress
             setLoadingProgress(100);
             toast.success("Lesson ready!", {
-              id: toastId,
-              duration: 2000 // Auto dismiss after 2 seconds
+              id: toastId
             });
           } else {
             throw new Error("Incomplete lesson content received");
@@ -175,8 +187,7 @@ const Lesson = () => {
               // Inform user we're using cached content
               toast.info("Using cached content", {
                 id: toastId,
-                description: "Couldn't connect to NCERT database. Using previously loaded content.",
-                duration: 3000
+                description: "Couldn't connect to NCERT database. Using previously loaded content."
               });
             } else {
               throw new Error("Cached content is also incomplete");
@@ -200,7 +211,7 @@ const Lesson = () => {
         if (retryCount < 2) {
           setRetryCount(prev => prev + 1);
           toast.info("Retrying", {
-            description: "Attempting to load authentic NCERT lesson content again...",
+            description: "Attempting to load authentic NCERT lesson content again..."
           });
           
           // Wait 2 seconds before retrying
@@ -223,7 +234,7 @@ const Lesson = () => {
     };
     
     loadLessonContent();
-  }, [id, currentStudyItem]);
+  }, [id]);
   
   const handleNextLesson = () => {
     if (!lessonCompleted) {

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -9,6 +9,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Quiz from "./pages/Quiz";
 import Lesson from "./pages/Lesson";
+import SubjectDetails from "./pages/SubjectDetails";
 import Achievements from "./pages/Achievements";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
@@ -32,6 +33,7 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/subject/:subject" element={<SubjectDetails />} />
             <Route path="/quiz/:id" element={<Quiz />} />
             <Route path="/lesson/:id" element={<Lesson />} />
             <Route path="/achievements" element={<Achievements />} />
