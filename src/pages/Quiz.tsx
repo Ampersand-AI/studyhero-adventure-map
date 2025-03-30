@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { claudeService } from '@/services/claudeService';
-import QuizCard from '@/components/QuizCard'; // Fixed import statement
+import QuizCard from '@/components/QuizCard';
 import StudyAIHeader from '@/components/StudyAIHeader';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ChevronLeft, ChevronRight, Home, Trophy, Award, BarChart } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface QuizQuestion {
   id: string;
@@ -94,7 +94,8 @@ const Quiz = () => {
           });
         }
         
-        const quizData = await claudeService.generateLessonTest(subject, topic, questionCount);
+        // Fix: Pass only two arguments to generateLessonTest
+        const quizData = await claudeService.generateLessonTest(subject, topic);
         
         if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
           throw new Error("Failed to load quiz questions.");
@@ -106,9 +107,9 @@ const Quiz = () => {
         console.error("Error loading quiz:", err);
         setError(err.message || "Failed to load quiz content.");
         toast({
+          variant: "destructive",
           title: "Error",
           description: "Failed to load quiz content. Please try again.",
-          variant: "destructive"
         });
       } finally {
         setLoading(false);

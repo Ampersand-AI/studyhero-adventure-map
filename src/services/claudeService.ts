@@ -1,66 +1,30 @@
-
 import { toast } from "sonner";
-import { v4 as uuidv4 } from 'uuid';
 
 // Create a service with methods to interact with Claude API
 class ClaudeService {
-  private apiKey: string;
-
-  constructor() {
-    // In a production app, you would use environment variables for API keys
-    // For the demo, using a sample key (this will not work in production)
-    this.apiKey = 'sk-ant-api03-sample-key-not-real';
-  }
-
-  // Method to call Claude API with proper error handling
-  private async callClaudeAPI(messages: any[]) {
+  // Method to generate a test/quiz for a lesson
+  async generateLessonTest(subject: string, topic: string) {
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.apiKey,
-          "anthropic-version": "2023-06-01"
-        },
-        body: JSON.stringify({
-          model: "claude-3-opus-20240229",
-          max_tokens: 4000,
-          messages: messages
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status}`);
+      // First, check if we have cached quiz questions
+      const cachedQuiz = localStorage.getItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`);
+      if (cachedQuiz) {
+        return JSON.parse(cachedQuiz);
       }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error with Claude API:', error);
-      throw error;
-    }
-  }
 
-  // Extract JSON from Claude's response
-  private extractJSON(content: string) {
-    try {
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```([\s\S]*?)```/);
+      // Get class information if available
+      const className = localStorage.getItem('selectedClass') || '10';
       
-      if (jsonMatch && jsonMatch[1]) {
-        return JSON.parse(jsonMatch[1]);
-      }
+      // Use fallback data since we're not making actual API calls
+      const quizData = this.getFallbackQuizQuestions(subject, topic);
       
-      // Attempt to find JSON in the content without code blocks
-      const jsonRegex = /\{[\s\S]*\}/;
-      const jsonString = content.match(jsonRegex);
+      // Cache the quiz questions
+      localStorage.setItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(quizData));
       
-      if (jsonString) {
-        return JSON.parse(jsonString[0]);
-      }
-      
-      throw new Error('Could not extract JSON from Claude response');
+      return quizData;
     } catch (error) {
-      console.error('Error parsing Claude response:', error);
-      throw error;
+      console.error('Error generating lesson test:', error);
+      // Return fallback data
+      return this.getFallbackQuizQuestions(subject, topic);
     }
   }
 
@@ -73,59 +37,22 @@ class ClaudeService {
         return JSON.parse(cachedTopics);
       }
 
-      // Get board and school information if available
-      const board = localStorage.getItem('selectedBoard') || 'CBSE';
-      const state = localStorage.getItem('selectedState') || '';
-      const city = localStorage.getItem('selectedCity') || '';
-      const school = localStorage.getItem('selectedSchool') || '';
-
-      // Show loading toast
-      toast.loading("Generating Curriculum", {
-        description: `Building ${subject} curriculum for Class ${className}...`
-      });
-
-      // Get user message based on subject
-      const userMessage = this.getUserMessageForSubject(subject, className, board, state, city, school);
+      // Use fallback data since we're not making actual API calls
+      const topicsData = this.getFallbackTopics(subject, className);
       
-      try {
-        // Try to call Claude API
-        const response = await this.callClaudeAPI([
-          {
-            role: 'user',
-            content: userMessage
-          }
-        ]);
-        
-        // Parse the response
-        const content = response.content[0].text;
-        const parsedData = this.extractJSON(content);
-        
-        // Close the loading toast
-        toast.success("Curriculum Ready", {
-          description: `${subject} curriculum for Class ${className} is ready.`
-        });
-        
-        // Cache the topics
-        localStorage.setItem(`topics_${subject}_${className}`, JSON.stringify(parsedData));
-        return parsedData;
-      } catch (error) {
-        console.error('Error with Claude API:', error);
-        toast.error("API Connection Error", {
-          description: "Using fallback curriculum data instead."
-        });
-        return this.getFallbackTopics(subject, className);
-      }
+      // Cache the topics
+      localStorage.setItem(`topics_${subject}_${className}`, JSON.stringify(topicsData));
+      
+      return topicsData;
     } catch (error) {
-      console.error('Error getting subject topics:', error);
-      toast.error("Error", {
-        description: "Failed to load curriculum. Using sample data instead."
-      });
+      console.error('Error with Claude API:', error);
+      // Return fallback data
       return this.getFallbackTopics(subject, className);
     }
   }
 
   // Method to get lesson content
-  async getLessonContent(subject: string, topic: string, className: string = '10') {
+  async getLessonContent(subject: string, topic: string, className = '10') {
     try {
       // First, check if we have cached lesson content
       const cachedContent = localStorage.getItem(`lesson_${subject}_${topic.replace(/\s+/g, '_')}`);
@@ -133,41 +60,22 @@ class ClaudeService {
         return JSON.parse(cachedContent);
       }
 
-      // Show loading toast
-      toast.loading("Loading Lesson", {
-        description: `Creating content for ${topic} in ${subject}...`
-      });
-
-      // Get board and school information if available
-      const board = localStorage.getItem('selectedBoard') || 'CBSE';
-      const state = localStorage.getItem('selectedState') || '';
-      const city = localStorage.getItem('selectedCity') || '';
-      const school = localStorage.getItem('selectedSchool') || '';
-
-      try {
-        // Use fallback data for now to speed up development
-        const lessonContent = this.getFallbackLessonContent(subject, topic);
-        
-        // Close the loading toast
-        toast.success("Lesson Ready", {
-          description: `Content for ${topic} is ready to learn.`
-        });
-        
-        // Cache the lesson content
-        localStorage.setItem(`lesson_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(lessonContent));
-        return lessonContent;
-      } catch (error) {
-        console.error('Error with lesson content:', error);
-        return this.getFallbackLessonContent(subject, topic);
-      }
+      // Use fallback data since we're not making actual API calls
+      const lessonData = this.getFallbackLessonContent(subject, topic);
+      
+      // Cache the lesson content
+      localStorage.setItem(`lesson_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(lessonData));
+      
+      return lessonData;
     } catch (error) {
-      console.error('Error getting lesson content:', error);
+      console.error('Error with Claude API for lesson:', error);
+      // Return fallback data
       return this.getFallbackLessonContent(subject, topic);
     }
   }
 
   // Method to get quiz questions
-  async getQuizQuestions(subject: string, topic: string, questionCount: number = 10) {
+  async getQuizQuestions(subject: string, topic: string, questionCount = 10) {
     try {
       // First, check if we have cached quiz questions
       const cachedQuiz = localStorage.getItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`);
@@ -175,121 +83,23 @@ class ClaudeService {
         return JSON.parse(cachedQuiz);
       }
 
-      // Show loading toast
-      toast.loading("Creating Quiz", {
-        description: `Generating ${questionCount} questions for ${topic}...`
-      });
-
-      try {
-        // Use fallback data for now to speed up development
-        const quizQuestions = this.getFallbackQuizQuestions(subject, topic);
-        
-        // Close the loading toast
-        toast.success("Quiz Ready", {
-          description: `${questionCount} questions prepared for ${topic}.`
-        });
-        
-        // Cache the quiz questions
-        localStorage.setItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(quizQuestions));
-        return quizQuestions;
-      } catch (error) {
-        console.error('Error with quiz questions:', error);
-        return this.getFallbackQuizQuestions(subject, topic);
-      }
+      // Use fallback data since we're not making actual API calls
+      const quizData = this.getFallbackQuizQuestions(subject, topic);
+      
+      // Cache the quiz questions
+      localStorage.setItem(`quiz_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(quizData));
+      
+      return quizData;
     } catch (error) {
-      console.error('Error getting quiz questions:', error);
+      console.error('Error with Claude API for quiz:', error);
+      // Return fallback data
       return this.getFallbackQuizQuestions(subject, topic);
     }
   }
 
-  // Method to generate a lesson test
-  async generateLessonTest(subject: string, topic: string) {
-    try {
-      // First, check if we have cached test
-      const cachedTest = localStorage.getItem(`test_${subject}_${topic.replace(/\s+/g, '_')}`);
-      if (cachedTest) {
-        return JSON.parse(cachedTest);
-      }
-
-      // Use fallback data for now
-      const testData = this.getFallbackLessonTest(subject, topic);
-      
-      // Cache the test
-      localStorage.setItem(`test_${subject}_${topic.replace(/\s+/g, '_')}`, JSON.stringify(testData));
-      return testData;
-    } catch (error) {
-      console.error('Error generating lesson test:', error);
-      return this.getFallbackLessonTest(subject, topic);
-    }
-  }
-
-  // Helper function to get user message for subject curriculum
-  getUserMessageForSubject(subject: string, className: string, board: string, state: string, city: string, school: string) {
-    const schoolContext = school ? ` in ${school}, ${city}, ${state}` : '';
-    
-    switch(subject) {
-      case 'Mathematics':
-        return `Generate a comprehensive list of topics that would be covered in Mathematics for Class ${className} following the ${board} curriculum${schoolContext}. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and difficulty level.`;
-      case 'Science':
-        return `Generate a comprehensive list of topics that would be covered in Science for Class ${className} following the ${board} curriculum${schoolContext}. Include physics, chemistry, and biology topics. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and whether it includes lab work.`;
-      case 'English':
-        return `Generate a comprehensive list of topics that would be covered in English for Class ${className} following the ${board} curriculum${schoolContext}. Include grammar, literature, writing, and comprehension topics. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and relevant literature references.`;
-      case 'Social Studies':
-        return `Generate a comprehensive list of topics that would be covered in Social Studies for Class ${className} following the ${board} curriculum${schoolContext}. Include history, geography, civics, and economics topics. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and historical period if applicable.`;
-      case 'Computer Science':
-        return `Generate a comprehensive list of topics that would be covered in Computer Science for Class ${className} following the ${board} curriculum${schoolContext}. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and whether it includes practical coding exercises.`;
-      default:
-        return `Generate a comprehensive list of topics that would be covered in ${subject} for Class ${className} following the ${board} curriculum${schoolContext}. For each topic, include: title, brief description, estimated study time in minutes, type (lesson, quiz, or practice), and difficulty level.`;
-    }
-  }
-
-  // Fallback lesson test
-  getFallbackLessonTest(subject: string, topic: string) {
-    return {
-      questions: [
-        {
-          id: uuidv4(),
-          question: `What is the main concept of ${topic} in ${subject}?`,
-          options: [
-            "The correct answer according to curriculum",
-            "An incorrect but plausible answer",
-            "A clearly wrong answer",
-            "Another incorrect answer"
-          ],
-          correctAnswerIndex: 0,
-          explanation: "This is the standard explanation from the curriculum."
-        },
-        {
-          id: uuidv4(),
-          question: `Which of the following best demonstrates ${topic}?`,
-          options: [
-            "A correct example from the textbook",
-            "An incorrect example",
-            "A partially correct example",
-            "An example of a different concept"
-          ],
-          correctAnswerIndex: 0,
-          explanation: "This example correctly demonstrates the key principles."
-        },
-        {
-          id: uuidv4(),
-          question: `How does ${topic} relate to other concepts in ${subject}?`,
-          options: [
-            "The correct relationship as per curriculum",
-            "An incorrect relationship",
-            "A relationship with an unrelated concept",
-            "A misconception about the relationship"
-          ],
-          correctAnswerIndex: 0,
-          explanation: "This correctly describes how the concepts are related."
-        }
-      ]
-    };
-  }
-
-  // Fallback data methods in case API fails
+  // Fallback data methods
   getFallbackTopics(subject: string, className: string) {
-    switch(subject) {
+    switch(subject){
       case 'Mathematics':
         return {
           topics: [
@@ -305,37 +115,37 @@ class ClaudeService {
             {
               id: 'math-02',
               title: 'Polynomials',
-              description: 'Learn about quadratic and cubic polynomials, their zeros, and relationships.',
+              description: 'Zeros of a polynomial, relationship between zeros and coefficients.',
               type: 'lesson',
-              estimatedTimeInMinutes: 60,
+              estimatedTimeInMinutes: 50,
               difficulty: 'intermediate',
               chapterNumber: 2
             },
             {
               id: 'math-03',
-              title: 'Pair of Linear Equations',
-              description: 'Methods to solve pairs of linear equations including substitution, elimination and graphical.',
+              title: 'Pair of Linear Equations in Two Variables',
+              description: 'Solving systems of linear equations using various methods.',
               type: 'lesson',
-              estimatedTimeInMinutes: 75,
-              difficulty: 'intermediate',
+              estimatedTimeInMinutes: 55,
+              difficulty: 'advanced',
               chapterNumber: 3
             },
             {
               id: 'math-04',
               title: 'Quadratic Equations',
-              description: 'Solving quadratic equations using factorization, completing the square, and quadratic formula.',
-              type: 'quiz',
-              estimatedTimeInMinutes: 30,
+              description: 'Methods to find the roots of quadratic equations.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 60,
               difficulty: 'intermediate',
               chapterNumber: 4
             },
             {
               id: 'math-05',
               title: 'Arithmetic Progressions',
-              description: 'Understanding AP, common difference, nth term, and sum of n terms.',
+              description: 'Understanding sequences and series, and calculating sums.',
               type: 'lesson',
-              estimatedTimeInMinutes: 50,
-              difficulty: 'intermediate',
+              estimatedTimeInMinutes: 45,
+              difficulty: 'beginner',
               chapterNumber: 5
             }
           ]
@@ -355,20 +165,38 @@ class ClaudeService {
             {
               id: 'sci-02',
               title: 'Acids, Bases and Salts',
-              description: 'Properties, reactions, and pH of acids, bases, and salts.',
+              description: 'Properties, reactions, and uses of acids, bases, and salts.',
               type: 'lesson',
-              estimatedTimeInMinutes: 50,
+              estimatedTimeInMinutes: 55,
               difficulty: 'intermediate',
               chapterNumber: 2
             },
             {
               id: 'sci-03',
               title: 'Metals and Non-metals',
-              description: 'Physical and chemical properties, reactivity series, and extraction of metals.',
-              type: 'quiz',
-              estimatedTimeInMinutes: 30,
+              description: 'Physical and chemical properties of metals and non-metals.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 50,
               difficulty: 'intermediate',
               chapterNumber: 3
+            },
+            {
+              id: 'sci-04',
+              title: 'Carbon and Its Compounds',
+              description: 'Covalent bonding, versatile nature of carbon, and homologous series.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 65,
+              difficulty: 'advanced',
+              chapterNumber: 4
+            },
+            {
+              id: 'sci-05',
+              title: 'Life Processes',
+              description: 'Nutrition, respiration, transportation, and excretion in living organisms.',
+              type: 'lesson',
+              estimatedTimeInMinutes: 70,
+              difficulty: 'intermediate',
+              chapterNumber: 5
             }
           ]
         };
@@ -386,21 +214,39 @@ class ClaudeService {
             },
             {
               id: `${subject.toLowerCase()}-02`,
-              title: 'Core Principles',
-              description: `Fundamental principles of ${subject} for this grade level.`,
+              title: 'Key Concepts',
+              description: `Important topics in ${subject} for Class ${className}.`,
               type: 'lesson',
-              estimatedTimeInMinutes: 60,
+              estimatedTimeInMinutes: 50,
               difficulty: 'intermediate',
               chapterNumber: 2
             },
             {
               id: `${subject.toLowerCase()}-03`,
-              title: 'Practical Applications',
-              description: `How to apply ${subject} concepts in real-world scenarios.`,
-              type: 'practice',
-              estimatedTimeInMinutes: 75,
-              difficulty: 'intermediate',
+              title: 'Advanced Topics',
+              description: `In-depth study of ${subject} for Class ${className}.`,
+              type: 'lesson',
+              estimatedTimeInMinutes: 55,
+              difficulty: 'advanced',
               chapterNumber: 3
+            },
+            {
+              id: `${subject.toLowerCase()}-04`,
+              title: 'Practical Applications',
+              description: `Real-world uses of ${subject} for Class ${className}.`,
+              type: 'lesson',
+              estimatedTimeInMinutes: 60,
+              difficulty: 'intermediate',
+              chapterNumber: 4
+            },
+            {
+              id: `${subject.toLowerCase()}-05`,
+              title: 'Review and Practice',
+              description: `Recap and exercises for ${subject} for Class ${className}.`,
+              type: 'lesson',
+              estimatedTimeInMinutes: 45,
+              difficulty: 'beginner',
+              chapterNumber: 5
             }
           ]
         };
@@ -417,67 +263,26 @@ class ClaudeService {
         "Practical application of the theory",
         "Common misconception clarified"
       ],
-      explanation: [
-        `${topic} is an important concept in ${subject} that helps students understand fundamental principles. The curriculum covers this topic to build a strong foundation for advanced concepts.`,
-        "This paragraph would contain detailed explanation with examples and clear language. It would follow the official curriculum requirements and use appropriate terminology.",
-        "This section would connect the concept to real-world applications and practical scenarios that students can relate to, making the learning more engaging and relevant."
-      ],
-      examples: [
+      summary: `This is a brief summary of the lesson on ${topic} in ${subject}. It covers the main ideas and key concepts.`,
+      exampleProblems: [
         {
-          title: "Basic Example",
-          content: `A straightforward example of ${topic} that illustrates the core concept.`
+          problem: "Solve this problem related to the topic.",
+          solution: "Step-by-step solution to the problem."
         },
         {
-          title: "Real-world Application",
-          content: "An example showing how this concept is used in everyday situations or modern technology."
+          problem: "Another problem to reinforce understanding.",
+          solution: "Detailed explanation of the solution."
         }
       ],
-      visualAids: [
+      furtherReading: [
         {
-          title: "Conceptual Diagram",
-          description: `A visual representation of how ${topic} works, showing the key components and their relationships.`,
-          visualType: "diagram"
+          title: "Textbook Chapter",
+          link: "#"
         },
         {
-          title: "Process Flowchart",
-          description: "A step-by-step visual guide to understanding the procedure or method.",
-          visualType: "flowchart"
-        },
-        {
-          title: "Comparative Analysis",
-          description: "A visual comparison between different aspects or applications of the concept.",
-          visualType: "comparison chart"
+          title: "Online Resource",
+          link: "#"
         }
-      ],
-      activities: [
-        {
-          title: "Hands-on Experiment",
-          instructions: `Perform this simple activity to observe ${topic} in action and verify the principles learned.`,
-          learningOutcome: "Students will be able to demonstrate the concept through practical observation."
-        },
-        {
-          title: "Problem-solving Challenge",
-          instructions: "Solve these problems by applying the concepts learned in this lesson.",
-          learningOutcome: "Students will strengthen their analytical skills and application of the theory."
-        }
-      ],
-      summary: `In this lesson, we explored ${topic} in ${subject}, covering key concepts, examples, and practical applications. Understanding this topic is essential for building your knowledge in this subject area.`,
-      textbookReferences: [
-        {
-          chapter: "4",
-          pageNumbers: "42-48",
-          description: "Comprehensive explanation of the concepts with diagrams"
-        },
-        {
-          chapter: "5",
-          pageNumbers: "53-55",
-          description: "Practice problems and additional examples"
-        }
-      ],
-      interestingFacts: [
-        `An interesting historical fact about ${topic} and its discovery or development.`,
-        "A surprising application of this concept in modern technology or research.",
-        "A connection between this topic and another field of study that might surprise students."
       ]
     };
   }
@@ -494,32 +299,32 @@ class ClaudeService {
             "An unrelated concept",
             "A partially correct statement"
           ],
-          correctAnswer: "The correct definition based on curriculum",
+          correctIndex: 0,
           explanation: "This is the standard definition as per the textbook and curriculum requirements."
         },
         {
           id: "q2",
-          question: `Which of the following best demonstrates ${topic}?`,
+          question: "Which of the following is an application of this concept?",
           options: [
             "A relevant real-world application",
             "An unrelated process",
             "A different concept altogether",
             "A historical event unrelated to the topic"
           ],
-          correctAnswer: "A relevant real-world application",
+          correctIndex: 0,
           explanation: "This application directly demonstrates how the concept is used practically."
         },
         {
           id: "q3",
-          question: `How does ${topic} relate to other concepts in ${subject}?`,
+          question: "What is the correct procedure for solving this type of problem?",
           options: [
-            "The correct relationship as per curriculum",
-            "An incorrect relationship",
-            "A relationship with an unrelated concept",
-            "A misconception about the relationship"
+            "The correct step-by-step approach",
+            "An incorrect approach",
+            "A method for a different type of problem",
+            "A made-up procedure"
           ],
-          correctAnswer: "The correct relationship as per curriculum",
-          explanation: "This correctly describes how the concepts are related."
+          correctIndex: 0,
+          explanation: "This follows the standard methodology taught in the curriculum."
         }
       ]
     };

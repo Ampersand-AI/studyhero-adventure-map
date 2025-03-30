@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ interface OnboardingCardProps {
   title: string;
   description: string;
   icon: React.ReactNode;
-  onClick: () => void;
+  onClick?: () => void;  // Make onClick optional
   options?: string[];
   selectedOption?: string;
   onOptionSelect?: (option: string) => void;
@@ -61,7 +62,7 @@ const OnboardingCard = ({
   // Otherwise, render as simple clickable card
   return (
     <Card 
-      className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md" 
+      className={`hover:border-primary/50 transition-all hover:shadow-md ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <CardHeader className="pb-2">

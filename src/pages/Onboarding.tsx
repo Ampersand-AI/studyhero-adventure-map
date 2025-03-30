@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -139,33 +140,36 @@ const Onboarding = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {/* Use the custom card component with onClick prop */}
-                  <div className="cursor-pointer" onClick={() => handleBoardSelect('CBSE')}>
+                  <div className="cursor-pointer">
                     <OnboardingCard
                       title="CBSE"
                       description="Central Board of Secondary Education"
                       icon={<BookOpen className="h-8 w-8" />}
+                      onClick={() => handleBoardSelect('CBSE')}
                     />
                   </div>
-                  <div className="cursor-pointer" onClick={() => handleBoardSelect('ICSE')}>
+                  <div className="cursor-pointer">
                     <OnboardingCard
                       title="ICSE"
                       description="Indian Certificate of Secondary Education"
                       icon={<BookOpen className="h-8 w-8" />}
+                      onClick={() => handleBoardSelect('ICSE')}
                     />
                   </div>
-                  <div className="cursor-pointer" onClick={() => handleBoardSelect('State Board')}>
+                  <div className="cursor-pointer">
                     <OnboardingCard
                       title="State Board"
                       description="State Education Board Curriculum"
                       icon={<BookOpen className="h-8 w-8" />}
+                      onClick={() => handleBoardSelect('State Board')}
                     />
                   </div>
-                  <div className="cursor-pointer" onClick={() => handleBoardSelect('International')}>
+                  <div className="cursor-pointer">
                     <OnboardingCard
                       title="International"
                       description="IB, Cambridge & Other International Curricula"
                       icon={<BookOpen className="h-8 w-8" />}
+                      onClick={() => handleBoardSelect('International')}
                     />
                   </div>
                 </div>
@@ -182,12 +186,13 @@ const Onboarding = () => {
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
                   {[6, 7, 8, 9, 10, 11, 12].map(classNum => (
-                    <div key={classNum} className="cursor-pointer" onClick={() => handleClassSelect(classNum.toString())}>
+                    <div key={classNum} className="cursor-pointer">
                       <OnboardingCard
                         key={classNum}
                         title={`Class ${classNum}`}
                         description={`${board} Curriculum`}
                         icon={<GraduationCap className="h-8 w-8" />}
+                        onClick={() => handleClassSelect(classNum.toString())}
                       />
                     </div>
                   ))}
