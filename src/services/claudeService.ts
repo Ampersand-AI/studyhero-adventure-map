@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 
 // Create a service with methods to interact with Claude API
@@ -506,4 +507,357 @@ class ClaudeService {
         "Poetry has evolved across cultures and time periods, reflecting social and historical contexts"
       ],
       explanation: [
-        "Poetry is a form of literature that uses aesthetic and rhythmic qualities of language to evoke meanings beyond literal interpretation. It employs various literary devices and techniques to convey emotions, ideas, and experiences in a condensed, evocative form. Unlike prose, which follows natural speech patterns, poetry often uses line breaks, st
+        "Poetry is a form of literature that uses aesthetic and rhythmic qualities of language to evoke meanings beyond literal interpretation. It employs various literary devices and techniques to convey emotions, ideas, and experiences in a condensed, evocative form. Unlike prose, which follows natural speech patterns, poetry often uses line breaks, stanzas, rhythm, and sometimes rhyme to create musical and visual effects.",
+        "Figurative language is a cornerstone of poetry. Metaphors compare two unlike things without using 'like' or 'as', similes make comparisons using 'like' or 'as', personification attributes human qualities to non-human things, and imagery uses vivid sensory details to create mental pictures. These devices help poets express abstract ideas and evoke emotional responses in readers.",
+        "Poetry comes in many forms, each with its own structural rules and traditions. Sonnets are 14-line poems with specific rhyme schemes, haiku are three-line Japanese poems with a 5-7-5 syllable pattern, free verse has no fixed structure, ballads tell stories in song-like stanzas, and epic poetry narrates heroic adventures. These forms have evolved across cultures and time periods.",
+        "When analyzing poetry, readers consider multiple elements: the theme (central idea), tone (attitude toward the subject), structure (organization), imagery, figurative language, and historical context. This multi-layered approach reveals deeper meanings and artistic choices that might not be apparent on first reading."
+      ],
+      examples: [
+        {
+          title: "Metaphor Example",
+          content: "From Shakespeare's Romeo and Juliet:\n\"But soft, what light through yonder window breaks?\nIt is the east, and Juliet is the sun.\"\n\nHere, Romeo compares Juliet to the sun, suggesting she is radiant, life-giving, and the center of his universe, without using 'like' or 'as'."
+        },
+        {
+          title: "Sonnet Structure",
+          content: "Shakespeare's Sonnet 18 follows the structure of an English sonnet:\n- 14 lines total\n- Written in iambic pentameter\n- Rhyme scheme: abab cdcd efef gg\n- First 12 lines present a problem or question\n- Final couplet provides resolution\n\nThis structural pattern enhances the poem's exploration of eternal beauty and the power of poetry to preserve it."
+        }
+      ],
+      visualAids: [
+        {
+          title: "Poetic Devices Chart",
+          description: "Visual chart showing examples of various poetic devices (metaphor, simile, personification, alliteration, etc.) with examples from famous poems",
+          visualType: "Reference Chart"
+        },
+        {
+          title: "Poetry Forms Comparison",
+          description: "Side-by-side comparison of different poetic forms (sonnet, haiku, villanelle, free verse, etc.) showing their structural characteristics and example poems",
+          visualType: "Comparative Diagram"
+        }
+      ],
+      activities: [
+        {
+          title: "Found Poetry Creation",
+          instructions: "Collect interesting words and phrases from newspapers, magazines, or books. Cut them out and rearrange them to create a poem with a cohesive theme. Reflect on how the context of words changes their meaning.",
+          learningOutcome: "Understanding how context affects meaning and developing creativity in poetic expression"
+        },
+        {
+          title: "Poetry Analysis Workshop",
+          instructions: "In small groups, analyze a provided poem using the TPCASTT method: Title, Paraphrase, Connotation, Attitude/Tone, Shifts, Title (revisited), Theme. Share your findings with the class and discuss different interpretations.",
+          learningOutcome: "Developing critical reading skills and understanding how poetic elements contribute to meaning"
+        }
+      ],
+      summary: "Poetry is a rich, expressive form of literature that uses language artistically to convey meanings, emotions, and experiences. Through various devices like metaphor, simile, and imagery, poets create works that resonate on multiple levels. Different poetic forms provide frameworks that both constrain and liberate creative expression across cultures and time periods. Analyzing poetry involves examining multiple elements including theme, tone, structure, and language choices. By understanding these elements, readers can better appreciate poetry's unique ability to express the nuances of human experience in condensed, evocative language.",
+      textbookReferences: [
+        {
+          chapter: "4",
+          pageNumbers: "78-92",
+          description: "Poetic Forms and Devices"
+        },
+        {
+          chapter: "5",
+          pageNumbers: "93-110",
+          description: "Poetry Analysis Techniques"
+        }
+      ],
+      interestingFacts: [
+        "The oldest known poem is the Epic of Gilgamesh, written around 2100 BCE in ancient Mesopotamia",
+        "English poet John Milton dictated all of 'Paradise Lost' (over 10,000 lines) to assistants after becoming completely blind",
+        "Japanese haiku traditionally include a seasonal reference called 'kigo' that places the poem in a specific time of year"
+      ]
+    };
+  }
+
+  // Computer Science lesson content - implementing as needed
+  getComputerScienceLessonContent(topic: string) {
+    return {
+      title: topic,
+      keyPoints: [
+        "Algorithms are step-by-step procedures for solving problems",
+        "Efficiency is measured in terms of time complexity and space complexity",
+        "Common algorithms include searching, sorting, and graph algorithms",
+        "Algorithm design techniques include divide and conquer, greedy, and dynamic programming",
+        "Algorithm analysis helps predict performance regardless of hardware",
+        "Real-world applications include web search, route planning, and data processing"
+      ],
+      explanation: [
+        "An algorithm is a precise sequence of operations that solves a specific problem or performs a computation. Algorithms form the foundation of computer science and are essential for everything from simple calculations to complex artificial intelligence systems. They can be expressed in various ways, including natural language, pseudocode, flowcharts, and programming languages.",
+        "Algorithm efficiency is typically measured in terms of time complexity (how runtime grows with input size) and space complexity (how memory usage grows with input size). Computer scientists use Big O notation to describe these complexities, such as O(1) for constant time, O(log n) for logarithmic time, O(n) for linear time, O(n log n) for linearithmic time, and O(n²) for quadratic time.",
+        "Various algorithm design paradigms have emerged to solve different types of problems. Divide and conquer breaks problems into smaller subproblems, solves them, and combines the results. Greedy algorithms make locally optimal choices at each step. Dynamic programming solves complex problems by breaking them down into simpler overlapping subproblems and storing the results to avoid redundant calculations.",
+        "Algorithms are ubiquitous in our digital world. Search engines use complex algorithms to index and retrieve web pages. Navigation apps use graph algorithms to find optimal routes. Social media platforms use algorithms to personalize content. Financial systems use algorithms for secure transactions. Understanding algorithms helps us comprehend how modern technology functions and enables us to develop new solutions for emerging challenges."
+      ],
+      examples: [
+        {
+          title: "Binary Search Algorithm",
+          content: "Problem: Find a target value in a sorted array.\n\nAlgorithm steps:\n1. Compare the target value to the middle element of the array.\n2. If they match, return the middle index.\n3. If the target is less than the middle element, search the left half.\n4. If the target is greater than the middle element, search the right half.\n5. Repeat until the target is found or the subarray is empty.\n\nTime Complexity: O(log n) - significantly faster than linear search (O(n)) for large datasets."
+        },
+        {
+          title: "Merge Sort Algorithm",
+          content: "Problem: Sort an array of elements.\n\nAlgorithm steps (divide and conquer):\n1. Divide the unsorted array into n subarrays, each with one element.\n2. Repeatedly merge subarrays to produce new sorted subarrays until only one subarray remains.\n\nPseudocode for merge function:\nmerge(left, right):\n  result = []\n  while left not empty and right not empty:\n    if first(left) <= first(right):\n      append first(left) to result\n      remove first(left)\n    else:\n      append first(right) to result\n      remove first(right)\n  append remaining elements of left to result\n  append remaining elements of right to result\n  return result\n\nTime Complexity: O(n log n) - efficient for large datasets."
+        }
+      ],
+      visualAids: [
+        {
+          title: "Big O Complexity Chart",
+          description: "Visual representation of different time complexity functions (O(1), O(log n), O(n), O(n log n), O(n²), O(2^n), etc.) on a graph, showing how they scale with input size",
+          visualType: "Graph"
+        },
+        {
+          title: "Sorting Algorithm Visualization",
+          description: "Side-by-side animation of different sorting algorithms (bubble sort, insertion sort, merge sort, quick sort) working on the same dataset, showing the number of operations and time taken by each",
+          visualType: "Animation"
+        }
+      ],
+      activities: [
+        {
+          title: "Algorithm Trace-Through",
+          instructions: "Manually trace through the execution of binary search and linear search algorithms on the same sorted array of 15 numbers, counting the number of comparisons each algorithm makes. Discuss why binary search is more efficient for large datasets.",
+          learningOutcome: "Understanding algorithm efficiency through hands-on comparison"
+        },
+        {
+          title: "Algorithm Design Challenge",
+          instructions: "Design an algorithm to find the most frequent word in a text document. Consider efficiency in terms of time and space complexity. Implement your algorithm in pseudocode or a programming language of your choice.",
+          learningOutcome: "Applying algorithm design principles to solve a practical problem"
+        }
+      ],
+      summary: "Algorithms are systematic procedures for solving problems and form the foundation of computer science. They range from simple operations to complex processes, with efficiency measured in terms of time and space complexity using Big O notation. Various design paradigms like divide and conquer, greedy algorithms, and dynamic programming provide frameworks for solving different types of problems. Algorithm analysis allows programmers to predict performance across different hardware environments. From web searches to route planning, algorithms power countless applications in our digital world, making their study essential for understanding and advancing technology.",
+      textbookReferences: [
+        {
+          chapter: "3",
+          pageNumbers: "78-105",
+          description: "Algorithm Analysis and Big O Notation"
+        },
+        {
+          chapter: "4",
+          pageNumbers: "106-142",
+          description: "Searching and Sorting Algorithms"
+        }
+      ],
+      interestingFacts: [
+        "The word 'algorithm' comes from the name of the 9th-century Persian mathematician Muhammad ibn Musa al-Khwarizmi",
+        "The quicksort algorithm was developed by British computer scientist Tony Hoare in 1959 when he was just 25 years old",
+        "The PageRank algorithm that initially powered Google's search results was named after Larry Page, one of Google's co-founders"
+      ]
+    };
+  }
+
+  // Generic content for other subjects
+  getGenericLessonContent(subject: string, topic: string) {
+    return {
+      title: topic,
+      keyPoints: [
+        `${topic} is a fundamental concept in ${subject}`,
+        `Understanding ${topic} helps develop critical thinking skills`,
+        `${topic} has both theoretical and practical applications`,
+        `The study of ${topic} involves multiple perspectives and approaches`,
+        `${topic} connects to other important concepts in ${subject}`,
+        `Modern advancements continue to expand our understanding of ${topic}`
+      ],
+      explanation: [
+        `${topic} represents a core area of study within ${subject}, providing essential knowledge and skills for students. Its importance extends beyond academic settings into practical applications in various fields and everyday life.`,
+        `The development of ${topic} as a concept has evolved over time, with contributions from numerous scholars and practitioners. This historical context helps us understand how current perspectives have been shaped by earlier thinking and discoveries.`,
+        `When studying ${topic}, it's important to consider multiple approaches and viewpoints. Different theoretical frameworks can provide complementary insights, leading to a more comprehensive understanding of the subject matter.`,
+        `${topic} connects to several other key concepts within ${subject}, forming part of an interconnected web of knowledge. These connections help students develop a more holistic understanding of the subject area rather than viewing concepts in isolation.`
+      ],
+      examples: [
+        {
+          title: `${topic} in Action`,
+          content: `A practical example of ${topic} can be seen in [relevant real-world scenario]. This demonstrates how theoretical knowledge can be applied to solve problems or understand phenomena in the real world.`
+        },
+        {
+          title: `Case Study: ${topic}`,
+          content: `In [specific example or case study], we can observe how principles of ${topic} operate in a specific context. This case illustrates the key aspects discussed in the theoretical explanation and shows their practical significance.`
+        }
+      ],
+      visualAids: [
+        {
+          title: `${topic} Concept Map`,
+          description: `A visual representation showing how ${topic} relates to other key concepts in ${subject}, with connecting lines indicating relationships and hierarchies`,
+          visualType: "Concept Map"
+        },
+        {
+          title: `${topic} Process Diagram`,
+          description: `Step-by-step visual representation of processes or methods related to ${topic}, showing inputs, transformations, and outputs`,
+          visualType: "Process Diagram"
+        }
+      ],
+      activities: [
+        {
+          title: `${topic} Exploration`,
+          instructions: `Research different perspectives on ${topic} from at least three credible sources. Compare and contrast their approaches, noting similarities and differences. Prepare a short presentation summarizing your findings.`,
+          learningOutcome: `Developing research skills and critical thinking by analyzing different perspectives on ${topic}`
+        },
+        {
+          title: `Applied ${topic} Project`,
+          instructions: `Design a project that applies principles of ${topic} to solve a real-world problem. Outline the problem, your approach, and how concepts from ${topic} inform your solution.`,
+          learningOutcome: `Connecting theoretical knowledge to practical applications and developing problem-solving skills`
+        }
+      ],
+      summary: `${topic} stands as a significant area of study within ${subject}, offering insights into [broader implications or applications]. Through examining its theoretical foundations, historical development, and practical applications, students gain not only subject-specific knowledge but also transferable skills such as critical thinking, analysis, and problem-solving. The interconnections between ${topic} and other concepts in ${subject} highlight the integrated nature of knowledge in this field. As research and practice continue to evolve, our understanding of ${topic} will likely deepen, opening new avenues for inquiry and application.`,
+      textbookReferences: [
+        {
+          chapter: "5",
+          pageNumbers: "98-124",
+          description: `${topic}: Foundations and Principles`
+        },
+        {
+          chapter: "6",
+          pageNumbers: "125-150",
+          description: `Applications and Extensions of ${topic}`
+        }
+      ],
+      interestingFacts: [
+        `The concept of ${topic} dates back to [historical period or figure], though its modern understanding has evolved significantly`,
+        `Research on ${topic} has led to unexpected discoveries in seemingly unrelated fields`,
+        `The way we understand ${topic} today was revolutionized by [significant development or discovery] in recent decades`
+      ]
+    };
+  }
+
+  // Method to get fallback quiz questions
+  getFallbackQuizQuestions(subject: string, topic: string) {
+    // Provide subject-specific quiz questions
+    const subjectLower = subject.toLowerCase();
+    
+    // Return generic quiz structure with placeholder questions
+    return {
+      questions: [
+        {
+          id: "q1",
+          question: `What is the primary focus of ${topic}?`,
+          options: [
+            `Understanding theoretical concepts`,
+            `Applying practical methods`,
+            `Both theoretical concepts and practical applications`,
+            `Neither theoretical nor practical aspects`
+          ],
+          correctAnswer: `Both theoretical concepts and practical applications`,
+          explanation: `${topic} encompasses both theoretical understanding and practical applications, making it a comprehensive area of study.`
+        },
+        {
+          id: "q2",
+          question: `Which of the following best describes ${topic}?`,
+          options: [
+            `A recent development with limited applications`,
+            `A fundamental concept with broad implications`,
+            `An obsolete theory replaced by modern thinking`,
+            `A specialized topic relevant only to experts`
+          ],
+          correctAnswer: `A fundamental concept with broad implications`,
+          explanation: `${topic} is considered fundamental in ${subject} and has implications across various contexts and applications.`
+        },
+        {
+          id: "q3",
+          question: `How does studying ${topic} benefit students?`,
+          options: [
+            `It provides only theoretical knowledge`,
+            `It develops practical skills but not critical thinking`,
+            `It enhances both knowledge and transferable skills`,
+            `It has minimal educational benefits`
+          ],
+          correctAnswer: `It enhances both knowledge and transferable skills`,
+          explanation: `Studying ${topic} provides subject-specific knowledge while developing transferable skills like critical thinking and analysis.`
+        },
+        {
+          id: "q4",
+          question: `Which approach is most effective when studying ${topic}?`,
+          options: [
+            `Focusing only on theoretical aspects`,
+            `Considering only practical applications`,
+            `Integrating multiple perspectives and approaches`,
+            `Memorizing facts without analysis`
+          ],
+          correctAnswer: `Integrating multiple perspectives and approaches`,
+          explanation: `${topic} is best understood through multiple perspectives and approaches, as this provides a more comprehensive understanding.`
+        },
+        {
+          id: "q5",
+          question: `How has our understanding of ${topic} changed over time?`,
+          options: [
+            `It has remained exactly the same since its inception`,
+            `It has evolved through research and new discoveries`,
+            `It has been completely invalidated by modern research`,
+            `It has become less relevant in contemporary contexts`
+          ],
+          correctAnswer: `It has evolved through research and new discoveries`,
+          explanation: `Our understanding of ${topic} has evolved over time through ongoing research, discoveries, and changing perspectives.`
+        }
+      ]
+    };
+  }
+
+  // Method to get fallback topics
+  getFallbackTopics(subject: string, className: string) {
+    // Return generic topics for subjects
+    const subjectLower = subject.toLowerCase();
+    
+    if (subjectLower.includes('math')) {
+      return [
+        { id: 1, title: "Quadratic Equations", difficulty: "Intermediate" },
+        { id: 2, title: "Trigonometry", difficulty: "Advanced" },
+        { id: 3, title: "Linear Algebra", difficulty: "Advanced" },
+        { id: 4, title: "Probability and Statistics", difficulty: "Intermediate" },
+        { id: 5, title: "Calculus", difficulty: "Advanced" }
+      ];
+    } else if (subjectLower.includes('science') || subjectLower.includes('physics')) {
+      return [
+        { id: 1, title: "Newton's Laws of Motion", difficulty: "Basic" },
+        { id: 2, title: "Electricity and Magnetism", difficulty: "Intermediate" },
+        { id: 3, title: "Optics and Light", difficulty: "Intermediate" },
+        { id: 4, title: "Thermodynamics", difficulty: "Advanced" },
+        { id: 5, title: "Quantum Mechanics", difficulty: "Advanced" }
+      ];
+    } else if (subjectLower.includes('chemistry')) {
+      return [
+        { id: 1, title: "Periodic Table and Elements", difficulty: "Basic" },
+        { id: 2, title: "Chemical Bonding", difficulty: "Intermediate" },
+        { id: 3, title: "Acids and Bases", difficulty: "Intermediate" },
+        { id: 4, title: "Organic Chemistry", difficulty: "Advanced" },
+        { id: 5, title: "Electrochemistry", difficulty: "Advanced" }
+      ];
+    } else if (subjectLower.includes('biology')) {
+      return [
+        { id: 1, title: "Cell Structure and Function", difficulty: "Basic" },
+        { id: 2, title: "Genetics and Heredity", difficulty: "Intermediate" },
+        { id: 3, title: "Human Body Systems", difficulty: "Intermediate" },
+        { id: 4, title: "Evolution and Natural Selection", difficulty: "Advanced" },
+        { id: 5, title: "Ecology and Ecosystems", difficulty: "Intermediate" }
+      ];
+    } else if (subjectLower.includes('english') || subjectLower.includes('language')) {
+      return [
+        { id: 1, title: "Poetry and Poetic Devices", difficulty: "Intermediate" },
+        { id: 2, title: "Novel Analysis", difficulty: "Intermediate" },
+        { id: 3, title: "Shakespeare's Works", difficulty: "Advanced" },
+        { id: 4, title: "Grammar and Composition", difficulty: "Basic" },
+        { id: 5, title: "World Literature", difficulty: "Advanced" }
+      ];
+    } else if (subjectLower.includes('history') || subjectLower.includes('social')) {
+      return [
+        { id: 1, title: "Indian Constitution", difficulty: "Intermediate" },
+        { id: 2, title: "World War II", difficulty: "Intermediate" },
+        { id: 3, title: "Ancient Civilizations", difficulty: "Basic" },
+        { id: 4, title: "Industrial Revolution", difficulty: "Intermediate" },
+        { id: 5, title: "Cold War Era", difficulty: "Advanced" }
+      ];
+    } else if (subjectLower.includes('computer') || subjectLower.includes('cs')) {
+      return [
+        { id: 1, title: "Algorithms and Data Structures", difficulty: "Intermediate" },
+        { id: 2, title: "Programming Fundamentals", difficulty: "Basic" },
+        { id: 3, title: "Web Development", difficulty: "Intermediate" },
+        { id: 4, title: "Database Management", difficulty: "Intermediate" },
+        { id: 5, title: "Artificial Intelligence", difficulty: "Advanced" }
+      ];
+    } else {
+      // Generic topics for any other subject
+      return [
+        { id: 1, title: "Fundamental Concepts", difficulty: "Basic" },
+        { id: 2, title: "Intermediate Principles", difficulty: "Intermediate" },
+        { id: 3, title: "Advanced Applications", difficulty: "Advanced" },
+        { id: 4, title: "Historical Developments", difficulty: "Intermediate" },
+        { id: 5, title: "Contemporary Perspectives", difficulty: "Advanced" }
+      ];
+    }
+  }
+}
+
+// Create and export a singleton instance
+export const claudeService = new ClaudeService();
