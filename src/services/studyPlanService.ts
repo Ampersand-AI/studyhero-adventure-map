@@ -291,8 +291,8 @@ export const studyPlanService = {
    */
   createStudyPlan: async (subject: string) => {
     toast({
-      title: "Connecting to NCERT",
-      description: `Extracting ${subject} curriculum data...`,
+      title: "Generating study plan",
+      description: `Creating personalized content for ${subject}...`,
     });
     
     return new Promise<StudyPlan>((resolve) => {
@@ -307,7 +307,7 @@ export const studyPlanService = {
         
         toast({
           title: "Subject Added",
-          description: `${subject} has been added to your study plan.`,
+          description: `${subject} has been added to your study plan with ${items.length} lessons.`,
         });
         
         resolve(newPlan);

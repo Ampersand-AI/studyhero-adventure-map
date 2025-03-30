@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, User } from '@/services/userService';
@@ -8,7 +9,8 @@ import WeeklyPlanView from '@/components/WeeklyPlanView';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Home, Trophy, BarChart, PlusCircle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Home, Trophy, BarChart, PlusCircle, BookOpen, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface StudyItem {
@@ -71,6 +73,7 @@ const Dashboard = () => {
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
   const [weeklyPlans, setWeeklyPlans] = useState<WeeklyPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -103,6 +106,15 @@ const Dashboard = () => {
         const userSubjects = profile.subjects || [];
         setSubjects(userSubjects);
         
+        if (userSubjects.length === 0) {
+          toast({
+            title: "No subjects found",
+            description: "Please add subjects to your profile to generate a study plan.",
+          });
+          navigate('/onboarding');
+          return;
+        }
+        
         // Load study plans
         const savedPlans = localStorage.getItem('studyPlans');
         let existingPlans: StudyPlan[] = [];
@@ -116,7 +128,7 @@ const Dashboard = () => {
         const existingSubjects = existingPlans.map(plan => plan.subject);
         const subjectsToGenerate = userSubjects.filter(subject => !existingSubjects.includes(subject));
         
-        // Generate new study plans for each missing subject
+        // Show an initial loading notification
         if (subjectsToGenerate.length > 0) {
           toast({
             title: "Generating Study Plans",
@@ -137,20 +149,43 @@ const Dashboard = () => {
           const updatedPlans = [...existingPlans, ...newPlans];
           setStudyPlans(updatedPlans);
           localStorage.setItem('studyPlans', JSON.stringify(updatedPlans));
+          
+          toast({
+            title: "Study Plans Ready",
+            description: `Created personalized plans for ${newPlans.length} subjects.`,
+          });
         }
         
         // Load or generate weekly plans
         const savedWeeklyPlans = localStorage.getItem('weeklyPlans');
         
         if (savedWeeklyPlans) {
-          setWeeklyPlans(JSON.parse(savedWeeklyPlans));
+          const parsedWeeklyPlans = JSON.parse(savedWeeklyPlans);
+          setWeeklyPlans(parsedWeeklyPlans);
+          
+          // Only show notification on first load
+          if (!initialLoadComplete) {
+            toast({
+              title: "Weekly Schedule Loaded",
+              description: "Your personalized study schedule is ready.",
+            });
+          }
         } else {
-          // Generate new weekly plans using the study items from all subjects
-          const allStudyItems = studyPlans.flatMap(plan => plan.items);
+          // Generate new weekly plans
+          toast({
+            title: "Creating Weekly Schedule",
+            description: "Organizing your study material into a weekly plan...",
+          });
+          
           const { weeklyPlans: newWeeklyPlans } = await studyPlanService.getWeeklyPlans();
           
           setWeeklyPlans(newWeeklyPlans);
           localStorage.setItem('weeklyPlans', JSON.stringify(newWeeklyPlans));
+          
+          toast({
+            title: "Weekly Plan Ready",
+            description: `Your ${newWeeklyPlans.length}-week personalized schedule is ready to use.`,
+          });
         }
         
         // Load test scores
@@ -163,6 +198,8 @@ const Dashboard = () => {
           });
           setTestScores(scoresMap);
         }
+        
+        setInitialLoadComplete(true);
         
       } catch (err: any) {
         console.error("Error loading dashboard data:", err);
@@ -220,6 +257,12 @@ const Dashboard = () => {
     if (foundItem) {
       // Save the current study item
       localStorage.setItem('currentStudyItem', JSON.stringify(foundItem));
+      
+      // Show a notification when starting a study item
+      toast({
+        title: `Starting ${foundItem.type === 'quiz' || foundItem.isWeeklyTest ? 'Quiz' : 'Lesson'}`,
+        description: `Loading ${foundItem.title}...`,
+      });
       
       // Navigate based on item type
       if (foundItem.type === 'quiz' || foundItem.isWeeklyTest) {
@@ -308,9 +351,19 @@ const Dashboard = () => {
           </div>
           <Button onClick={handleGenerateStudyPlan}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Generate New Study Plan
+            Update Study Plan
           </Button>
         </div>
+        
+        {initialLoadComplete && weeklyPlans.length === 0 && (
+          <Alert className="my-4">
+            <Info className="h-4 w-4" />
+            <AlertTitle>No study plan found</AlertTitle>
+            <AlertDescription>
+              You haven't generated a study plan yet. Click "Update Study Plan" to create one.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="mt-4">
           {weeklyPlans && weeklyPlans.length > 0 ? (
@@ -318,7 +371,14 @@ const Dashboard = () => {
           ) : (
             <Card className="w-full">
               <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">No weekly plan available yet. Generate a study plan to get started.</p>
+                <div className="flex flex-col items-center gap-2">
+                  <BookOpen className="h-12 w-12 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No weekly plan available yet. Generate a study plan to get started.</p>
+                  <Button onClick={handleGenerateStudyPlan} className="mt-2">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Generate Study Plan
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}

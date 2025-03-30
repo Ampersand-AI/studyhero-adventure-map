@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, BookOpen, Award, BookType } from "lucide-react";
+import { Calendar, BookOpen, Award, BookType, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DailyActivity {
   date: string;
@@ -91,6 +91,7 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
             onClick={() => setSelectedWeek(prev => Math.max(1, prev - 1))}
             disabled={selectedWeek === 1}
           >
+            <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
           </Button>
           <span className="text-sm font-medium">Week {selectedWeek}</span>
@@ -101,6 +102,7 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
             disabled={selectedWeek === weeklyPlans.length}
           >
             Next
+            <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       </div>
@@ -118,7 +120,34 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
           <CardDescription>Your daily learning activities for this week</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          {/* First show the weekly test card */}
+          <div className="mb-6">
+            <Card className="border bg-primary/5">
+              <CardHeader className="pb-2 pt-4">
+                <div className="flex items-center">
+                  <Award className="h-4 w-4 mr-2 text-primary" />
+                  <CardTitle className="text-base">Weekly Test</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="mb-2">
+                  <span className="font-medium">{currentWeek.weeklyTest.title}</span>
+                  <p className="text-xs text-muted-foreground">{currentWeek.weeklyTest.description}</p>
+                </div>
+                <Button 
+                  size="sm"
+                  className="w-full"
+                  onClick={() => onStartItem(currentWeek.weeklyTest.id)}
+                  variant={testScores[`test-week-${currentWeek.weekNumber}`] !== undefined ? "outline" : "default"}
+                >
+                  {testScores[`test-week-${currentWeek.weekNumber}`] !== undefined ? "Retake Test" : "Take Test"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Display daily activities in a 3-column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentWeek.dailyActivities.map((day, index) => (
               <Card key={index} className="border bg-accent/50">
                 <CardHeader className="pb-2 pt-4">
@@ -168,29 +197,6 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
                 </CardContent>
               </Card>
             ))}
-            
-            <Card className="border bg-primary/5">
-              <CardHeader className="pb-2 pt-4">
-                <div className="flex items-center">
-                  <Award className="h-4 w-4 mr-2 text-primary" />
-                  <CardTitle className="text-base">Weekly Test</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="mb-2">
-                  <span className="font-medium">{currentWeek.weeklyTest.title}</span>
-                  <p className="text-xs text-muted-foreground">{currentWeek.weeklyTest.description}</p>
-                </div>
-                <Button 
-                  size="sm"
-                  className="w-full"
-                  onClick={() => onStartItem(currentWeek.weeklyTest.id)}
-                  variant={testScores[`test-week-${currentWeek.weekNumber}`] !== undefined ? "outline" : "default"}
-                >
-                  {testScores[`test-week-${currentWeek.weekNumber}`] !== undefined ? "Retake Test" : "Take Test"}
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </CardContent>
       </Card>
