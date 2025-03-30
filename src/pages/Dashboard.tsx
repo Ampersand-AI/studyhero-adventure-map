@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudyAIHeader } from '@/components/StudyAIHeader';
@@ -238,6 +239,7 @@ const Dashboard = () => {
           description: "This subject is already in your study plans",
           variant: "destructive"
         });
+        setIsGeneratingPlan(false);
         return;
       }
       
@@ -332,34 +334,13 @@ const Dashboard = () => {
             </div>
             
             <div className="flex gap-2 mt-4 md:mt-0">
-              <Button 
-                variant="outline" 
-                onClick={handleRegeneratePlan}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Regenerate Plan
-                  </>
-                )}
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={handleClearUserData}
-                className="border-destructive text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear Data
-              </Button>
-              
               <Dialog open={isAddingSubject} onOpenChange={setIsAddingSubject}>
+                <DialogTrigger asChild>
+                  <Button variant="default">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Subject
+                  </Button>
+                </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add New Subject</DialogTitle>
@@ -424,6 +405,33 @@ const Dashboard = () => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              
+              <Button 
+                variant="outline" 
+                onClick={handleRegeneratePlan}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Regenerate Plan
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={handleClearUserData}
+                className="border-destructive text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear Data
+              </Button>
             </div>
           </div>
 

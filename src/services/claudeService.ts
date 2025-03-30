@@ -1,4 +1,3 @@
-
 interface AI {
   generateStudyPlan: (board: string, className: string, subject: string) => Promise<any>;
   generateQuizQuestion: (subject: string, topic: string) => Promise<any>;
@@ -69,50 +68,29 @@ class AIService implements AI {
   private generateMockResponse(prompt: string): any {
     // Check which type of content is being requested
     if (prompt.includes("Create a detailed study plan")) {
-      return {
-        items: [
-          {
-            id: "topic-1",
-            title: "Introduction to Science",
-            description: "Overview of scientific methodology and basic principles",
-            type: "lesson",
-            content: "This lesson introduces the fundamental concepts of scientific inquiry.",
-            estimatedTimeInMinutes: 45
-          },
-          {
-            id: "topic-2",
-            title: "Matter and Its Composition",
-            description: "Understanding the building blocks of matter",
-            type: "lesson",
-            content: "This lesson covers atoms, molecules, and the structure of matter.",
-            estimatedTimeInMinutes: 60
-          },
-          {
-            id: "topic-3",
-            title: "Forces and Motion",
-            description: "Understanding Newton's laws and basic mechanics",
-            type: "quiz",
-            content: "Test your knowledge of forces and motion with these questions.",
-            estimatedTimeInMinutes: 30
-          },
-          {
-            id: "topic-4",
-            title: "Energy and Its Forms",
-            description: "Exploring different types of energy and transformations",
-            type: "practice",
-            content: "Practice problems related to energy calculations and conversions.",
-            estimatedTimeInMinutes: 45
-          },
-          {
-            id: "topic-5",
-            title: "Living World",
-            description: "Introduction to biology and living organisms",
-            type: "lesson",
-            content: "This lesson introduces the characteristics of living organisms.",
-            estimatedTimeInMinutes: 60
-          }
-        ]
-      };
+      // Extract subject from prompt
+      const subjectMatch = prompt.match(/studying (.*?) in Class/);
+      const subject = subjectMatch ? subjectMatch[1] : "Science";
+      
+      // Generate different study plans based on the subject
+      if (subject.toLowerCase().includes("math") || subject.toLowerCase().includes("maths")) {
+        return this.getMathematicsMockPlan();
+      } else if (subject.toLowerCase().includes("phys")) {
+        return this.getPhysicsMockPlan();
+      } else if (subject.toLowerCase().includes("chem")) {
+        return this.getChemistryMockPlan();
+      } else if (subject.toLowerCase().includes("bio")) {
+        return this.getBiologyMockPlan();
+      } else if (subject.toLowerCase().includes("computer") || subject.toLowerCase().includes("cs")) {
+        return this.getComputerScienceMockPlan();
+      } else if (subject.toLowerCase().includes("social") || subject.toLowerCase().includes("history")) {
+        return this.getSocialStudiesMockPlan();
+      } else if (subject.toLowerCase().includes("english")) {
+        return this.getEnglishMockPlan();
+      } else {
+        // Default to a comprehensive science plan
+        return this.getComprehensiveSciencePlan();
+      }
     } else if (prompt.includes("Create a multiple-choice question")) {
       return {
         question: "Which of the following is NOT a state of matter?",
@@ -255,172 +233,620 @@ class AIService implements AI {
     }
   }
 
-  async generateStudyPlan(board: string, className: string, subject: string): Promise<any> {
-    const prompt = `
-      Create a detailed study plan for a student studying ${subject} in Class ${className} under the ${board} board, following NCERT guidelines. 
-      
-      Break down the curriculum into logical teaching units. For each topic:
-      - Include key concepts that need to be taught
-      - Add practical exercises to reinforce learning
-      - Include quizzes to test understanding
-      
-      Return a JSON format with an array of study items, where each item has:
-      - id (string - use format "topic-1", "topic-2", etc.)
-      - title (string - the name of the topic)
-      - description (string - brief outline of what will be covered)
-      - type: "lesson", "quiz", or "practice"
-      - content: (detailed teaching notes for lessons, questions for quizzes, tasks for practice)
-      - estimatedTimeInMinutes (number)
-      
-      Structure the topics in a logical learning sequence following the official NCERT curriculum.
-    `;
-    
-    console.log(`Generating study plan for ${subject}, Class ${className}, ${board} board`);
-    const result = await this.callOpenAI(prompt);
-    return result;
+  // New mock response methods for different subjects
+  private getMathematicsMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Number Systems",
+          description: "Understanding real numbers, irrational numbers, and operations",
+          type: "lesson",
+          content: "This lesson covers the classification of numbers and their properties.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "Algebraic Expressions",
+          description: "Simplifying and factoring algebraic expressions",
+          type: "lesson",
+          content: "Learn to manipulate algebraic expressions and factor polynomials.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Linear Equations",
+          description: "Solving linear equations and inequalities",
+          type: "quiz",
+          content: "Test your understanding of linear equations and their applications.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Quadratic Equations",
+          description: "Methods to solve quadratic equations",
+          type: "practice",
+          content: "Practice solving quadratic equations using different methods.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "Coordinate Geometry",
+          description: "Distance formula, section formula, and coordinate systems",
+          type: "lesson",
+          content: "Understanding the Cartesian coordinate system and related formulas.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "Triangles and Congruence",
+          description: "Congruence of triangles and geometric proofs",
+          type: "lesson",
+          content: "Learn about triangle congruence criteria and their applications.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Circles",
+          description: "Properties of circles, arcs, and angles",
+          type: "quiz",
+          content: "Test your knowledge of circles and their geometric properties.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Surface Area and Volume",
+          description: "Calculating surface area and volume of 3D shapes",
+          type: "practice",
+          content: "Practice problems on surface area and volume calculations.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Statistics",
+          description: "Data collection, representation, and measures of central tendency",
+          type: "lesson",
+          content: "Learn to analyze and interpret data using statistical methods.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Probability",
+          description: "Basic probability concepts and calculations",
+          type: "quiz",
+          content: "Test your understanding of probability theory and applications.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
 
-  async generateQuizQuestion(subject: string, topic: string): Promise<any> {
-    const prompt = `
-      Create a multiple-choice question about "${topic}" for a student studying ${subject}.
-      
-      Return a JSON object with:
-      - question (string)
-      - options (array of 4 strings)
-      - correctAnswer (string, must be one of the options)
-      - explanation (string)
-      
-      The question should test understanding, not just factual recall. Make it appropriate for school students.
-    `;
-    
-    console.log(`Generating quiz question for ${subject}, topic: ${topic}`);
-    const result = await this.callOpenAI(prompt);
-    return result;
+  private getPhysicsMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Motion and Measurement",
+          description: "Understanding distance, displacement, speed, and velocity",
+          type: "lesson",
+          content: "This lesson introduces the fundamental concepts of motion and measurement in physics.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "Force and Laws of Motion",
+          description: "Newton's laws and their applications",
+          type: "lesson",
+          content: "Understanding Newton's three laws of motion and how they explain physical phenomena.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Gravitation",
+          description: "Universal law of gravitation and gravitational field",
+          type: "quiz",
+          content: "Test your knowledge of gravitation and related concepts.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Work, Energy and Power",
+          description: "Understanding work, different forms of energy, and power",
+          type: "practice",
+          content: "Practice problems related to work, energy, and power calculations.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "Sound",
+          description: "Sound waves, propagation, and characteristics",
+          type: "lesson",
+          content: "Learn about the nature of sound and its properties.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "Light - Reflection and Refraction",
+          description: "Laws of reflection and refraction, lenses and mirrors",
+          type: "lesson",
+          content: "Understanding how light behaves when it encounters different media.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Electricity and Circuits",
+          description: "Electric current, potential difference, and circuit components",
+          type: "quiz",
+          content: "Test your understanding of electrical concepts and circuit analysis.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Magnetism and Electromagnetism",
+          description: "Magnetic field, electromagnetic induction, and applications",
+          type: "practice",
+          content: "Practice problems on magnetism and electromagnetic phenomena.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Sources of Energy",
+          description: "Conventional and non-conventional energy sources",
+          type: "lesson",
+          content: "Explore different energy sources and their implications for sustainability.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Nuclear Physics",
+          description: "Nuclear structure, radioactivity, and nuclear reactions",
+          type: "quiz",
+          content: "Test your knowledge of nuclear physics concepts.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
 
-  async generateLessonContent(subject: string, topic: string): Promise<any> {
-    const prompt = `
-      Create detailed teaching content for a lesson on "${topic}" for a student studying ${subject}.
-      
-      Return a JSON object with:
-      - title (string)
-      - keyPoints (array of strings)
-      - explanation (detailed explanation broken into paragraphs as an array of strings)
-      - examples (array of example objects with title and content)
-      - visualAids (suggestions for diagrams or visual aids as an array of objects with title and description)
-      - activities (array of interactive activities with instructions)
-      - summary (string)
-      
-      Make it engaging, informative, and appropriate for school students.
-    `;
-    
-    console.log(`Generating lesson content for ${subject}, topic: ${topic}`);
-    try {
-      const result = await this.callOpenAI(prompt);
-      return result;
-    } catch (error) {
-      console.error("Error generating lesson content:", error);
-      // Return a minimal valid response structure to prevent UI errors
-      return {
-        title: topic,
-        keyPoints: ["Understanding the core concepts", "Applying knowledge to real-world situations"],
-        explanation: ["This topic covers fundamental principles that are essential for your educational journey."],
-        examples: [{title: "Basic Example", content: "A simplified example to demonstrate the concept."}],
-        visualAids: [],
-        activities: [],
-        summary: "A foundational topic that will help build your knowledge in this subject area."
-      };
-    }
+  private getChemistryMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Matter in Our Surroundings",
+          description: "States of matter and their interconversion",
+          type: "lesson",
+          content: "This lesson explains the three states of matter and factors affecting state changes.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "Is Matter Around Us Pure?",
+          description: "Pure substances, mixtures, solutions, and separation techniques",
+          type: "lesson",
+          content: "Understanding the classification of matter and methods to separate mixtures.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Atoms and Molecules",
+          description: "Atomic structure, molecules, compounds, and chemical formulas",
+          type: "quiz",
+          content: "Test your understanding of atoms, molecules, and basic chemical formulas.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Structure of the Atom",
+          description: "Atomic models, subatomic particles, and electronic configuration",
+          type: "practice",
+          content: "Practice problems related to atomic structure and electronic arrangement.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "The Periodic Table",
+          description: "Development of the periodic table and periodic properties",
+          type: "lesson",
+          content: "Learn about the organization of elements in the periodic table and trends in properties.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "Chemical Bonding",
+          description: "Ionic, covalent, and metallic bonding",
+          type: "lesson",
+          content: "Understanding how atoms combine to form different types of chemical bonds.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Chemical Reactions and Equations",
+          description: "Types of chemical reactions and balancing equations",
+          type: "quiz",
+          content: "Test your knowledge of chemical reactions and how to represent them.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Acids, Bases, and Salts",
+          description: "Properties, reactions, and applications of acids, bases, and salts",
+          type: "practice",
+          content: "Practice problems on acid-base concepts and salt formation.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Metals and Non-metals",
+          description: "Properties, reactions, and uses of metals and non-metals",
+          type: "lesson",
+          content: "Explore the characteristics that distinguish metals from non-metals.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Carbon and its Compounds",
+          description: "Organic chemistry, hydrocarbons, and functional groups",
+          type: "quiz",
+          content: "Test your understanding of carbon compounds and their properties.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
 
-  async generateLessonTest(subject: string, topic: string, numQuestions: number = 5): Promise<any> {
-    const prompt = `
-      Create a comprehensive test with ${numQuestions} multiple-choice questions about "${topic}" for a student studying ${subject}.
-      
-      Return a JSON object with:
-      - lessonTitle (string)
-      - questions (array of question objects with:
-        - question (string)
-        - options (array of 4 strings)
-        - correctAnswer (string, must be one of the options)
-        - explanation (string that explains the correct answer)
-      )
-      
-      The questions should thoroughly test understanding of the topic, ranging from basic recall to application and analysis.
-      Make them appropriate for school students.
-    `;
-    
-    console.log(`Generating lesson test for ${subject}, topic: ${topic}, with ${numQuestions} questions`);
-    const result = await this.callOpenAI(prompt);
-    return result;
+  private getBiologyMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Cell - The Fundamental Unit of Life",
+          description: "Cell structure, organelles, and functions",
+          type: "lesson",
+          content: "This lesson introduces cell theory and explores the structure of plant and animal cells.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "Tissues",
+          description: "Plant and animal tissues, their types and functions",
+          type: "lesson",
+          content: "Understanding how cells organize into tissues with specialized functions.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Diversity in Living Organisms",
+          description: "Classification of organisms and biodiversity",
+          type: "quiz",
+          content: "Test your knowledge of taxonomic categories and characteristics of major groups.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Life Processes",
+          description: "Nutrition, respiration, transportation, and excretion",
+          type: "practice",
+          content: "Practice problems related to fundamental life processes in organisms.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "Control and Coordination",
+          description: "Nervous system, hormones, and plant responses",
+          type: "lesson",
+          content: "Learn about how organisms regulate their functions and respond to stimuli.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "Reproduction",
+          description: "Asexual and sexual reproduction in plants and animals",
+          type: "lesson",
+          content: "Understanding various reproductive strategies in living organisms.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Heredity and Evolution",
+          description: "Mendel's laws, inheritance, and the theory of evolution",
+          type: "quiz",
+          content: "Test your understanding of genetic inheritance and evolutionary processes.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Human Health and Disease",
+          description: "Common diseases, prevention, and immune system",
+          type: "practice",
+          content: "Practice problems on human health concepts and disease mechanisms.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Our Environment",
+          description: "Ecosystems, food chains, and environmental issues",
+          type: "lesson",
+          content: "Explore the relationships between organisms and their environment.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Natural Resources and Management",
+          description: "Conservation of biodiversity and sustainable development",
+          type: "quiz",
+          content: "Test your knowledge of resource management and conservation strategies.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
 
-  async generateDiagram(subject: string, topic: string, diagramType: string): Promise<string> {
-    const prompt = `
-      Create a detailed text description of a ${diagramType} diagram for "${topic}" in ${subject}.
-      
-      Provide a very detailed description that could help someone visualize or draw this diagram.
-      Include all necessary elements, labels, relationships, and any color recommendations.
-      
-      The description should be thorough enough that it could be used to create an actual visual representation.
-    `;
-    
-    console.log(`Generating diagram description for ${subject}, topic: ${topic}, diagram type: ${diagramType}`);
-    const result = await this.callOpenAI(prompt);
-    return result;
+  private getComputerScienceMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Introduction to Computers",
+          description: "Computer systems, hardware, and software",
+          type: "lesson",
+          content: "This lesson introduces the basic components and functions of computer systems.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "Number Systems and Data Representation",
+          description: "Binary, decimal, octal, and hexadecimal number systems",
+          type: "lesson",
+          content: "Understanding different number systems and how data is represented in computers.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Introduction to Problem Solving",
+          description: "Algorithms, flowcharts, and pseudocode",
+          type: "quiz",
+          content: "Test your understanding of problem-solving techniques in computer science.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Programming Fundamentals",
+          description: "Variables, data types, operators, and expressions",
+          type: "practice",
+          content: "Practice basic programming concepts and syntax.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "Control Structures",
+          description: "Conditional statements and loops",
+          type: "lesson",
+          content: "Learn about decision-making and repetition in programming.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "Functions and Modularity",
+          description: "Creating and using functions in programming",
+          type: "lesson",
+          content: "Understanding how to organize code using functions and modules.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Data Structures",
+          description: "Arrays, strings, and basic data structures",
+          type: "quiz",
+          content: "Test your knowledge of data organization and manipulation in programming.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Object-Oriented Programming",
+          description: "Classes, objects, inheritance, and polymorphism",
+          type: "practice",
+          content: "Practice problems on object-oriented programming concepts.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Database Management Systems",
+          description: "Introduction to databases, SQL, and data modeling",
+          type: "lesson",
+          content: "Explore how data is stored, organized, and retrieved in databases.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Networking and Internet",
+          description: "Computer networks, protocols, and web technologies",
+          type: "quiz",
+          content: "Test your understanding of networking concepts and internet technologies.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
 
-  async clearAllUserData(): Promise<void> {
-    // Display notification
-    toast({
-      title: "Clearing User Data",
-      description: "Removing all saved progress and study plans...",
-      duration: 3000,
-    });
-    
-    // Clear all localStorage items related to the app
-    localStorage.removeItem('studyPlans');
-    localStorage.removeItem('studyHeroProfile');
-    localStorage.removeItem('currentStudyItem');
-    localStorage.removeItem('completedItems');
-    localStorage.removeItem('currentLevel');
-    localStorage.removeItem('currentXp');
-    localStorage.removeItem('achievements');
-    localStorage.removeItem('quizResults');
-    localStorage.removeItem('studyStats');
-    
-    // Clear any cached lesson content
-    const keys = Object.keys(localStorage);
-    for (const key of keys) {
-      if (key.startsWith('lesson-content-') || key.startsWith('lesson-diagrams-') || key.startsWith('lesson-test-')) {
-        localStorage.removeItem(key);
-      }
-    }
-    
-    // Display success notification
-    setTimeout(() => {
-      toast({
-        title: "User Data Cleared",
-        description: "All your data has been removed successfully.",
-      });
-    }, 1000);
-    
-    console.log("All user data cleared from localStorage");
+  private getSocialStudiesMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "The French Revolution",
+          description: "Causes, events, and impact of the French Revolution",
+          type: "lesson",
+          content: "This lesson explores the social, political, and economic factors leading to the French Revolution.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "The Russian Revolution",
+          description: "Causes, events, and aftermath of the Russian Revolution",
+          type: "lesson",
+          content: "Understanding the fall of the Tsarist regime and the rise of the Soviet Union.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Nationalism in Europe",
+          description: "The rise of nationalism and nation-states in Europe",
+          type: "quiz",
+          content: "Test your knowledge of nationalist movements in 19th-century Europe.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Colonialism and Imperialism",
+          description: "European colonization and its impact on the world",
+          type: "practice",
+          content: "Practice analyzing colonial policies and their consequences.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "World Wars",
+          description: "Causes, major events, and consequences of World Wars I and II",
+          type: "lesson",
+          content: "Learn about the global conflicts that shaped the 20th century.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "The Indian Freedom Struggle",
+          description: "India's fight for independence from British rule",
+          type: "lesson",
+          content: "Understanding the key movements, leaders, and events in India's independence movement.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Democracy and Constitution",
+          description: "Principles of democracy and the Indian Constitution",
+          type: "quiz",
+          content: "Test your understanding of democratic values and constitutional features.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Resources and Development",
+          description: "Types of resources, sustainability, and economic development",
+          type: "practice",
+          content: "Practice problems on resource management and economic concepts.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Agriculture and Food Security",
+          description: "Agricultural patterns, food security challenges, and solutions",
+          type: "lesson",
+          content: "Explore agricultural practices and their relationship to food security.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Globalization and Its Impact",
+          description: "Economic globalization and its social, cultural effects",
+          type: "quiz",
+          content: "Test your knowledge of globalization processes and their consequences.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
 
-  // Helper function to clean JSON response from API - no longer needed with mock responses
-  private cleanJsonResponse(response: string): string {
-    // Remove markdown code blocks if present
-    let cleanedResponse = response.replace(/```json\n|\n```|```\n|\n```/g, '');
-    
-    // Try to extract just the JSON part if there's additional text
-    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      cleanedResponse = jsonMatch[0];
-    }
-    
-    return cleanedResponse;
+  private getEnglishMockPlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Reading Comprehension",
+          description: "Techniques for understanding and analyzing texts",
+          type: "lesson",
+          content: "This lesson introduces strategies for effective reading and comprehension.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-2",
+          title: "Prose and Literary Devices",
+          description: "Understanding prose forms and literary techniques",
+          type: "lesson",
+          content: "Learn about different prose forms and how authors use literary devices.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-3",
+          title: "Poetry Analysis",
+          description: "Interpreting poetic forms, themes, and techniques",
+          type: "quiz",
+          content: "Test your understanding of poetic devices and interpretation skills.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-4",
+          title: "Grammar Fundamentals",
+          description: "Parts of speech, sentence structure, and common rules",
+          type: "practice",
+          content: "Practice identifying and correcting grammatical errors.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-5",
+          title: "Writing Essays",
+          description: "Essay structure, types, and writing techniques",
+          type: "lesson",
+          content: "Learn how to plan, structure, and write effective essays.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-6",
+          title: "Letter and Email Writing",
+          description: "Formal and informal correspondence formats",
+          type: "lesson",
+          content: "Understanding different types of written communication and their formats.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-7",
+          title: "Vocabulary Building",
+          description: "Word roots, prefixes, suffixes, and context clues",
+          type: "quiz",
+          content: "Test your vocabulary knowledge and word-building skills.",
+          estimatedTimeInMinutes: 30
+        },
+        {
+          id: "topic-8",
+          title: "Speaking and Listening Skills",
+          description: "Effective communication, presentations, and discussions",
+          type: "practice",
+          content: "Practice activities to enhance speaking and listening abilities.",
+          estimatedTimeInMinutes: 45
+        },
+        {
+          id: "topic-9",
+          title: "Media Literacy",
+          description: "Analyzing and interpreting different media forms",
+          type: "lesson",
+          content: "Explore how to critically evaluate information from various media sources.",
+          estimatedTimeInMinutes: 60
+        },
+        {
+          id: "topic-10",
+          title: "Drama and Plays",
+          description: "Elements of drama, character analysis, and theatrical devices",
+          type: "quiz",
+          content: "Test your understanding of dramatic works and their components.",
+          estimatedTimeInMinutes: 30
+        }
+      ]
+    };
   }
-}
 
-export const claudeService = new AIService(API_KEY);
+  private getComprehensiveSciencePlan() {
+    return {
+      items: [
+        {
+          id: "topic-1",
+          title: "Scientific Method and Inquiry",
+          description: "Understanding the process of scientific investigation
