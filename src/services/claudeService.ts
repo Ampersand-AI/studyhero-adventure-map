@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const API_KEY = process.env.NEXT_PUBLIC_CLAUDE_AI_API_KEY;
+// Use a fallback approach for API keys in browser environment
+const API_KEY = import.meta.env.VITE_CLAUDE_AI_API_KEY || '';
 
 interface StudyItem {
   id: string;
@@ -14,6 +15,28 @@ interface StudyItem {
 
 interface StudyPlanResponse {
   items: StudyItem[];
+}
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+interface LessonContent {
+  title: string;
+  keyPoints: string[];
+  explanation: string[];
+  examples: {title: string; content: string}[];
+  visualAids: {title: string; description: string}[];
+  activities: {title: string; instructions: string}[];
+  summary: string;
+}
+
+interface LessonTest {
+  lessonTitle: string;
+  questions: QuizQuestion[];
 }
 
 class AIService {
@@ -30,9 +53,9 @@ class AIService {
       throw new Error("API key is required to generate study plans.");
     }
 
-    // Use default plans for testing purposes
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Using default study plan for development environment.");
+    // Use default plans for development mode or when we don't have a valid key
+    if (import.meta.env.DEV || !this.apiKey) {
+      console.log("Using default study plan in development environment.");
       return this.getDefaultStudyPlan(subject);
     }
 
@@ -79,6 +102,80 @@ class AIService {
     }
   }
 
+  async generateQuizQuestion(subject: string, topic: string): Promise<QuizQuestion> {
+    // Implementation for generating quiz questions
+    // This is a placeholder that returns a mock question
+    return {
+      question: `Which of the following best describes ${topic} in ${subject}?`,
+      options: [
+        `The primary concept of ${topic}`,
+        `A secondary aspect of ${topic}`,
+        `An unrelated concept to ${topic}`,
+        `A historical perspective of ${topic}`
+      ],
+      correctAnswer: `The primary concept of ${topic}`,
+      explanation: `This is the correct definition of ${topic} in the context of ${subject}.`
+    };
+  }
+
+  async generateLessonContent(subject: string, topic: string): Promise<LessonContent> {
+    // Implementation for generating lesson content
+    // This is a placeholder that returns mock content
+    return {
+      title: `Introduction to ${topic}`,
+      keyPoints: [
+        `Key point 1 about ${topic}`,
+        `Key point 2 about ${topic}`,
+        `Key point 3 about ${topic}`
+      ],
+      explanation: [
+        `First paragraph explaining ${topic} in the context of ${subject}.`,
+        `Second paragraph providing more details about ${topic}.`,
+        `Third paragraph connecting ${topic} to other concepts in ${subject}.`
+      ],
+      examples: [
+        {title: "Basic Example", content: `A simple example of ${topic} in action.`},
+        {title: "Advanced Example", content: `A more complex example of ${topic}.`}
+      ],
+      visualAids: [
+        {title: "Concept Map", description: `A visual representation of ${topic} and related concepts.`},
+        {title: "Process Diagram", description: `A step-by-step visualization of ${topic} processes.`}
+      ],
+      activities: [
+        {title: "Hands-on Exercise", instructions: `Follow these steps to practice ${topic}.`},
+        {title: "Discussion Questions", instructions: `Consider these questions about ${topic}.`}
+      ],
+      summary: `Summary of the key concepts covered about ${topic} in ${subject}.`
+    };
+  }
+
+  async generateLessonTest(subject: string, topic: string, numQuestions: number): Promise<LessonTest> {
+    // Implementation for generating lesson tests
+    // This creates a mock test with the requested number of questions
+    const questions = Array.from({ length: numQuestions }, (_, i) => ({
+      question: `Question ${i+1} about ${topic} in ${subject}?`,
+      options: [
+        `Option A for question ${i+1}`,
+        `Option B for question ${i+1}`,
+        `Option C for question ${i+1}`,
+        `Option D for question ${i+1}`
+      ],
+      correctAnswer: `Option A for question ${i+1}`,
+      explanation: `Explanation for why option A is correct for question ${i+1}.`
+    }));
+
+    return {
+      lessonTitle: topic,
+      questions
+    };
+  }
+
+  async generateDiagram(subject: string, topic: string, diagramType: string): Promise<string> {
+    // Implementation for generating diagram descriptions
+    // This is a placeholder that returns a mock diagram description
+    return `This is a ${diagramType} diagram for ${topic} in ${subject}. It illustrates the key concepts and relationships between different elements of ${topic}.`;
+  }
+
   clearAllUserData() {
     // Clear localStorage
     localStorage.clear();
@@ -98,11 +195,11 @@ class AIService {
   }
 
   // Comprehensive Math Plan
-  private getComprehensiveMathPlan() {
+  private getComprehensiveMathPlan(): StudyPlanResponse {
     return {
       items: [
         {
-          id: "topic-1",
+          id: uuidv4(),
           title: "Basic Arithmetic",
           description: "Introduction to addition, subtraction, multiplication, and division",
           type: "lesson",
@@ -110,7 +207,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-2",
+          id: uuidv4(),
           title: "Fractions and Decimals",
           description: "Understanding fractions, decimals, and their operations",
           type: "lesson",
@@ -118,7 +215,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-3",
+          id: uuidv4(),
           title: "Weekly Test: Arithmetic Fundamentals",
           description: "Test your understanding of arithmetic operations",
           type: "quiz",
@@ -126,7 +223,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-4",
+          id: uuidv4(),
           title: "Introduction to Algebra",
           description: "Basic algebraic expressions and equations",
           type: "lesson",
@@ -134,7 +231,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-5",
+          id: uuidv4(),
           title: "Solving Linear Equations",
           description: "Techniques for solving linear equations",
           type: "practice",
@@ -142,7 +239,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-6",
+          id: uuidv4(),
           title: "Weekly Test: Algebra Basics",
           description: "Test your understanding of algebraic expressions and equations",
           type: "quiz",
@@ -150,7 +247,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-7",
+          id: uuidv4(),
           title: "Geometry Basics",
           description: "Introduction to geometric shapes and concepts",
           type: "lesson",
@@ -158,7 +255,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-8",
+          id: uuidv4(),
           title: "Area and Perimeter",
           description: "Calculating area and perimeter of basic shapes",
           type: "practice",
@@ -166,7 +263,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-9",
+          id: uuidv4(),
           title: "Weekly Test: Geometry Fundamentals",
           description: "Test your knowledge of geometric shapes and area/perimeter calculations",
           type: "quiz",
@@ -174,7 +271,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-10",
+          id: uuidv4(),
           title: "Data Analysis",
           description: "Introduction to data analysis and statistics",
           type: "lesson",
@@ -182,7 +279,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-11",
+          id: uuidv4(),
           title: "Probability",
           description: "Basic concepts of probability",
           type: "practice",
@@ -190,7 +287,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-12",
+          id: uuidv4(),
           title: "Weekly Test: Data Analysis and Probability",
           description: "Test your understanding of data analysis and probability",
           type: "quiz",
@@ -198,7 +295,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-13",
+          id: uuidv4(),
           title: "Advanced Algebra",
           description: "More complex algebraic equations and systems",
           type: "lesson",
@@ -206,7 +303,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-14",
+          id: uuidv4(),
           title: "Trigonometry",
           description: "Introduction to trigonometric functions",
           type: "lesson",
@@ -214,7 +311,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-15",
+          id: uuidv4(),
           title: "Final Comprehensive Test",
           description: "Test your understanding of all major math topics",
           type: "quiz",
@@ -226,11 +323,11 @@ class AIService {
   }
 
   // Comprehensive English Plan
-  private getComprehensiveEnglishPlan() {
+  private getComprehensiveEnglishPlan(): StudyPlanResponse {
     return {
       items: [
         {
-          id: "topic-1",
+          id: uuidv4(),
           title: "Grammar Essentials",
           description: "Basic grammar rules and sentence structure",
           type: "lesson",
@@ -238,7 +335,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-2",
+          id: uuidv4(),
           title: "Reading Comprehension",
           description: "Techniques for understanding written text",
           type: "lesson",
@@ -246,7 +343,7 @@ class AIService {
           estimatedTimeInMinutes: 60
         },
         {
-          id: "topic-3",
+          id: uuidv4(),
           title: "Weekly Test: Grammar and Comprehension",
           description: "Test your understanding of grammar rules and reading skills",
           type: "quiz",
@@ -254,7 +351,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-4",
+          id: uuidv4(),
           title: "Essay Writing",
           description: "Introduction to essay writing",
           type: "lesson",
@@ -262,7 +359,7 @@ class AIService {
           estimatedTimeInMinutes: 60
         },
         {
-          id: "topic-5",
+          id: uuidv4(),
           title: "Vocabulary Building",
           description: "Techniques for expanding your vocabulary",
           type: "practice",
@@ -270,7 +367,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-6",
+          id: uuidv4(),
           title: "Weekly Test: Writing and Vocabulary",
           description: "Test your writing skills and vocabulary knowledge",
           type: "quiz",
@@ -278,7 +375,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-7",
+          id: uuidv4(),
           title: "Literary Analysis",
           description: "Introduction to literary analysis",
           type: "lesson",
@@ -286,7 +383,7 @@ class AIService {
           estimatedTimeInMinutes: 60
         },
         {
-          id: "topic-8",
+          id: uuidv4(),
           title: "Fiction",
           description: "Introduction to Fiction",
           type: "practice",
@@ -294,7 +391,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-9",
+          id: uuidv4(),
           title: "Non-Fiction",
           description: "Introduction to Non-Fiction",
           type: "lesson",
@@ -302,7 +399,7 @@ class AIService {
           estimatedTimeInMinutes: 60
         },
         {
-          id: "topic-10",
+          id: uuidv4(),
           title: "Public Speaking",
           description: "Techniques for Public Speaking",
           type: "quiz",
@@ -314,11 +411,11 @@ class AIService {
   }
 
   // Comprehensive Science Plan for the default fallback
-  private getComprehensiveSciencePlan() {
+  private getComprehensiveSciencePlan(): StudyPlanResponse {
     return {
       items: [
         {
-          id: "topic-1",
+          id: uuidv4(),
           title: "Scientific Method and Inquiry",
           description: "Understanding the process of scientific investigation",
           type: "lesson",
@@ -326,7 +423,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-2",
+          id: uuidv4(),
           title: "Matter and Its Properties",
           description: "Physical and chemical properties of matter",
           type: "lesson",
@@ -334,7 +431,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-3",
+          id: uuidv4(),
           title: "Weekly Test: Scientific Fundamentals",
           description: "Test your understanding of scientific methods and matter",
           type: "quiz",
@@ -342,7 +439,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-4",
+          id: uuidv4(),
           title: "Atomic Structure",
           description: "Atoms, elements, and the periodic table",
           type: "lesson",
@@ -350,7 +447,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-5",
+          id: uuidv4(),
           title: "Forces and Motion",
           description: "Newton's laws and principles of motion",
           type: "practice",
@@ -358,7 +455,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-6",
+          id: uuidv4(),
           title: "Weekly Test: Physics Fundamentals",
           description: "Test your understanding of atoms and forces",
           type: "quiz",
@@ -366,7 +463,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-7",
+          id: uuidv4(),
           title: "Energy and Work",
           description: "Different forms of energy and energy transformations",
           type: "lesson",
@@ -374,7 +471,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-8",
+          id: uuidv4(),
           title: "Cells and Life Processes",
           description: "Cell structure, function, and basic life processes",
           type: "lesson",
@@ -382,7 +479,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-9",
+          id: uuidv4(),
           title: "Weekly Test: Energy and Biology",
           description: "Test your knowledge of energy concepts and cell biology",
           type: "quiz",
@@ -390,7 +487,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-10",
+          id: uuidv4(),
           title: "Genetics and Heredity",
           description: "DNA, genes, and inheritance patterns",
           type: "lesson",
@@ -398,7 +495,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-11",
+          id: uuidv4(),
           title: "Ecology and Ecosystems",
           description: "Relationships between organisms and their environment",
           type: "practice",
@@ -406,7 +503,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-12",
+          id: uuidv4(),
           title: "Weekly Test: Genetics and Ecology",
           description: "Test your understanding of genetics and ecosystems",
           type: "quiz",
@@ -414,7 +511,7 @@ class AIService {
           estimatedTimeInMinutes: 45
         },
         {
-          id: "topic-13",
+          id: uuidv4(),
           title: "Earth Systems",
           description: "Earth's structure, geological processes, and natural resources",
           type: "lesson",
@@ -422,7 +519,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-14",
+          id: uuidv4(),
           title: "Space Science",
           description: "Solar system, stars, and space exploration",
           type: "lesson",
@@ -430,7 +527,7 @@ class AIService {
           estimatedTimeInMinutes: 30
         },
         {
-          id: "topic-15",
+          id: uuidv4(),
           title: "Final Comprehensive Test",
           description: "Test your understanding of all major science topics",
           type: "quiz",
