@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,9 +132,9 @@ const Lesson = () => {
         <main className="flex-1 container py-6 md:py-12">
           <LessonTest 
             lessonTitle={studyItem?.title || 'Lesson Test'}
-            subjectName={studyItem?.subject || ''}
-            topicName={studyItem?.title || ''}
             onFinish={() => navigate(`/subject/${studyItem?.subject}`)}
+            topicName={studyItem?.title || ''}
+            lessonSubject={studyItem?.subject || ''}
           />
         </main>
       </div>
