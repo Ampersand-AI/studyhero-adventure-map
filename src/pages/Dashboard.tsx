@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { Home, Trophy, BarChart, PlusCircle, BookOpen, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
 
 interface StudyItem {
   id: string;
