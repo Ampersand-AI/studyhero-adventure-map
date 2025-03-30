@@ -545,29 +545,6 @@ export const claudeService: ClaudeService = {
     return await attemptGeneration();
   },
 
-  researchCurriculum: async (subject: string, className: string) => {
-    try {
-      toast({
-        title: "Researching Curriculum",
-        description: `Finding NCERT curriculum for ${subject} Class ${className}...`,
-      });
-      
-      // Use OpenAI to research the curriculum
-      const curriculumData = await openaiService.researchNCERTCurriculum(subject, className);
-      
-      return curriculumData;
-    } catch (error) {
-      console.error("Error researching curriculum:", error);
-      toast({
-        title: "Error",
-        description: "Failed to research curriculum. Using standard data.",
-        variant: "destructive"
-      });
-      
-      return null;
-    }
-  },
-
   clearAllUserData: () => {
     localStorage.clear();
     toast({
