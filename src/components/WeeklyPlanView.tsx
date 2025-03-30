@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, BookOpen, Award, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { Calendar, BookOpen, Award, ChevronLeft, ChevronRight, Info, BookOpenText, FileSpreadsheet } from "lucide-react";
 
 interface DailyActivity {
   date: string;
@@ -87,6 +87,46 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
     
     return colors[subject] || 'bg-gray-100 text-gray-800';
   };
+
+  // Function to get appropriate icon based on content type
+  const getItemIcon = (type: string) => {
+    switch(type) {
+      case 'lesson': return <BookOpen className="h-4 w-4 mr-2 text-blue-500" />;
+      case 'quiz': return <Award className="h-4 w-4 mr-2 text-purple-500" />;
+      case 'practice': return <FileSpreadsheet className="h-4 w-4 mr-2 text-orange-500" />;
+      default: return <BookOpen className="h-4 w-4 mr-2 text-blue-500" />;
+    }
+  };
+
+  // Function to get textbook URL based on subject (same as in SubjectCardGrid)
+  const getTextbookUrl = (subject: string) => {
+    const subjectLower = subject.toLowerCase();
+    const baseUrl = "https://ncert.nic.in/textbook.php";
+    
+    if (subjectLower.includes('math')) {
+      return `${baseUrl}?lemh1=0-10`;
+    } else if (subjectLower.includes('physics')) {
+      return `${baseUrl}?leph1=0-8`;
+    } else if (subjectLower.includes('chemistry')) {
+      return `${baseUrl}?lech1=0-14`;
+    } else if (subjectLower.includes('english')) {
+      return `${baseUrl}?lefl1=0-11`;
+    } else if (subjectLower.includes('economics')) {
+      return `${baseUrl}?leec1=0-10`;
+    } else if (subjectLower.includes('geography')) {
+      return `${baseUrl}?legy1=0-7`;
+    } else if (subjectLower.includes('computer')) {
+      return `${baseUrl}?lecs1=0-10`;
+    } else if (subjectLower.includes('biology')) {
+      return `${baseUrl}?lebo1=0-16`;
+    } else if (subjectLower.includes('social')) {
+      return `${baseUrl}?less1=0-9`;
+    } else if (subjectLower.includes('science') && !subjectLower.includes('computer')) {
+      return `${baseUrl}?lesc1=0-18`;
+    } else {
+      return baseUrl;
+    }
+  };
   
   return (
     <div className="space-y-4">
@@ -128,6 +168,31 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
           <CardDescription>Your NCERT-aligned learning activities for this week</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Reference to original textbook */}
+          {currentWeek.dailyActivities[0]?.items[0]?.subject && (
+            <div className="mb-4">
+              <Alert className="bg-blue-50 border-blue-200">
+                <div className="flex items-center">
+                  <BookOpenText className="h-4 w-4 mr-2 text-blue-600" />
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800">
+                      Need more resources? Access the official NCERT textbooks for detailed content.
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={() => window.open(getTextbookUrl(currentWeek.dailyActivities[0].items[0].subject), '_blank')}
+                  >
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    View Textbook
+                  </Button>
+                </div>
+              </Alert>
+            </div>
+          )}
+
           {/* First show the weekly test card */}
           <div className="mb-6">
             <Card className="border bg-primary/5">
@@ -174,14 +239,10 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
                     <p className="text-sm text-muted-foreground">No activities scheduled for this day.</p>
                   ) : (
                     day.items.map(item => (
-                      <div key={item.id} className="mb-3 last:mb-0">
+                      <div key={item.id} className="mb-3 last:mb-0 bg-white rounded-md p-3 shadow-sm">
                         <div className="flex justify-between items-center mb-1">
                           <div className="flex items-center">
-                            {item.type === 'lesson' ? (
-                              <BookOpen className="h-4 w-4 mr-2 text-blue-500" />
-                            ) : (
-                              <Award className="h-4 w-4 mr-2 text-purple-500" />
-                            )}
+                            {getItemIcon(item.type)}
                             <span className="font-medium">{item.title}</span>
                           </div>
                           <div className="flex gap-2 flex-wrap justify-end">
@@ -196,13 +257,18 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
+                        <div className="text-xs text-muted-foreground mb-2">
+                          <span className="inline-block bg-gray-100 rounded px-2 py-1">
+                            {item.estimatedTimeInMinutes} min
+                          </span>
+                        </div>
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          className="w-full"
+                          className="w-full hover:bg-primary/10"
                           onClick={() => onStartItem(item.id)}
                         >
-                          Start
+                          Start Learning
                         </Button>
                       </div>
                     ))

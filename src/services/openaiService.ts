@@ -28,7 +28,9 @@ export const generateStudyPlan = async (board: string, className: string, subjec
     - dueDate: a date string
     - estimatedTimeInMinutes: estimated study time
     - subject: the subject name
-    - content: a brief overview of the topic`;
+    - content: a brief overview of the topic
+    - textbookReference: a specific chapter or page number reference to the NCERT textbook
+    - hasVisualAids: boolean indicating if this topic benefits from visual learning aids`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -83,16 +85,18 @@ export const generateLessonContent = async (subject: string, topic: string) => {
       "keyPoints": [array of key concepts to understand],
       "explanation": [array of detailed explanatory paragraphs],
       "examples": [array of objects with "title" and "content" properties],
-      "visualAids": [array of objects with "title" and "description" properties],
-      "activities": [array of objects with "title" and "instructions" properties],
-      "summary": "a concluding paragraph summarizing the lesson"
+      "visualAids": [array of objects with "title", "description", and "visualType" (diagram, chart, graph, etc.) properties],
+      "activities": [array of objects with "title", "instructions" and "learningOutcome" properties],
+      "summary": "a concluding paragraph summarizing the lesson",
+      "textbookReferences": [array of objects with "chapter", "pageNumbers", and "description" properties],
+      "visualLearningResources": [array of objects with "type" (video, animation, etc.), "title", and "description" properties]
     }`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create NCERT-aligned lesson content for "${topic}" in ${subject}.` }
+        { role: 'user', content: `Create NCERT-aligned lesson content for "${topic}" in ${subject}, optimized for effective daily learning with appropriate visual learning aids where beneficial.` }
       ],
       temperature: 0.7
     });
@@ -102,7 +106,7 @@ export const generateLessonContent = async (subject: string, topic: string) => {
     try {
       const jsonResponse = JSON.parse(content);
       
-      // Verify all required fields are present
+      // Verify required fields are present
       const requiredFields = ['title', 'keyPoints', 'explanation', 'examples', 'visualAids', 'activities', 'summary'];
       const missingFields = requiredFields.filter(field => !jsonResponse[field]);
       

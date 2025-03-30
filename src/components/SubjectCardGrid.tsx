@@ -117,6 +117,41 @@ const SubjectCardGrid: React.FC<SubjectCardGridProps> = ({ subjects, onSelectSub
       return 'Comprehensive curriculum with structured lessons and practice.';
     }
   };
+
+  // Function to get textbook URL based on subject
+  const getTextbookUrl = (subject: string) => {
+    const subjectLower = subject.toLowerCase();
+    const baseUrl = "https://ncert.nic.in/textbook.php";
+    
+    if (subjectLower.includes('math')) {
+      return `${baseUrl}?lemh1=0-10`;
+    } else if (subjectLower.includes('physics')) {
+      return `${baseUrl}?leph1=0-8`;
+    } else if (subjectLower.includes('chemistry')) {
+      return `${baseUrl}?lech1=0-14`;
+    } else if (subjectLower.includes('english')) {
+      return `${baseUrl}?lefl1=0-11`;
+    } else if (subjectLower.includes('economics')) {
+      return `${baseUrl}?leec1=0-10`;
+    } else if (subjectLower.includes('geography')) {
+      return `${baseUrl}?legy1=0-7`;
+    } else if (subjectLower.includes('computer')) {
+      return `${baseUrl}?lecs1=0-10`;
+    } else if (subjectLower.includes('biology')) {
+      return `${baseUrl}?lebo1=0-16`;
+    } else if (subjectLower.includes('social')) {
+      return `${baseUrl}?less1=0-9`;
+    } else if (subjectLower.includes('science') && !subjectLower.includes('computer')) {
+      return `${baseUrl}?lesc1=0-18`;
+    } else {
+      return baseUrl;
+    }
+  };
+  
+  const handleViewTextbook = (e: React.MouseEvent<HTMLButtonElement>, subject: string) => {
+    e.stopPropagation(); // Prevent card click from triggering
+    window.open(getTextbookUrl(subject), '_blank');
+  };
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -140,9 +175,21 @@ const SubjectCardGrid: React.FC<SubjectCardGridProps> = ({ subjects, onSelectSub
               {getSubjectDescription(subject)}
             </p>
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full mt-2">
-              View Curriculum
+          <CardFooter className="flex flex-col space-y-2">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={(e) => handleViewTextbook(e, subject)}
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              View NCERT Textbook
+            </Button>
+            <Button 
+              variant="default" 
+              className="w-full"
+              onClick={() => onSelectSubject(subject)}
+            >
+              Start Learning
             </Button>
           </CardFooter>
         </Card>
