@@ -231,8 +231,11 @@ const Lesson = () => {
         />
         <main className="flex-1 container py-6 md:py-12">
           <LessonTest 
-            test={testContent}
+            lessonId={id || ''}
+            lessonTitle={lessonContent.title}
+            questions={testContent.questions}
             onComplete={handleNextLesson}
+            onCancel={() => setCurrentSection('content')}
           />
         </main>
       </div>

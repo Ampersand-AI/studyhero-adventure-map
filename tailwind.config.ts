@@ -20,8 +20,7 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'display': ['Playfair Display', 'serif'],
-				'body': ['Inter', 'sans-serif'],
+				'sans': ['Inter', 'system-ui', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -68,12 +67,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				study: {
-					purple: '#8B5CF6',
-					blue: '#3B82F6',
-					green: '#10B981',
-					yellow: '#F59E0B',
-					pink: '#EC4899',
-					orange: '#F97316'
+					purple: '#666',
+					blue: '#666',
+					green: '#666',
+					yellow: '#666',
+					pink: '#666',
+					orange: '#666'
 				}
 			},
 			borderRadius: {
@@ -100,14 +99,14 @@ export default {
 				},
 				'float': {
 					'0%, 100%': { transform: 'translateY(0)' },
-					'50%': { transform: 'translateY(-10px)' }
+					'50%': { transform: 'translateY(-5px)' }
 				},
 				'bounce-small': {
 					'0%, 100%': { transform: 'translateY(0)' },
-					'50%': { transform: 'translateY(-5px)' }
+					'50%': { transform: 'translateY(-3px)' }
 				},
 				'scale-in': {
-					'0%': { transform: 'scale(0.9)', opacity: '0' },
+					'0%': { transform: 'scale(0.95)', opacity: '0' },
 					'100%': { transform: 'scale(1)', opacity: '1' }
 				}
 			},

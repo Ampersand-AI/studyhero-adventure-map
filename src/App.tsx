@@ -14,6 +14,7 @@ import Achievements from "./pages/Achievements";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
+// Create a new query client
 const queryClient = new QueryClient();
 
 const App = () => (
