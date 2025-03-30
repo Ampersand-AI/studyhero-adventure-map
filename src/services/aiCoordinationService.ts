@@ -1,4 +1,3 @@
-
 import { generateAIContent, generateEnhancedContent, AIStatus } from './aiService';
 import { toast } from "sonner";
 
@@ -86,7 +85,7 @@ export const generateLessonContent = async (
         updateStatus({
           stage: "Retrieved from cache",
           progress: 100,
-          provider: "System"
+          provider: "Fallback"
         });
         return JSON.parse(cachedContent);
       }
@@ -216,7 +215,7 @@ export const generateQuizContent = async (
         updateStatus({
           stage: "Retrieved from cache",
           progress: 100,
-          provider: "System"
+          provider: "Fallback"
         });
         return JSON.parse(cachedQuiz);
       }
