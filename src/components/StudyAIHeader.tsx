@@ -23,7 +23,7 @@ const StudyAIHeader = ({
   navigation
 }: StudyAIHeaderProps) => {
   // Ensure userName is a non-empty string for the avatar fallback
-  const fallbackInitial = (userName && userName.length > 0) ? userName[0] : "U";
+  const fallbackInitial = (userName && userName.length > 0) ? userName[0].toUpperCase() : "U";
   
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-sm">

@@ -7,10 +7,9 @@ import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 
 interface SchoolSelectionFormProps {
-  userName: string;
-  level: number;
-  xp: number;
-  board?: string;
+  userName?: string;
+  level?: number;
+  xp?: number;
   onComplete: (school: { state: string; city: string; school: string }) => void;
 }
 
@@ -18,7 +17,6 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   userName = "Student", 
   level = 1, 
   xp = 0,
-  board,
   onComplete 
 }) => {
   const [state, setState] = useState<string>("");
@@ -48,10 +46,9 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
 
     // Validate form inputs
     if (!state || !city || !school) {
-      // Fix the toast call to use the correct properties
+      // Fixed the toast call to use correct properties for sonner
       toast("Required fields missing", {
-        description: "Please fill in all required fields.",
-        variant: "destructive",
+        description: "Please fill in all required fields."
       });
       return;
     }
@@ -79,10 +76,15 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
     // This is a simplified example. In a real app, you would fetch this from an API
     const citiesMap: Record<string, string[]> = {
       "Delhi": ["New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi"],
-      "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik"],
-      "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangaluru", "Belgaum"],
-      "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Trichy"],
-      "Uttar Pradesh": ["Lucknow", "Kanpur", "Agra", "Varanasi", "Meerut"],
+      "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Aurangabad", "Solapur", "Kolhapur"],
+      "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangaluru", "Belgaum", "Gulbarga", "Davanagere", "Shimoga"],
+      "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Trichy", "Tirunelveli", "Erode", "Vellore"],
+      "Uttar Pradesh": ["Lucknow", "Kanpur", "Agra", "Varanasi", "Meerut", "Prayagraj", "Ghaziabad", "Noida"],
+      "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar", "Junagadh"],
+      "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Kota", "Bikaner", "Ajmer", "Sikar", "Bhilwara"],
+      "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri", "Baharampur", "Haldia", "Kharagpur"],
+      "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam", "Ramagundam", "Mahbubnagar", "Nalgonda"],
+      "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Rajahmundry", "Tirupati", "Kakinada"],
       // Add more states and cities as needed
     };
 
@@ -91,16 +93,20 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
 
   // Function to get schools based on city
   const getSchoolsForCity = (city: string) => {
-    // This is a simplified example. In a real app, you would fetch this from an API
+    // Enhanced with more comprehensive school lists
     const schoolsMap: Record<string, string[]> = {
-      "Mumbai": ["St. Xavier's School", "Don Bosco High School", "R.N. Podar School", "Bombay Scottish School"],
-      "New Delhi": ["Delhi Public School", "Modern School", "Springdales School", "Sanskriti School"],
-      "Bengaluru": ["Bishop Cotton Boys' School", "National Public School", "The Valley School", "Inventure Academy"],
-      "Chennai": ["Don Bosco Matriculation School", "DAV Boys School", "Chettinad Vidyashram", "P.S. Senior Secondary School"],
+      "Mumbai": ["St. Xavier's High School", "Don Bosco High School", "R.N. Podar School", "Bombay Scottish School", "Cathedral and John Connon School", "Jamnabai Narsee School", "Dhirubhai Ambani International School", "Arya Vidya Mandir"],
+      "New Delhi": ["Delhi Public School (R.K. Puram)", "Modern School (Barakhamba Road)", "Springdales School (Pusa Road)", "Sanskriti School", "The Shri Ram School", "Mother's International School", "St. Columba's School", "Don Bosco School"],
+      "Bengaluru": ["Bishop Cotton Boys' School", "National Public School (Indiranagar)", "The Valley School", "Inventure Academy", "Vidyashilp Academy", "Delhi Public School (Bangalore East)", "Mallya Aditi International School", "Ekya School"],
+      "Chennai": ["Don Bosco Matriculation Higher Secondary School", "DAV Boys Senior Secondary School", "Chettinad Vidyashram", "P.S. Senior Secondary School", "Sir Mutha School", "Padma Seshadri Bala Bhavan", "Lady Andal Venkatasubba Rao School", "Chennai Public School"],
+      "Pune": ["The Bishop's School", "St. Mary's School", "Symbiosis International School", "Delhi Public School Pune", "The Orchid School", "Hutchings High School", "St. Vincent's High School", "Loyola High School"],
+      "Hyderabad": ["Hyderabad Public School", "Delhi Public School (Nacharam)", "Oakridge International School", "Chirec International School", "Johnson Grammar School", "Meridian School", "Silver Oaks International School", "Glendale Academy"],
+      "Kolkata": ["La Martiniere for Boys/Girls", "Don Bosco School (Park Circus)", "St. Xavier's Collegiate School", "Modern High School for Girls", "South Point High School", "The Heritage School", "Calcutta International School", "St. James' School"],
+      "Ahmedabad": ["Delhi Public School (Bopal)", "Anand Niketan School", "Nirma Vidyavihar", "Udgam School", "Riverside School", "Eklavya School", "St. Kabir School", "SGVP International School"],
       // Add more cities and schools as needed
     };
 
-    return schoolsMap[city] || ["School 1", "School 2", "School 3"]; // Default schools if city is not in the map
+    return schoolsMap[city] || ["School 1", "School 2", "School 3", "School 4", "School 5", "School 6", "School 7", "School 8"]; // Default schools if city is not in the map
   };
 
   const navigationItems = [

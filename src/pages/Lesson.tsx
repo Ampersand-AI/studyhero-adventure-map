@@ -9,49 +9,8 @@ import StudyAIHeader from '@/components/StudyAIHeader';
 import LessonTest from '@/components/LessonTest';
 import { claudeService } from '@/services/claudeService';
 import { generateEnhancedContent } from '@/services/aiService';
+import { generateLessonContent, LessonContent } from '@/services/aiCoordinationService';
 import { BookOpen, ChevronLeft, DownloadCloud, Lightbulb, PlayCircle, List, FileText, Star, Clock, BookCheck, Award } from "lucide-react";
-
-// Type for lesson content
-interface LessonContent {
-  title: string;
-  keyPoints: string[];
-  explanation: string[];
-  examples: {
-    title: string;
-    content: string;
-  }[];
-  visualAids?: {
-    title: string;
-    description: string;
-    visualType: string;
-  }[];
-  activities?: {
-    title: string;
-    instructions: string;
-    learningOutcome: string;
-  }[];
-  summary: string;
-  textbookReferences?: {
-    chapter: string;
-    pageNumbers: string;
-    description: string;
-  }[];
-  visualLearningResources?: {
-    type: string;
-    title: string;
-    description: string;
-  }[];
-  interestingFacts?: string[];
-  // Add fallback properties that might be in the API response
-  exampleProblems?: {
-    problem: string;
-    solution: string;
-  }[];
-  furtherReading?: {
-    title: string;
-    link: string;
-  }[];
-}
 
 interface GenerationStatus {
   stage: string;
@@ -94,7 +53,7 @@ const Lesson = () => {
         
         // Show toast for content loading
         toast("Loading lesson: " + parsedStudyItem.title, {
-          description: "Retrieving NCERT-aligned learning content...",
+          description: "Researching educational content from global sources...",
         });
         
         setGenerationStatus({
@@ -104,7 +63,7 @@ const Lesson = () => {
         });
         
         // Try to get cached lesson first
-        const cachedLesson = localStorage.getItem(`lesson_${parsedStudyItem.subject}_${parsedStudyItem.title}`);
+        const cachedLesson = localStorage.getItem(`lesson_${parsedStudyItem.subject}_${parsedStudyItem.title.replace(/\s+/g, '_')}`);
         if (cachedLesson) {
           setLesson(JSON.parse(cachedLesson));
           setLoading(false);
@@ -117,49 +76,15 @@ const Lesson = () => {
           provider: "AI Service"
         });
         
-        // Try to get lesson content from coordinated AI services
-        const prompt = `
-          Create a comprehensive educational lesson on "${parsedStudyItem.title}" for the subject "${parsedStudyItem.subject}" for students in class ${parsedStudyItem.className || '10'}.
-          
-          The lesson should include:
-          1. Key learning points (5-7 points)
-          2. Detailed explanation (3-5 paragraphs)
-          3. Practical examples (2-3)
-          4. Visual learning aids (3-4 descriptions)
-          5. Hands-on activities (2-3)
-          6. A concise summary
-          7. References to textbook chapters and pages
-          8. Interesting facts to engage students
-          
-          Base your response on actual NCERT textbook content for class ${parsedStudyItem.className || '10'} ${parsedStudyItem.subject} curriculum.
-          
-          Format the response as a well-structured JSON object following this schema:
+        // Use the coordinated AI service to generate lesson content
+        const lessonContent = await generateLessonContent(
           {
-            "title": "full topic title",
-            "keyPoints": ["point 1", "point 2", ...],
-            "explanation": ["paragraph 1", "paragraph 2", ...],
-            "examples": [{"title": "Example 1", "content": "..."}, ...],
-            "visualAids": [{"title": "Visual 1", "description": "...", "visualType": "diagram"}, ...],
-            "activities": [{"title": "Activity 1", "instructions": "...", "learningOutcome": "..."}, ...],
-            "summary": "summary text",
-            "textbookReferences": [{"chapter": "1", "pageNumbers": "10-15", "description": "..."}, ...],
-            "interestingFacts": ["fact 1", "fact 2", ...]
-          }
-          
-          Ensure the content is accurate, age-appropriate, and aligned with NCERT curriculum for ${parsedStudyItem.subject}.
-        `;
-        
-        // Create a context object for the AI service
-        const context = {
-          subject: parsedStudyItem.subject,
-          topic: parsedStudyItem.title,
-          className: parsedStudyItem.className || '10'
-        };
-        
-        // Get lesson content using the coordinated AI services
-        const result = await generateEnhancedContent(
-          prompt,
-          context,
+            subject: parsedStudyItem.subject,
+            topic: parsedStudyItem.title,
+            className: parsedStudyItem.className || '10',
+            includeVisuals: true,
+            includeActivities: true
+          },
           (status) => {
             // Update loading status
             setGenerationStatus({
@@ -174,52 +99,19 @@ const Lesson = () => {
           }
         );
         
-        if (result) {
-          setGenerationStatus({
-            stage: "Processing response",
-            progress: 90,
-            provider: "System"
-          });
-          
-          // Transform result if needed to match our expected format
-          const formattedLesson: LessonContent = {
-            title: result.title || parsedStudyItem.title,
-            keyPoints: result.keyPoints || [],
-            explanation: Array.isArray(result.explanation) ? result.explanation : 
-              (typeof result.explanation === 'string' ? [result.explanation] : 
-              (typeof result.summary === 'string' ? [result.summary] : [])),
-            examples: Array.isArray(result.examples) ? result.examples : 
-              (result.exampleProblems ? result.exampleProblems.map(ep => ({
-                title: "Example",
-                content: `Problem: ${ep.problem}\nSolution: ${ep.solution}`
-              })) : []),
-            summary: result.summary || "",
-            visualAids: result.visualAids || [],
-            activities: result.activities || [],
-            textbookReferences: result.textbookReferences || [],
-            interestingFacts: result.interestingFacts || []
-          };
-          
-          setLesson(formattedLesson);
-          
-          // Cache the lesson for future use
-          localStorage.setItem(
-            `lesson_${parsedStudyItem.subject}_${parsedStudyItem.title}`, 
-            JSON.stringify(formattedLesson)
-          );
-          
+        if (lessonContent) {
+          setLesson(lessonContent);
           setGenerationStatus({
             stage: "Completed",
             progress: 100,
             provider: "System"
           });
           
-          // Show success toast
-          toast.success("Lesson Ready - " + parsedStudyItem.title + " content has been loaded successfully");
-          
           // Award XP for viewing a lesson
           const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
           localStorage.setItem('currentXp', (currentXp + 10).toString());
+          
+          toast.success("Lesson Ready - " + parsedStudyItem.title + " content has been loaded successfully");
         } else {
           throw new Error("Failed to load lesson content");
         }

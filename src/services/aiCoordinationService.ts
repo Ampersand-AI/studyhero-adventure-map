@@ -69,7 +69,7 @@ export const generateLessonContent = async (
   try {
     // Show initial toast
     toast(`Generating ${context.subject} lesson content`, {
-      description: "Researching comprehensive educational content from various sources..."
+      description: "Researching comprehensive educational content from various global sources..."
     });
 
     // Update status if callback provided
@@ -98,7 +98,8 @@ export const generateLessonContent = async (
     const comprehensivePrompt = `
       Create a comprehensive educational lesson on "${context.topic}" for the subject "${context.subject}" for students in class ${context.className || '10'}.
       
-      IMPORTANT: Research and compile information from various educational sources and curriculums worldwide. Find the most engaging and effective teaching methods for this topic.
+      IMPORTANT: Research and compile information from various educational sources and curriculums worldwide. Find the most engaging and effective teaching methods for this topic. 
+      Draw from global best practices, international curriculums, and modern educational resources available online.
       
       The lesson should include:
       1. Key learning points (5-7 points) that align with standard educational objectives
@@ -141,10 +142,26 @@ export const generateLessonContent = async (
     let parsedResult;
     if (typeof result === 'string') {
       try {
-        parsedResult = JSON.parse(result);
+        // Attempt to parse JSON from the string
+        // Clean up potential JSON issues
+        const cleanedJson = result
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
+        
+        parsedResult = JSON.parse(cleanedJson);
       } catch (e) {
         console.error("Failed to parse lesson content as JSON:", e);
-        return null;
+        console.error("Raw content:", result);
+        
+        // Attempt a fallback generic lesson structure
+        parsedResult = {
+          title: context.topic,
+          keyPoints: ["This topic is important for understanding " + context.subject],
+          explanation: ["The content for this lesson couldn't be properly formatted. Please try again."],
+          examples: [{ title: "Example", content: "Example content" }],
+          summary: "Summary of " + context.topic
+        };
       }
     } else {
       parsedResult = result;
