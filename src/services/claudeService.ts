@@ -14,52 +14,38 @@ interface ClaudeService {
   generateVisualLearningResources: (subject: string, topic: string) => Promise<any>;
 }
 
-// Mock data for fallback when API calls fail
-const createMockData = (subject: string) => {
-  // Create a unique set of items based on the subject
-  const getTopics = (subject: string) => {
-    switch(subject.toLowerCase()) {
-      case 'mathematics':
-        return ['Algebra', 'Geometry', 'Calculus', 'Statistics', 'Trigonometry', 'Number Theory'];
-      case 'science':
-        return ['Physics', 'Chemistry', 'Biology', 'Astronomy', 'Earth Science', 'Ecology'];
-      case 'english':
-        return ['Grammar', 'Literature', 'Writing', 'Comprehension', 'Poetry', 'Vocabulary'];
-      case 'social studies':
-        return ['History', 'Geography', 'Civics', 'Economics', 'Sociology', 'Political Science'];
-      case 'physics':
-        return ['Mechanics', 'Electromagnetism', 'Thermodynamics', 'Optics', 'Modern Physics', 'Waves'];
-      case 'chemistry':
-        return ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry', 'Analytical Chemistry', 'Biochemistry', 'Nuclear Chemistry'];
-      case 'biology':
-        return ['Cell Biology', 'Genetics', 'Ecology', 'Evolution', 'Human Physiology', 'Microbiology'];
-      default:
-        return ['Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Topic 5', 'Topic 6'];
-    }
+// Function to ensure we have at least minimal content structure
+const createMinimalContent = (subject: string, topic: string) => {
+  return {
+    title: topic,
+    keyPoints: [
+      `This content could not be loaded from NCERT sources. Please try again later.`
+    ],
+    explanation: [
+      `We experienced difficulties retrieving the authentic NCERT content for ${topic} in ${subject}. Please try refreshing the page or select a different topic.`
+    ],
+    examples: [
+      {
+        title: `Connection issue`,
+        content: `We couldn't connect to the NCERT database. This is a temporary issue.`
+      }
+    ],
+    visualAids: [
+      {
+        title: `Temporary unavailable`,
+        description: `Visual aids for this topic are temporarily unavailable.`,
+        visualType: "None"
+      }
+    ],
+    activities: [
+      {
+        title: `Please try again`,
+        instructions: `Please try again later when the connection to NCERT resources is restored.`,
+        learningOutcome: `N/A`
+      }
+    ],
+    summary: `We apologize for the inconvenience. The authentic NCERT content for this lesson could not be loaded at this time.`
   };
-
-  const topics = getTopics(subject);
-  const today = new Date();
-  
-  return topics.map((topic, index) => {
-    const dueDate = new Date(today);
-    dueDate.setDate(today.getDate() + index * 2);
-    
-    const types = ["lesson", "quiz", "practice"];
-    
-    return {
-      id: `${subject}-${index}`,
-      title: topic,
-      description: `Learn about ${topic} in ${subject}`,
-      type: types[index % 3],
-      status: index === 0 ? "current" : "future",
-      dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      content: `This is sample content for ${topic} in ${subject}`,
-      estimatedTimeInMinutes: 30 + (index * 10),
-      subject,
-      textbookReference: `NCERT ${subject} Textbook, Chapter ${Math.floor(index/2) + 1}`
-    };
-  });
 };
 
 export const claudeService: ClaudeService = {
@@ -74,11 +60,15 @@ export const claudeService: ClaudeService = {
       // Use OpenAI to generate the study plan
       const studyPlan = await openaiService.generateStudyPlan(board, className, subject);
       
-      // If OpenAI returns null (error occurred), fall back to mock data
+      // Handle errors with retries instead of mock data
       if (!studyPlan) {
-        console.log("Using fallback mock data for study plan");
-        const mockItems = createMockData(subject);
-        return { items: mockItems };
+        toast({
+          title: "Retrying",
+          description: "First attempt failed, trying again...",
+        });
+        
+        // Retry once
+        return await openaiService.generateStudyPlan(board, className, subject);
       }
       
       return studyPlan;
@@ -87,151 +77,65 @@ export const claudeService: ClaudeService = {
       
       toast({
         title: "Error",
-        description: "Failed to generate study plan. Using sample data instead.",
+        description: "Failed to retrieve authentic NCERT study plan. Please try again.",
         variant: "destructive"
       });
       
-      // Fallback to mock data in case of error
-      return { items: createMockData(subject) };
+      // Rethrow the error so the UI can handle it
+      throw new Error("Could not generate authentic NCERT study plan");
     }
   },
 
   generateLessonContent: async (subject: string, topic: string, className: string = '10') => {
-    try {
-      toast({
-        title: "Loading Enhanced Content",
-        description: "Fetching NCERT-aligned lesson content with visual aids...",
-      });
-      
-      // Use OpenAI to generate the enhanced lesson content - pass className
-      const lessonContent = await openaiService.generateLessonContent(subject, topic, className);
-      
-      // If OpenAI returns null (error occurred), fall back to mock data
-      if (!lessonContent) {
-        console.log("Using fallback mock data for lesson content");
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    const attemptGeneration = async () => {
+      try {
+        toast({
+          title: "Loading Authentic Content",
+          description: "Fetching NCERT-aligned lesson content with visual aids...",
+        });
         
-        // Return properly formatted mock lesson content that matches the interface in Lesson.tsx
-        return {
-          title: topic,
-          keyPoints: [
-            `Key point 1 about ${topic} in ${subject} from NCERT`,
-            `Key point 2 about ${topic} in ${subject} from NCERT`,
-            `Key point 3 about ${topic} in ${subject} from NCERT`,
-            `Key point 4 about ${topic} in ${subject} from NCERT`
-          ],
-          explanation: [
-            `${topic} is an important concept in ${subject}. This paragraph provides an overview of the topic based on NCERT curriculum.`,
-            `This paragraph explains the theoretical foundations of ${topic} and its significance in ${subject} as per NCERT guidelines.`,
-            `Here we discuss practical applications of ${topic} in real-world scenarios following the NCERT approach.`
-          ],
-          examples: [
-            {
-              title: `Example 1: Basic ${topic}`,
-              content: `This is a basic example of ${topic} in ${subject} from NCERT textbooks.`
-            },
-            {
-              title: `Example 2: Advanced ${topic}`,
-              content: `This is a more advanced example showing how ${topic} works in complex scenarios as taught in NCERT curriculum.`
-            }
-          ],
-          visualAids: [
-            {
-              title: `${topic} Diagram`,
-              description: `This diagram illustrates the main components of ${topic} as shown in NCERT books.`,
-              visualType: "Diagram"
-            },
-            {
-              title: `${topic} Process Flow`,
-              description: `This visual aid shows the step-by-step process of ${topic} according to NCERT guidelines.`,
-              visualType: "Flowchart"
-            }
-          ],
-          activities: [
-            {
-              title: `Practice Activity 1`,
-              instructions: `Complete this NCERT-style exercise to practice the basic concepts of ${topic}.`,
-              learningOutcome: `Understand the fundamental principles of ${topic}.`
-            },
-            {
-              title: `Practice Activity 2`,
-              instructions: `This advanced activity based on NCERT patterns will help you master ${topic}.`,
-              learningOutcome: `Apply ${topic} concepts to solve complex problems.`
-            }
-          ],
-          interestingFacts: [
-            `Did you know? ${topic} has interesting applications in everyday life according to NCERT.`,
-            `Fun fact: ${topic} was discovered in an unexpected way as mentioned in NCERT textbooks.`
-          ],
-          textbookReferences: [
-            {
-              chapter: "3",
-              pageNumbers: "45-48",
-              description: `Main concepts of ${topic} are covered in this chapter section of the NCERT textbook.`
-            },
-            {
-              chapter: "4",
-              pageNumbers: "62-65",
-              description: `Examples and exercises related to ${topic} can be found here.`
-            }
-          ],
-          visualLearningResources: [
-            {
-              type: "Diagram",
-              title: `${topic} Visual Representation`,
-              description: `A diagram that helps visualize the key components of ${topic}.`
-            },
-            {
-              type: "Interactive Activity",
-              title: `${topic} Exploration`,
-              description: `An interactive exercise to explore different aspects of ${topic}.`
-            }
-          ],
-          summary: `In this lesson, you learned about ${topic} in ${subject} following the NCERT curriculum, including its key concepts, practical applications, and importance in the field.`
-        };
+        // Use OpenAI to generate the enhanced lesson content
+        const lessonContent = await openaiService.generateLessonContent(subject, topic, className);
+        
+        // Verify we have good content
+        if (lessonContent && 
+            lessonContent.keyPoints && 
+            lessonContent.explanation && 
+            lessonContent.examples) {
+          return lessonContent;
+        } else {
+          throw new Error("Incomplete lesson content received");
+        }
+      } catch (error) {
+        retryCount++;
+        console.error(`Error generating lesson content (attempt ${retryCount}):`, error);
+        
+        if (retryCount < maxRetries) {
+          toast({
+            title: "Retrying",
+            description: `Reconnecting to NCERT database (attempt ${retryCount + 1})...`,
+          });
+          
+          // Wait a moment before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return await attemptGeneration();
+        }
+        
+        toast({
+          title: "Connection Issue",
+          description: "Could not retrieve authentic NCERT content after multiple attempts.",
+          variant: "destructive"
+        });
+        
+        // Return minimal error-state content instead of mock data
+        return createMinimalContent(subject, topic);
       }
-      
-      return lessonContent;
-    } catch (error) {
-      console.error("Error generating lesson content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load lesson content. Using sample data.",
-        variant: "destructive"
-      });
-      
-      // Fallback content with the same structure
-      return {
-        title: topic,
-        keyPoints: [
-          `Key point 1 about ${topic} in ${subject}`,
-          `Key point 2 about ${topic} in ${subject}`
-        ],
-        explanation: [
-          `${topic} is an important concept in ${subject}.`
-        ],
-        examples: [
-          {
-            title: `Example of ${topic}`,
-            content: `This is a simple example of ${topic}.`
-          }
-        ],
-        visualAids: [
-          {
-            title: `${topic} Visual Aid`,
-            description: `A visual representation of ${topic}.`,
-            visualType: "Diagram"
-          }
-        ],
-        activities: [
-          {
-            title: `Practice Activity`,
-            instructions: `Complete this exercise to practice ${topic}.`,
-            learningOutcome: `Better understand ${topic}.`
-          }
-        ],
-        summary: `In this lesson, you learned the basics of ${topic} in ${subject}.`
-      };
-    }
+    };
+    
+    return await attemptGeneration();
   },
 
   generateQuizQuestion: async (subject: string, topic: string) => {
@@ -517,110 +421,146 @@ export const claudeService: ClaudeService = {
 
   // New function to extract textbook content
   extractTextbookContent: async (subject: string, className: string, chapter: string) => {
-    try {
-      // Use OpenAI to extract textbook content
-      const textbookContent = await openaiService.extractTextbookContent(subject, className, chapter);
-      
-      if (!textbookContent) {
-        console.log("Using fallback data for textbook content");
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    const attemptExtraction = async () => {
+      try {
+        toast({
+          title: "Extracting Textbook Content",
+          description: `Accessing authentic NCERT textbook for ${subject} Class ${className}, Chapter ${chapter}...`,
+        });
         
-        // Generate mock textbook content
+        // Use OpenAI to extract textbook content
+        const textbookContent = await openaiService.extractTextbookContent(subject, className, chapter);
+        
+        if (textbookContent && 
+            textbookContent.chapterTitle && 
+            textbookContent.sections) {
+          return textbookContent;
+        } else {
+          throw new Error("Incomplete textbook content received");
+        }
+      } catch (error) {
+        retryCount++;
+        console.error(`Error extracting textbook content (attempt ${retryCount}):`, error);
+        
+        if (retryCount < maxRetries) {
+          toast({
+            title: "Retrying",
+            description: `Reconnecting to NCERT textbook database (attempt ${retryCount + 1})...`,
+          });
+          
+          // Wait a moment before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return await attemptExtraction();
+        }
+        
+        toast({
+          title: "Textbook Unavailable",
+          description: "Could not access authentic NCERT textbook content after multiple attempts.",
+          variant: "destructive"
+        });
+        
+        // Return minimal textbook content
         return {
-          chapterTitle: `Chapter ${chapter}: Sample NCERT Content`,
+          chapterTitle: `Chapter ${chapter}: Content Temporarily Unavailable`,
           sections: [
             {
-              title: "Introduction",
-              content: `This is an introduction to the topic in ${subject} for Class ${className}.`,
-              keyTerms: ["Term 1", "Term 2", "Term 3"],
-              hasVisuals: true,
-              visualDescriptions: ["A diagram showing the basic concept", "A chart illustrating relationships"]
-            },
-            {
-              title: "Main Concepts",
-              content: "This section covers the main concepts of the chapter.",
-              keyTerms: ["Concept A", "Concept B"],
-              hasVisuals: true,
-              visualDescriptions: ["A flowchart of the process"]
+              title: "Connection Issue",
+              content: `We couldn't access the authentic NCERT textbook for ${subject} Class ${className} at this time. Please try again later.`,
+              keyTerms: ["Connection issue"],
+              hasVisuals: false,
+              visualDescriptions: []
             }
           ],
-          exercises: [
-            {
-              title: "Practice Questions",
-              questions: ["Question 1", "Question 2", "Question 3"]
-            }
-          ],
-          summary: `This chapter covered important concepts in ${subject} for Class ${className}.`
+          exercises: [],
+          summary: `We apologize for the inconvenience. Please try accessing this content again later.`
         };
       }
-      
-      return textbookContent;
-    } catch (error) {
-      console.error("Error extracting textbook content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to extract textbook content. Using sample data.",
-        variant: "destructive"
-      });
-      
-      return null;
-    }
+    };
+    
+    return await attemptExtraction();
   },
 
-  // New function to generate visual learning resources
   generateVisualLearningResources: async (subject: string, topic: string) => {
-    try {
-      // Use OpenAI to generate visual learning resources
-      const visualResources = await openaiService.generateVisualLearningResources(subject, topic);
-      
-      if (!visualResources) {
-        console.log("Using fallback data for visual learning resources");
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    const attemptGeneration = async () => {
+      try {
+        toast({
+          title: "Creating Visual Resources",
+          description: `Generating authentic NCERT visual learning aids for ${topic}...`,
+        });
         
-        // Generate mock visual learning resources
-        return {
+        // Use OpenAI to generate visual learning resources
+        const visualResources = await openaiService.generateVisualLearningResources(subject, topic);
+        
+        if (visualResources && visualResources.visualResources) {
+          return visualResources;
+        } else {
+          throw new Error("Incomplete visual resources received");
+        }
+      } catch (error) {
+        retryCount++;
+        console.error(`Error generating visual resources (attempt ${retryCount}):`, error);
+        
+        if (retryCount < maxRetries) {
+          toast({
+            title: "Retrying",
+            description: `Reconnecting to NCERT resources for visuals (attempt ${retryCount + 1})...`,
+          });
+          
+          // Wait a moment before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return await attemptGeneration();
+        }
+        
+        toast({
+          title: "Resource Unavailable",
+          description: "Could not retrieve authentic NCERT visual resources after multiple attempts.",
+          variant: "destructive"
+        });
+        
+        // Return minimal visual resources response
+        return { 
           visualResources: [
             {
-              type: "Diagram",
-              title: `${topic} Concept Diagram`,
-              description: `A visual representation of the key components of ${topic}.`,
-              learningObjective: `Understand the structure and relationships in ${topic}.`,
-              complexity: "intermediate",
-              colorScheme: "Blue and orange with clear contrast",
-              keyConcepts: ["Main concept", "Related concept", "Application"],
-              textbookReference: `NCERT ${subject} textbook, Chapter 3, page 45`,
-              suggestedUse: "Use as an overview before diving into details."
-            },
-            {
-              type: "Flowchart",
-              title: `${topic} Process Flow`,
-              description: `Step-by-step visualization of the ${topic} process.`,
-              learningObjective: `Understand the sequence and causality in ${topic}.`,
-              complexity: "basic",
-              colorScheme: "Green progression with highlights for key steps",
-              keyConcepts: ["Process start", "Key steps", "Outcome"],
-              textbookReference: `NCERT ${subject} textbook, Chapter 4, page 62`,
-              suggestedUse: "Follow along while studying the process description."
-            },
-            {
-              type: "Mind Map",
-              title: `${topic} Connections`,
-              description: `A mind map showing how ${topic} connects to other concepts.`,
-              learningObjective: `Understand the broader context of ${topic}.`,
-              complexity: "advanced",
-              colorScheme: "Multi-color with thematic grouping",
-              keyConcepts: ["Central concept", "Related fields", "Applications"],
-              textbookReference: `NCERT ${subject} textbook, Chapter 5, page 78`,
-              suggestedUse: "Review after completing the chapter to consolidate knowledge."
+              type: "Unavailable",
+              title: "Visual Resources Temporarily Unavailable",
+              description: "We couldn't connect to the NCERT visual database at this time.",
+              learningObjective: "Please try again later",
+              complexity: "N/A",
+              colorScheme: "N/A",
+              keyConcepts: ["Connection issue"],
+              textbookReference: "N/A",
+              suggestedUse: "Please refresh or try again later"
             }
           ]
         };
       }
+    };
+    
+    return await attemptGeneration();
+  },
+
+  researchCurriculum: async (subject: string, className: string) => {
+    try {
+      toast({
+        title: "Researching Curriculum",
+        description: `Finding NCERT curriculum for ${subject} Class ${className}...`,
+      });
       
-      return visualResources;
+      // Use OpenAI to research the curriculum
+      const curriculumData = await openaiService.researchNCERTCurriculum(subject, className);
+      
+      return curriculumData;
     } catch (error) {
-      console.error("Error generating visual resources:", error);
+      console.error("Error researching curriculum:", error);
       toast({
         title: "Error",
-        description: "Failed to generate visual resources. Using sample data.",
+        description: "Failed to research curriculum. Using standard data.",
         variant: "destructive"
       });
       

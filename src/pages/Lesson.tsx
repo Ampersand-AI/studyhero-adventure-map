@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { claudeService } from '@/services/claudeService';
 import LessonTest from '@/components/LessonTest';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink, Lightbulb, Sparkles } from 'lucide-react';
+import { Award, BookOpen, ChevronLeft, ChevronRight, Info, BookOpenText, ExternalLink, Lightbulb, Sparkles, RefreshCw } from 'lucide-react';
 
 interface LessonActivity {
   title: string;
@@ -76,30 +76,19 @@ const Lesson = () => {
           throw new Error("Missing study item information");
         }
         
-        // Check if we already have content for this lesson
-        const cachedContent = localStorage.getItem(`lesson_${id}_content`);
-        if (cachedContent) {
-          const parsedContent = JSON.parse(cachedContent);
-          // Check if the cached content has all required fields
-          if (parsedContent && 
-              parsedContent.keyPoints && 
-              parsedContent.explanation && 
-              parsedContent.examples && 
-              parsedContent.visualAids && 
-              parsedContent.activities && 
-              parsedContent.summary) {
-            setLessonContent(parsedContent);
-          } else {
-            // If cached content is missing fields, regenerate it
-            throw new Error("Cached lesson content is incomplete");
-          }
-        } else {
-          // Generate content
+        // Attempt to retrieve lesson content
+        try {
+          // Get class info (defaulting to '10' if not specified)
+          const className = currentStudyItem.className || currentStudyItem.class || '10';
+          
+          // Get lesson content for this specific topic
           const content = await claudeService.generateLessonContent(
             currentStudyItem.subject,
-            currentStudyItem.title
+            currentStudyItem.title,
+            className
           );
           
+          // Verify we have all required data
           if (content && 
               content.keyPoints && 
               content.explanation && 
@@ -108,18 +97,38 @@ const Lesson = () => {
               content.activities && 
               content.summary) {
             setLessonContent(content);
+            
+            // Store in localStorage for offline access, but don't rely on it as primary source
             localStorage.setItem(`lesson_${id}_content`, JSON.stringify(content));
           } else {
-            throw new Error("Generated lesson content is incomplete");
+            throw new Error("Incomplete lesson content received");
           }
-        }
-        
-        // Load test content too (for later)
-        const cachedTest = localStorage.getItem(`lesson_${id}_test`);
-        if (cachedTest) {
-          setTestContent(JSON.parse(cachedTest));
-        } else {
-          // We'll lazy load this when needed
+        } catch (lessonError) {
+          console.error("Error loading fresh NCERT lesson content:", lessonError);
+          
+          // Check if we have a cached version as fallback
+          const cachedContent = localStorage.getItem(`lesson_${id}_content`);
+          if (cachedContent) {
+            console.log("Using cached lesson content as fallback");
+            const parsedContent = JSON.parse(cachedContent);
+            
+            if (parsedContent && 
+                parsedContent.keyPoints && 
+                parsedContent.explanation &&
+                parsedContent.examples) {
+              setLessonContent(parsedContent);
+              
+              // Inform user we're using cached content
+              toast({
+                title: "Using cached content",
+                description: "Couldn't connect to NCERT database. Using previously loaded content.",
+              });
+            } else {
+              throw new Error("Cached content is also incomplete");
+            }
+          } else {
+            throw lessonError; // No cached content, propagate original error
+          }
         }
       } catch (error) {
         console.error("Error loading lesson content:", error);
@@ -129,7 +138,7 @@ const Lesson = () => {
           setRetryCount(prev => prev + 1);
           toast({
             title: "Retrying",
-            description: "Attempting to load lesson content again...",
+            description: "Attempting to load authentic NCERT lesson content again...",
           });
           
           // Wait 2 seconds before retrying
@@ -139,10 +148,10 @@ const Lesson = () => {
           return;
         }
         
-        setError("Failed to load lesson content. Please try again.");
+        setError("Failed to load authentic NCERT lesson content. Please try again.");
         toast({
           title: "Error",
-          description: "Failed to load lesson content. Please try again.",
+          description: "Failed to load authentic NCERT lesson content. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -307,6 +316,19 @@ const Lesson = () => {
     }
   };
   
+  // Function to reload the lesson content
+  const handleReloadContent = () => {
+    // Clear cached content to force a fresh load
+    localStorage.removeItem(`lesson_${id}_content`);
+    setRetryCount(0);
+    setIsLoading(true);
+    
+    // Wait a moment then reload the page
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+  
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: <ChevronLeft className="h-4 w-4" /> },
   ];
@@ -323,7 +345,8 @@ const Lesson = () => {
         <main className="flex-1 container py-12 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading lesson content...</p>
+            <p>Loading authentic NCERT lesson content...</p>
+            <p className="text-sm text-muted-foreground mt-2">This may take a moment as we extract content from NCERT textbooks.</p>
           </div>
         </main>
       </div>
@@ -343,18 +366,19 @@ const Lesson = () => {
           <Card className="w-full max-w-lg">
             <CardHeader>
               <CardTitle>Error Loading Lesson</CardTitle>
-              <CardDescription>We couldn't load the lesson content</CardDescription>
+              <CardDescription>We couldn't load the authentic NCERT lesson content</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>{error || "Something went wrong while loading this lesson."}</p>
+              <p>{error || "Something went wrong while loading this lesson from NCERT databases."}</p>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex justify-between">
               <Button onClick={() => navigate('/dashboard')}>
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 Back to Dashboard
               </Button>
-              <Button className="ml-2" onClick={() => window.location.reload()}>
-                Try Again
+              <Button className="ml-2" onClick={handleReloadContent}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reload Lesson
               </Button>
             </CardFooter>
           </Card>
@@ -401,9 +425,18 @@ const Lesson = () => {
               <div>
                 <CardTitle className="text-2xl md:text-3xl">{lessonContent.title}</CardTitle>
                 <CardDescription className="mt-2">{currentStudyItem.subject}</CardDescription>
+                <div className="mt-2">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    NCERT Curriculum
+                  </Badge>
+                </div>
               </div>
               
               <div className="flex space-x-2">
+                <Button variant="outline" onClick={handleReloadContent} title="Reload with fresh NCERT content">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
                 <Button variant="outline" onClick={() => navigate('/dashboard')}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Back to Dashboard
@@ -412,6 +445,7 @@ const Lesson = () => {
             </div>
           </CardHeader>
           
+          {/* Textbook Reference Notice */}
           <CardContent className="space-y-8">
             {/* Textbook Reference Notice */}
             <Alert className="bg-blue-50 border-blue-200">
