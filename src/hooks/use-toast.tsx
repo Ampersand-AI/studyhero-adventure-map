@@ -8,7 +8,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-import { useToast as useToastOriginal } from "@radix-ui/react-toast"
+// Remove incorrect import from @radix-ui/react-toast
 
 export interface ToastActionElement {
   altText?: string
