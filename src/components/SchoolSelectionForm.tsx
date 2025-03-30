@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -165,7 +164,14 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ board, onComp
   
   // Handle form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    onComplete(values);
+    // Ensure all values are required strings before passing to onComplete
+    const schoolInfo = {
+      state: values.state,
+      city: values.city,
+      school: values.school
+    };
+    
+    onComplete(schoolInfo);
     
     // Save to localStorage
     localStorage.setItem('selectedState', values.state);

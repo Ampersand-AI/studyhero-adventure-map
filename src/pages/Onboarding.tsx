@@ -77,7 +77,12 @@ const Onboarding = () => {
   
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
-      <StudyHeroHeader />
+      <StudyHeroHeader 
+        userName="New Student"
+        level={1}
+        xp={0}
+        navigation={[]}
+      />
       
       <main className="flex-1 container py-10 mx-auto">
         <div className="max-w-2xl mx-auto">

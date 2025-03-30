@@ -132,6 +132,7 @@ const Lesson = () => {
         />
         <main className="flex-1 container py-6 md:py-12">
           <LessonTest 
+            lessonTitle={studyItem?.title || 'Lesson Test'}
             subjectName={studyItem?.subject || ''}
             topicName={studyItem?.title || ''}
             onFinish={() => navigate(`/subject/${studyItem?.subject}`)}

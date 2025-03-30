@@ -1,11 +1,12 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Medal } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { claudeService } from '@/services/claudeService';
+import { toast } from 'sonner';
 
 interface TestQuestion {
   id: string;
@@ -16,18 +17,64 @@ interface TestQuestion {
 }
 
 interface LessonTestProps {
-  lessonId: string;
+  lessonId?: string;
   lessonTitle: string;
-  questions: TestQuestion[];
-  onComplete: (score: number, total: number) => void;
-  onCancel: () => void;
+  subjectName: string;
+  topicName: string;
+  questions?: TestQuestion[];
+  onComplete?: (score: number, total: number) => void;
+  onFinish: () => void;
+  onCancel?: () => void;
 }
 
-const LessonTest = ({ lessonId, lessonTitle, questions, onComplete, onCancel }: LessonTestProps) => {
+const LessonTest = ({ 
+  lessonId, 
+  lessonTitle, 
+  subjectName, 
+  topicName, 
+  questions: initialQuestions, 
+  onComplete, 
+  onCancel, 
+  onFinish 
+}: LessonTestProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(Array(questions.length).fill(''));
+  const [questions, setQuestions] = useState<TestQuestion[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      setLoading(true);
+      try {
+        if (initialQuestions && initialQuestions.length > 0) {
+          setQuestions(initialQuestions);
+          setSelectedAnswers(Array(initialQuestions.length).fill(''));
+        } else {
+          // Fetch questions from Claude service
+          const result = await claudeService.getQuizQuestions(subjectName, topicName, 10);
+          if (result && result.questions) {
+            setQuestions(result.questions);
+            setSelectedAnswers(Array(result.questions.length).fill(''));
+          } else {
+            toast.error("Error", {
+              description: "Failed to load quiz questions. Please try again.",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading questions:", error);
+        toast.error("Error", {
+          description: "Failed to load quiz questions. Please try again.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchQuestions();
+  }, [initialQuestions, subjectName, topicName]);
   
   const handleSelectAnswer = (answer: string) => {
     const newAnswers = [...selectedAnswers];
@@ -58,12 +105,49 @@ const LessonTest = ({ lessonId, lessonTitle, questions, onComplete, onCancel }: 
       }
     });
     setShowResults(true);
-    onComplete(score, questions.length);
+    if (onComplete) {
+      onComplete(score, questions.length);
+    }
+    
+    // Award XP for completing a quiz
+    const currentXp = parseInt(localStorage.getItem('currentXp') || '0');
+    localStorage.setItem('currentXp', (currentXp + 25).toString());
   };
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const isAnswered = selectedAnswers[currentQuestionIndex] !== '';
-  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+  if (loading) {
+    return (
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader>
+          <CardTitle className="font-display">{topicName} - Loading Quiz</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (questions.length === 0) {
+    return (
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader>
+          <CardTitle className="font-display">No Questions Available</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground mb-4">
+            Sorry, we couldn't load questions for this topic. Please try again later.
+          </p>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button onClick={onFinish}>
+            Return to Dashboard
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
   
   if (showResults) {
     const score = questions.filter((q, i) => selectedAnswers[i] === q.correctAnswer).length;
@@ -149,7 +233,7 @@ const LessonTest = ({ lessonId, lessonTitle, questions, onComplete, onCancel }: 
           </div>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Button onClick={() => onCancel()}>
+          <Button onClick={onFinish}>
             Return to Dashboard
           </Button>
         </CardFooter>
@@ -157,11 +241,15 @@ const LessonTest = ({ lessonId, lessonTitle, questions, onComplete, onCancel }: 
     );
   }
   
+  const currentQuestion = questions[currentQuestionIndex];
+  const isAnswered = selectedAnswers[currentQuestionIndex] !== '';
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+  
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className="font-display">{lessonTitle} - Test</CardTitle>
+          <CardTitle className="font-display">{topicName} - Test</CardTitle>
           <span className="text-sm text-muted-foreground">
             Question {currentQuestionIndex + 1} of {questions.length}
           </span>
@@ -201,7 +289,7 @@ const LessonTest = ({ lessonId, lessonTitle, questions, onComplete, onCancel }: 
         </Button>
         
         <Button
-          onClick={onCancel}
+          onClick={onFinish}
           variant="ghost"
         >
           Cancel
