@@ -10,6 +10,7 @@ interface SchoolSelectionFormProps {
   userName?: string;
   level?: number;
   xp?: number;
+  board?: string; // Add the board prop to the interface
   onComplete: (school: { state: string; city: string; school: string }) => void;
 }
 
@@ -17,6 +18,7 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   userName = "Student", 
   level = 1, 
   xp = 0,
+  board,
   onComplete 
 }) => {
   const [state, setState] = useState<string>("");
