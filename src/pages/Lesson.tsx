@@ -9,7 +9,7 @@ import StudyAIHeader from '@/components/StudyAIHeader';
 import LessonTest from '@/components/LessonTest';
 import { claudeService } from '@/services/claudeService';
 import { generateEnhancedContent } from '@/services/aiService';
-import { generateLessonContent, LessonContent } from '@/services/aiCoordinationService';
+import { generateLessonContent, LessonContent, generateLessonContentWithDeepSearch } from '@/services/aiCoordinationService';
 import { BookOpen, ChevronLeft, DownloadCloud, Lightbulb, PlayCircle, List, FileText, Star, Clock, BookCheck, Award } from "lucide-react";
 
 interface GenerationStatus {
@@ -31,6 +31,7 @@ const Lesson = () => {
     progress: 0,
     provider: "AI"
   });
+  const [useDeepSearch, setUseDeepSearch] = useState<boolean>(true);
   
   useEffect(() => {
     const loadLessonContent = async () => {
@@ -53,7 +54,9 @@ const Lesson = () => {
         
         // Show toast for content loading
         toast("Loading lesson: " + parsedStudyItem.title, {
-          description: "Researching educational content from global sources...",
+          description: useDeepSearch ? 
+            "Researching educational content from global sources and the web..." :
+            "Researching educational content from global sources...",
         });
         
         setGenerationStatus({
@@ -63,7 +66,8 @@ const Lesson = () => {
         });
         
         // Try to get cached lesson first
-        const cachedLesson = localStorage.getItem(`lesson_${parsedStudyItem.subject}_${parsedStudyItem.title.replace(/\s+/g, '_')}`);
+        const cacheKey = `lesson_${parsedStudyItem.subject}_${parsedStudyItem.title.replace(/\s+/g, '_')}`;
+        const cachedLesson = localStorage.getItem(cacheKey);
         if (cachedLesson) {
           setLesson(JSON.parse(cachedLesson));
           setLoading(false);
@@ -73,31 +77,56 @@ const Lesson = () => {
         setGenerationStatus({
           stage: "Preparing content generation",
           progress: 20,
-          provider: "AI Service"
+          provider: useDeepSearch ? "AI Research Service" : "AI Service"
         });
         
         // Use the coordinated AI service to generate lesson content
-        const lessonContent = await generateLessonContent(
-          {
-            subject: parsedStudyItem.subject,
-            topic: parsedStudyItem.title,
-            className: parsedStudyItem.className || '10',
-            includeVisuals: true,
-            includeActivities: true
-          },
-          (status) => {
-            // Update loading status
-            setGenerationStatus({
-              stage: status.stage || "Generating content",
-              progress: status.progress || 30,
-              provider: status.provider || "AI Service"
-            });
-            
-            toast(`${status.stage || "Generating"} (${status.progress || 30}%)`, {
-              description: `Using ${status.provider || "AI"} service to generate content...`,
-            });
-          }
-        );
+        // If deep search is enabled, use that service instead
+        const lessonContent = useDeepSearch ?
+          await generateLessonContentWithDeepSearch(
+            {
+              subject: parsedStudyItem.subject,
+              topic: parsedStudyItem.title,
+              className: parsedStudyItem.className || '10',
+              includeVisuals: true,
+              includeActivities: true,
+              board: parsedStudyItem.board || 'NCERT',
+              deepSearch: true
+            },
+            (status) => {
+              // Update loading status
+              setGenerationStatus({
+                stage: status.stage || "Searching educational content",
+                progress: status.progress || 30,
+                provider: status.provider || "AI Research Service"
+              });
+              
+              toast(`${status.stage || "Researching"} (${status.progress || 30}%)`, {
+                description: `Using ${status.provider || "AI Research"} service to find content...`,
+              });
+            }
+          ) :
+          await generateLessonContent(
+            {
+              subject: parsedStudyItem.subject,
+              topic: parsedStudyItem.title,
+              className: parsedStudyItem.className || '10',
+              includeVisuals: true,
+              includeActivities: true
+            },
+            (status) => {
+              // Update loading status
+              setGenerationStatus({
+                stage: status.stage || "Generating content",
+                progress: status.progress || 30,
+                provider: status.provider || "AI Service"
+              });
+              
+              toast(`${status.stage || "Generating"} (${status.progress || 30}%)`, {
+                description: `Using ${status.provider || "AI"} service to generate content...`,
+              });
+            }
+          );
         
         if (lessonContent) {
           setLesson(lessonContent);
@@ -161,7 +190,7 @@ const Lesson = () => {
     };
     
     loadLessonContent();
-  }, [id]); // Only dependency is id
+  }, [id, useDeepSearch]); // Added useDeepSearch as a dependency
   
   const handleStartTest = () => {
     setShowTest(true);
@@ -171,6 +200,16 @@ const Lesson = () => {
   const navigationItems = [
     { name: "Back to Subject", href: `/subject/${studyItem?.subject || ''}`, icon: <ChevronLeft className="h-4 w-4" /> },
   ];
+
+  // Add a toggle for deep search
+  const toggleDeepSearch = () => {
+    setUseDeepSearch(prev => !prev);
+    toast(useDeepSearch ? "Switched to standard content generation" : "Switched to deep web search", {
+      description: useDeepSearch ? 
+        "Content will be generated using AI without web search" : 
+        "Content will be researched from educational websites"
+    });
+  };
   
   if (showTest) {
     return (
@@ -207,7 +246,12 @@ const Lesson = () => {
           <Card className="w-full max-w-3xl mx-auto">
             <CardHeader>
               <CardTitle>Loading Lesson</CardTitle>
-              <CardDescription>Retrieving {studyItem?.subject || 'subject'} learning materials...</CardDescription>
+              <CardDescription>
+                {useDeepSearch ? 
+                  `Researching ${studyItem?.subject || 'subject'} content from educational websites...` :
+                  `Retrieving ${studyItem?.subject || 'subject'} learning materials...`
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -217,16 +261,35 @@ const Lesson = () => {
                     <span className="text-sm text-muted-foreground">{generationStatus.progress}%</span>
                   </div>
                   <Progress value={generationStatus.progress} variant={generationStatus.progress >= 100 ? "success" : "default"} />
-                  <p className="text-xs text-muted-foreground">Using {generationStatus.provider} to generate NCERT-aligned content</p>
+                  <p className="text-xs text-muted-foreground">
+                    Using {generationStatus.provider} to {useDeepSearch ? "research" : "generate"} {studyItem?.board || 'NCERT'}-aligned content
+                  </p>
                 </div>
                 
                 <div className="pt-4 space-y-2">
-                  <p className="text-sm">This content is being generated based on:</p>
+                  <p className="text-sm">This content is being {useDeepSearch ? "researched" : "generated"} based on:</p>
                   <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                    <li>NCERT curriculum guidelines</li>
-                    <li>Class {studyItem?.className || '10'} textbook content</li>
-                    <li>Standard {studyItem?.subject || 'subject'} learning objectives</li>
+                    {useDeepSearch ? (
+                      <>
+                        <li>{studyItem?.board || 'NCERT'} curriculum guidelines</li>
+                        <li>Educational websites and resources</li>
+                        <li>Academic publications and teaching materials</li>
+                        <li>Standard Class {studyItem?.className || '10'} learning objectives</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>{studyItem?.board || 'NCERT'} curriculum guidelines</li>
+                        <li>Class {studyItem?.className || '10'} textbook content</li>
+                        <li>Standard {studyItem?.subject || 'subject'} learning objectives</li>
+                      </>
+                    )}
                   </ul>
+                </div>
+                
+                <div className="pt-4">
+                  <Button variant="outline" size="sm" onClick={toggleDeepSearch} disabled={generationStatus.progress > 20}>
+                    Switch to {useDeepSearch ? "Standard Generation" : "Deep Web Search"}
+                  </Button>
                 </div>
               </div>
             </CardContent>

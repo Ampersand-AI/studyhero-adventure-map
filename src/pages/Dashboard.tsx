@@ -171,21 +171,18 @@ const Dashboard = () => {
           <ProgressCard
             title="Overall Progress"
             value={overallProgressValue}
-            total="100"
             description="Keep pushing forward!"
             icon={<BarChart className="h-4 w-4" />}
           />
           <ProgressCard
             title="Subjects Completed"
             value={subjectsCompletedValue}
-            total="10"
             description="Your completed subjects this semester"
             icon={<BookOpen className="h-4 w-4" />}
           />
           <ProgressCard
             title="Weekly Study Time"
             value={weeklyStudyTimeValue}
-            total="10"
             description="Hours studied this week"
             icon={<Clock className="h-4 w-4" />}
           />
@@ -256,7 +253,10 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 {/* Extract just the subject names for SubjectCardGrid */}
-                <SubjectCardGrid subjects={dashboardData.subjects.map(subject => subject.name)} />
+                <SubjectCardGrid 
+                  subjects={dashboardData.subjects.map(subject => subject.name)}
+                  onSelectSubject={(subject) => navigate(`/subject/${subject}`)}
+                />
               </CardContent>
             </Card>
           </TabsContent>

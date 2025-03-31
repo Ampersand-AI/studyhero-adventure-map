@@ -1,6 +1,6 @@
-
 import { toast } from "sonner";
 import { generateAIContent, AIStatus } from './aiService';
+import { deepSearchLessonContent, LessonSearchParams, LessonWithSources } from './aiDeepSearchService';
 
 // Interface for lesson generation parameters
 export interface LessonGenerationParams {
@@ -9,6 +9,8 @@ export interface LessonGenerationParams {
   className?: string;
   includeVisuals?: boolean;
   includeActivities?: boolean;
+  board?: string;
+  deepSearch?: boolean;
 }
 
 // Interface for lesson content
@@ -199,6 +201,83 @@ export async function generateLessonContent(
     });
     
     return fallbackLesson;
+  }
+}
+
+/**
+ * Generate lesson content with enhanced web search capabilities
+ */
+export async function generateLessonContentWithDeepSearch(
+  params: LessonGenerationParams,
+  statusCallback?: (status: AIStatus) => void
+): Promise<LessonContent | null> {
+  // Default status callback if none provided
+  const updateStatus = statusCallback || (() => {});
+  
+  try {
+    updateStatus({
+      stage: "Preparing deep search for lesson content",
+      progress: 10,
+      provider: "AI Research Service"
+    });
+    
+    // Convert our parameters to the search format
+    const searchParams: LessonSearchParams = {
+      subject: params.subject,
+      board: params.board || 'NCERT',
+      className: params.className,
+      topic: params.topic,
+      deepSearch: params.deepSearch
+    };
+    
+    // Perform deep search across educational resources
+    const searchResult = await deepSearchLessonContent(searchParams, updateStatus);
+    
+    if (!searchResult) {
+      throw new Error("Deep search returned no results");
+    }
+    
+    // Convert the search result to our standard lesson format
+    const lesson: LessonContent = {
+      title: searchResult.title,
+      explanation: searchResult.explanation,
+      keyPoints: searchResult.keyPoints,
+      examples: searchResult.examples,
+      visualAids: searchResult.visualAids,
+      activities: searchResult.activities,
+      interestingFacts: searchResult.interestingFacts,
+      summary: searchResult.summary,
+      // Add reference to sources
+      textbookReferences: searchResult.sources.map(source => ({
+        chapter: source.title,
+        pageNumbers: "Web Resource",
+        description: source.snippet
+      }))
+    };
+    
+    // Cache the result
+    const cacheKey = `lesson_${params.subject}_${params.topic.replace(/\s+/g, '_')}`;
+    localStorage.setItem(cacheKey, JSON.stringify(lesson));
+    
+    updateStatus({
+      stage: "Deep search lesson content ready",
+      progress: 100,
+      provider: "AI Research Service"
+    });
+    
+    return lesson;
+    
+  } catch (error) {
+    console.error("Deep search lesson generation error:", error);
+    
+    // Fall back to standard generation
+    updateStatus({
+      stage: "Falling back to standard lesson generation",
+      progress: 30,
+      provider: "System"
+    });
+    
+    return generateLessonContent(params, statusCallback);
   }
 }
 
