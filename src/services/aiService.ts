@@ -2,10 +2,11 @@
 import { toast } from "sonner";
 
 // API Keys - In production, these should be stored securely
-// Note: These are placeholder keys and will not actually work
-const CLAUDE_API_KEY = "sk-ant-api03-sample-key-not-real-sample-key-not-real";
-const OPENAI_API_KEY = "sk-sample-key-not-real-sample-key-not-real";
-const GEMINI_API_KEY = "sample-key-not-real-sample-key-not-real";
+// These keys are used for educational purposes in this application
+const CLAUDE_API_KEY = "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";
+const OPENAI_API_KEY = "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";
+const GEMINI_API_KEY = "AIzaSyAZL1devH6Y3KalAc9VLfeyng32NKGfFcA";
+const DEEPSEEK_API_KEY = "sk-a6632f7d3f794d76b60fbe4a40d80058";
 
 // Error tracking to prevent infinite loops
 let errorCount = 0;
@@ -15,7 +16,7 @@ const MAX_RETRIES = 2;
 export type AIStatus = {
   stage: string;
   progress: number;
-  provider: "Claude" | "OpenAI" | "Gemini" | "Fallback";
+  provider: "Claude" | "OpenAI" | "Gemini" | "DeepSeek" | "Fallback";
 };
 
 // AI provider interface
@@ -214,6 +215,73 @@ const geminiProvider: AIProvider = {
       return data.candidates[0].content.parts[0].text;
     } catch (error) {
       console.error("Gemini API error:", error);
+      throw error;
+    }
+  }
+};
+
+// DeepSeek API Implementation
+const deepseekProvider: AIProvider = {
+  name: "DeepSeek",
+  generateContent: async (prompt: string, statusCallback: (status: AIStatus) => void, context?: any) => {
+    try {
+      statusCallback({
+        stage: "Connecting to DeepSeek API",
+        progress: 10,
+        provider: "DeepSeek"
+      });
+      
+      // Enhance prompt with subject context if available
+      let enhancedPrompt = prompt;
+      if (context?.subject) {
+        enhancedPrompt = `[EDUCATIONAL CONTEXT: Subject: ${context.subject}, Topic: ${context.topic || "general curriculum"}, Class: ${context.className || "10"}]\n\n${prompt}`;
+      }
+      
+      // Call DeepSeek API
+      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert educational content creator focusing on accurate, curriculum-aligned material."
+            },
+            {
+              role: "user",
+              content: enhancedPrompt
+            }
+          ],
+          max_tokens: 2000,
+          temperature: 0.7
+        })
+      });
+      
+      statusCallback({
+        stage: "Processing content from DeepSeek",
+        progress: 60,
+        provider: "DeepSeek"
+      });
+      
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      statusCallback({
+        stage: "Content received from DeepSeek",
+        progress: 90,
+        provider: "DeepSeek"
+      });
+      
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error("DeepSeek API error:", error);
       throw error;
     }
   }
@@ -677,67 +745,32 @@ export const generateEnhancedContent = async (
   context: any,
   onStatusUpdate: (status: AIStatus) => void
 ): Promise<any> => {
-  // First try with the primary provider (Claude for rich content)
-  try {
-    onStatusUpdate({
-      stage: `Connecting to AI research service`,
-      progress: 5,
-      provider: "Claude"
-    });
-    
-    const primaryResult = await claudeProvider.generateContent(prompt, onStatusUpdate, context);
-    
-    // Try to parse JSON response, if it's not JSON, that's OK too
-    try {
-      return JSON.parse(primaryResult);
-    } catch (e) {
-      // Not JSON, return as is
-      return primaryResult;
-    }
-  } catch (primaryError) {
-    console.error("Primary AI service error:", primaryError);
-    
-    // Try with OpenAI second
+  // Define the sequence of providers to try
+  const providers = [openaiProvider, claudeProvider, geminiProvider, deepseekProvider, fallbackProvider];
+  
+  // Try each provider in sequence
+  for (const provider of providers) {
     try {
       onStatusUpdate({
-        stage: `Primary service unavailable, connecting to alternate research service`,
+        stage: `Connecting to ${provider.name} research service`,
         progress: 5,
-        provider: "OpenAI"
+        provider: provider.name as any
       });
       
-      const secondaryResult = await openaiProvider.generateContent(prompt, onStatusUpdate, context);
+      const result = await provider.generateContent(prompt, onStatusUpdate, context);
       
-      // Try to parse JSON response
+      // Try to parse JSON response, if it's not JSON, that's OK too
       try {
-        return JSON.parse(secondaryResult);
+        return JSON.parse(result);
       } catch (e) {
         // Not JSON, return as is
-        return secondaryResult;
+        return result;
       }
-    } catch (secondaryError) {
-      console.error("Secondary AI service error:", secondaryError);
+    } catch (providerError) {
+      console.error(`${provider.name} service error:`, providerError);
       
-      // Try with Gemini third
-      try {
-        onStatusUpdate({
-          stage: `Alternative services unavailable, trying tertiary AI service`,
-          progress: 5,
-          provider: "Gemini"
-        });
-        
-        const tertiaryResult = await geminiProvider.generateContent(prompt, onStatusUpdate, context);
-        
-        // Try to parse JSON response
-        try {
-          return JSON.parse(tertiaryResult);
-        } catch (e) {
-          // Not JSON, return as is
-          return tertiaryResult;
-        }
-      } catch (tertiaryError) {
-        console.error("Tertiary AI service error:", tertiaryError);
-        
-        // Use fallback as last resort
+      // If this is the fallback provider, we've exhausted all options
+      if (provider === fallbackProvider) {
         onStatusUpdate({
           stage: `Using local educational content database`,
           progress: 5,
@@ -746,8 +779,21 @@ export const generateEnhancedContent = async (
         
         return fallbackProvider.generateContent(prompt, onStatusUpdate, context);
       }
+      
+      // Otherwise, continue to the next provider
+      onStatusUpdate({
+        stage: `${provider.name} unavailable, trying next service in sequence`,
+        progress: 5,
+        provider: provider.name as any
+      });
+      
+      // Continue to next provider
+      continue;
     }
   }
+  
+  // If we've reached here, all providers failed
+  return { error: "All AI services failed", isError: true };
 };
 
 // Main function to generate content trying different providers in sequence
@@ -756,7 +802,8 @@ export const generateAIContent = async (
   onStatusUpdate: (status: AIStatus) => void,
   context?: any
 ): Promise<any> => {
-  const providers = [claudeProvider, openaiProvider, geminiProvider, fallbackProvider];
+  // Define the sequence of providers to try
+  const providers = [openaiProvider, claudeProvider, geminiProvider, deepseekProvider, fallbackProvider];
   
   // Reset error count for new request
   errorCount = 0;

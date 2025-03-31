@@ -1,439 +1,441 @@
 
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import StudyAIHeader from "@/components/StudyAIHeader";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+// Import required for the ReactNode type and icons
+import React, { useEffect, useState, ReactNode } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, BookOpenCheck, CheckCircle, Clock, Settings } from "lucide-react";
-import SubjectTopicList from "@/components/SubjectTopicList";
-import WeeklyPlanView from "@/components/WeeklyPlanView";
-import StudyTimeline from "@/components/StudyTimeline";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { BookOpen, Clock, ListChecks, BarChart, ChevronLeft, BookText, CalendarDays, GraduationCap } from "lucide-react";
+import StudyAIHeader from '@/components/StudyAIHeader';
+import SubjectTopicList from '@/components/SubjectTopicList';
+import WeeklyPlanView from '@/components/WeeklyPlanView';
+import StudyPlanProgress from '@/components/StudyPlanProgress';
+import StudyTimeline from '@/components/StudyTimeline';
+import { claudeService } from '@/services/claudeService';
+import { studyPlanService } from '@/services/studyPlanService';
 
-interface Lesson {
-  title: string;
-  type: string;
-}
-
+// Types for the component
 interface Chapter {
   title: string;
-  lessons: Lesson[];
+  progress: number;
+  lessons: {
+    title: string;
+    type: string;
+    completed?: boolean;
+  }[];
 }
 
-interface StudyPlan {
-  subject: string;
-  board: string;
-  className: string;
-  chapters: Chapter[];
-  lastUpdated: string;
-}
+interface SubjectDetailsProps {}
 
-// Mock data structure for topic list
+// Mock data for topics if needed
 const mockTopics = [
   {
-    id: "1",
+    id: "chapter1",
     title: "Introduction to the Subject",
-    description: "Overview of key concepts and fundamentals",
-    type: "lesson" as const,
-    estimatedTimeInMinutes: 30,
-    chapterNumber: 1,
-    difficulty: "beginner" as const
+    lessons: [
+      { id: "1.1", title: "Basic Concepts", type: "lesson" },
+      { id: "1.2", title: "Fundamental Principles", type: "lesson" },
+      { id: "1.3", title: "Chapter Review", type: "quiz" }
+    ]
   },
   {
-    id: "2",
-    title: "Basic Principles",
-    description: "Understanding the core principles",
-    type: "lesson" as const,
-    estimatedTimeInMinutes: 45,
-    chapterNumber: 2,
-    difficulty: "beginner" as const
+    id: "chapter2",
+    title: "Advanced Concepts",
+    lessons: [
+      { id: "2.1", title: "Complex Theories", type: "lesson" },
+      { id: "2.2", title: "Practical Applications", type: "lesson" },
+      { id: "2.3", title: "Problem Solving", type: "practice" }
+    ]
   }
 ];
 
-// Mock data for weekly plans
-const mockWeeklyPlans = [
-  {
-    weekNumber: 1,
-    startDate: "Sep 1",
-    endDate: "Sep 7",
-    dailyActivities: [
-      {
-        date: "2023-09-01",
-        items: [
-          {
-            id: "activity-1",
-            title: "Introduction",
-            description: "Basic concepts",
-            type: "lesson",
-            estimatedTimeInMinutes: 30,
-            subject: "Physics"
-          }
-        ]
-      }
-    ],
-    weeklyTest: {
-      id: "test-week-1",
-      title: "Week 1 Test",
-      description: "Test your knowledge",
-      type: "quiz",
-      status: "upcoming",
-      dueDate: "Sep 7",
-      estimatedTimeInMinutes: 45,
-      subject: "Physics",
-      isWeeklyTest: true,
-      weekNumber: 1
-    }
-  }
-];
-
-const SubjectDetails = () => {
-  const { subject } = useParams<{ subject: string }>();
+// SubjectDetails component
+const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
+  const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [subject, setSubject] = useState<string>(subjectId || "Unknown Subject");
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState("chapters");
+  const [progress, setProgress] = useState(0);
+  const [nextLesson, setNextLesson] = useState({
+    title: "",
+    chapter: "",
+    estimatedTime: 0
+  });
+  const [lastActivity, setLastActivity] = useState("");
   
+  // Fetch subject details and chapters on component mount
   useEffect(() => {
-    // Load user profile
-    const profileData = localStorage.getItem('studyHeroProfile');
-    if (profileData) {
-      const parsedProfile = JSON.parse(profileData);
-      setUserProfile(parsedProfile);
-    } else {
-      navigate('/onboarding');
-      return;
-    }
-    
-    // Get selected subject from localStorage
-    const selectedSubject = localStorage.getItem('selectedSubject') || subject;
-    if (!selectedSubject) {
-      navigate('/dashboard');
-      return;
-    }
-    
-    // Load study plan for the subject
-    const loadStudyPlan = () => {
+    const loadSubjectDetails = async () => {
       setLoading(true);
       
-      // Try to get from localStorage
-      const studyPlanKey = `studyPlan_${selectedSubject}_${userProfile?.board}_${userProfile?.class}`;
-      const savedPlan = localStorage.getItem(studyPlanKey);
-      
-      if (savedPlan) {
-        try {
-          const parsedPlan = JSON.parse(savedPlan);
-          setStudyPlan(parsedPlan);
-        } catch (e) {
-          console.error("Error parsing saved study plan:", e);
+      try {
+        // Get the stored subjects from localStorage
+        const storedSubjects = localStorage.getItem('selectedSubjects');
+        if (storedSubjects) {
+          const subjects = JSON.parse(storedSubjects);
+          const foundSubject = subjects.find((s: string) => s.toLowerCase() === subjectId?.toLowerCase());
+          if (foundSubject) {
+            setSubject(foundSubject);
+          }
         }
+        
+        // Get stored study plan for subject if available
+        const storedPlan = localStorage.getItem(`studyPlan_${subjectId}`);
+        if (storedPlan) {
+          const plan = JSON.parse(storedPlan);
+          if (plan.chapters && Array.isArray(plan.chapters)) {
+            // Calculate progress for each chapter
+            const chaptersWithProgress = plan.chapters.map((chapter: any) => ({
+              ...chapter,
+              progress: Math.floor(Math.random() * 100) // Mock progress - replace with real data
+            }));
+            setChapters(chaptersWithProgress);
+            
+            // Calculate overall progress
+            const totalLessons = chaptersWithProgress.reduce(
+              (acc: number, chapter: Chapter) => acc + chapter.lessons.length, 0
+            );
+            const completedLessons = chaptersWithProgress.reduce(
+              (acc: number, chapter: Chapter) => 
+                acc + chapter.lessons.filter(lesson => lesson.completed).length, 0
+            );
+            
+            setProgress(totalLessons ? Math.floor((completedLessons / totalLessons) * 100) : 0);
+            
+            // Set next lesson (mock data - replace with real logic)
+            if (chaptersWithProgress.length > 0 && chaptersWithProgress[0].lessons.length > 0) {
+              setNextLesson({
+                title: chaptersWithProgress[0].lessons[0].title,
+                chapter: chaptersWithProgress[0].title,
+                estimatedTime: 20
+              });
+            }
+            
+            // Set last activity
+            setLastActivity(new Date().toLocaleDateString());
+          }
+        } else {
+          // If no stored plan, try to generate one
+          try {
+            const className = localStorage.getItem('selectedClass') || '10';
+            const board = localStorage.getItem('selectedBoard') || 'CBSE';
+            
+            toast("Loading study plan...");
+            const studyPlan = await studyPlanService.getStudyPlan(subject, board, className);
+            
+            if (studyPlan && studyPlan.chapters) {
+              // Calculate progress for each chapter
+              const chaptersWithProgress = studyPlan.chapters.map((chapter: any) => ({
+                ...chapter,
+                progress: 0 // Initial progress is 0
+              }));
+              
+              setChapters(chaptersWithProgress);
+              
+              // Save to localStorage
+              localStorage.setItem(`studyPlan_${subjectId}`, JSON.stringify({
+                subject,
+                board,
+                className,
+                chapters: chaptersWithProgress,
+                lastUpdated: new Date().toISOString()
+              }));
+              
+              // Set next lesson
+              if (chaptersWithProgress.length > 0 && chaptersWithProgress[0].lessons.length > 0) {
+                setNextLesson({
+                  title: chaptersWithProgress[0].lessons[0].title,
+                  chapter: chaptersWithProgress[0].title,
+                  estimatedTime: 20
+                });
+              }
+            } else {
+              // If API fails, use default chapters
+              setChapters(
+                mockTopics.map(topic => ({
+                  title: topic.title,
+                  progress: Math.floor(Math.random() * 100),
+                  lessons: topic.lessons.map(lesson => ({
+                    ...lesson,
+                    completed: Math.random() > 0.5
+                  }))
+                }))
+              );
+            }
+          } catch (error) {
+            console.error("Error generating study plan:", error);
+            // Fall back to mock topics
+            setChapters(
+              mockTopics.map(topic => ({
+                title: topic.title,
+                progress: Math.floor(Math.random() * 100),
+                lessons: topic.lessons.map(lesson => ({
+                  ...lesson,
+                  completed: Math.random() > 0.5
+                }))
+              }))
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error loading subject details:", error);
+        toast.error("Failed to load subject details");
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
-    if (userProfile) {
-      loadStudyPlan();
-    }
-  }, [navigate, subject, userProfile]);
+    loadSubjectDetails();
+  }, [subjectId]);
   
-  const generateTimelineItems = () => {
-    if (!studyPlan) return [];
+  const handleStartLesson = (lesson: string, chapter: string) => {
+    // Store the current study item for the lesson page
+    localStorage.setItem('currentStudyItem', JSON.stringify({
+      title: lesson,
+      subject: subject,
+      chapter: chapter,
+      className: localStorage.getItem('selectedClass') || '10'
+    }));
     
-    let items = [];
-    let id = 1;
-    
-    // Extract lessons from chapters and convert to timeline items
-    for (const chapter of studyPlan.chapters) {
-      for (const lesson of chapter.lessons) {
-        // Calculate a due date (just for display purposes)
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + id);
-        
-        items.push({
-          id: String(id),
-          title: lesson.title,
-          description: `${chapter.title} - ${lesson.title}`,
-          status: id === 1 ? "current" : "future",
-          dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          type: lesson.type as "lesson" | "quiz" | "practice"
-        });
-        
-        id++;
-      }
-    }
-    
-    return items;
+    // Navigate to the lesson page
+    navigate(`/lesson/${encodeURIComponent(lesson)}`);
   };
   
-  const handleStartItem = (id: string) => {
-    // Navigate based on the type of item
-    const timelineItems = generateTimelineItems();
-    const item = timelineItems.find(item => item.id === id);
-    
-    if (item) {
-      if (item.type === "quiz") {
-        navigate(`/quiz/${id}`);
-      } else {
-        navigate(`/lesson/${id}`);
-      }
+  // Navigation items for the header
+  const navigationItems = [
+    { 
+      name: "Dashboard", 
+      href: "/dashboard", 
+      icon: <ChevronLeft className="h-4 w-4" /> 
+    },
+    { 
+      name: "Browse Library", 
+      href: "/library", 
+      icon: <BookOpen className="h-4 w-4" /> 
     }
-  };
-
-  const handleWeeklyPlanStartItem = (id: string) => {
-    if (id.includes('quiz')) {
-      navigate(`/quiz/${id}`);
-    } else {
-      navigate(`/lesson/${id}`);
-    }
-  };
+  ];
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <StudyAIHeader 
-          userName={userProfile?.name || "Student"}
-          level={1}
-          xp={0}
-          navigation={[]}
+      <div className="min-h-screen bg-background">
+        <StudyAIHeader
+          userName="Student"
+          level={parseInt(localStorage.getItem('currentLevel') || '1')}
+          xp={parseInt(localStorage.getItem('currentXp') || '0')}
+          navigation={navigationItems}
         />
-        <main className="flex-1 container py-6 flex items-center justify-center">
-          <div className="text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4">Loading subject data...</p>
+        <main className="container py-6 md:py-12">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold tracking-tight">Loading Subject Details</h2>
+              <p className="text-muted-foreground mt-2">Please wait while we prepare your study materials...</p>
+            </div>
           </div>
         </main>
       </div>
     );
   }
-  
-  if (!studyPlan) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <StudyAIHeader 
-          userName={userProfile?.name || "Student"}
-          level={1}
-          xp={0}
-          navigation={[]}
-        />
-        <main className="flex-1 container py-6 flex items-center justify-center">
-          <Card className="max-w-md w-full">
-            <CardHeader>
-              <CardTitle>Subject Not Found</CardTitle>
-              <CardDescription>We couldn't find study material for this subject.</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button onClick={() => navigate('/dashboard')} className="w-full">
-                Return to Dashboard
-              </Button>
-            </CardFooter>
-          </Card>
-        </main>
-      </div>
-    );
-  }
-  
-  const timelineItems = generateTimelineItems();
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <StudyAIHeader 
-        userName={userProfile?.name || "Student"}
+    <div className="min-h-screen bg-background">
+      <StudyAIHeader
+        userName="Student"
         level={parseInt(localStorage.getItem('currentLevel') || '1')}
         xp={parseInt(localStorage.getItem('currentXp') || '0')}
-        navigation={[
-          { name: "Dashboard", href: "/dashboard" },
-          { name: studyPlan.subject, href: "#" }
-        ]}
+        navigation={navigationItems}
       />
       
-      <main className="flex-1 container py-6 space-y-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-2/3 space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-2xl">{studyPlan.subject}</CardTitle>
-                    <CardDescription>
-                      {studyPlan.board} Curriculum for Class {studyPlan.className}
-                    </CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4 mr-1" />
-                    Customize
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex flex-col md:flex-row gap-4 justify-between">
-                    <div className="flex gap-2 items-center">
-                      <div className="p-2 bg-primary/10 rounded-full">
-                        <BookOpen className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Progress</p>
-                        <p className="text-2xl font-bold">10%</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 items-center">
-                      <div className="p-2 bg-green-100 rounded-full">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Completed</p>
-                        <p className="text-2xl font-bold">2/20</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 items-center">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <Clock className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Time Spent</p>
-                        <p className="text-2xl font-bold">1h 20m</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Progress value={10} className="h-2" />
-                  
-                  <div className="text-sm text-muted-foreground">
-                    Current Chapter: Introduction to {studyPlan.subject}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Tabs defaultValue="topics">
-              <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="topics">Topics</TabsTrigger>
-                <TabsTrigger value="weekly">Weekly Plan</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="topics" className="mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Course Content</CardTitle>
-                    <CardDescription>
-                      Complete curriculum based on {studyPlan.board} standards
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <SubjectTopicList
-                      subject={studyPlan.subject}
-                      className={studyPlan.className}
-                      topics={mockTopics}
-                      onSelectTopic={(topic) => navigate(`/lesson/${topic.id}`)}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="weekly" className="mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Weekly Study Plan</CardTitle>
-                    <CardDescription>
-                      Your customized weekly schedule for {studyPlan.subject}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <WeeklyPlanView 
-                      weeklyPlans={mockWeeklyPlans}
-                      onStartItem={handleWeeklyPlanStartItem}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="timeline" className="mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Study Timeline</CardTitle>
-                    <CardDescription>
-                      Your personalized learning pathway
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <StudyTimeline 
-                      items={timelineItems}
-                      onStartItem={handleStartItem}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+      <main className="container py-6 md:py-12">
+        {/* Subject Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{subject}</h1>
+            <p className="text-muted-foreground">
+              Class {localStorage.getItem('selectedClass') || '10'} • {localStorage.getItem('selectedBoard') || 'CBSE'}
+            </p>
           </div>
           
-          <div className="lg:w-1/3 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Next Up</CardTitle>
-                <CardDescription>Continue where you left off</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <BookOpenCheck className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">20 min</span>
-                  </div>
-                  <h3 className="font-medium">Introduction to {studyPlan.subject}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Learn the fundamental concepts and terminology of {studyPlan.subject}
-                  </p>
-                  <Button onClick={() => navigate('/lesson/intro')} className="w-full">
-                    Continue Learning
-                  </Button>
-                </div>
-                
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div className="p-2 bg-orange-100 rounded-full">
-                      <BookOpenCheck className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">15 min</span>
-                  </div>
-                  <h3 className="font-medium">Practice Quiz</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Test your understanding of the introduction to {studyPlan.subject}
-                  </p>
-                  <Button onClick={() => navigate('/quiz/intro')} variant="outline" className="w-full">
-                    Start Quiz
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Study Resources</CardTitle>
-                <CardDescription>Additional learning materials</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" onClick={() => toast("Opening PDF resources")}>
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  {studyPlan.subject} Textbook PDF
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => toast("Opening video resources")}>
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Video Lessons
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => toast("Opening practice problems")}>
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Practice Problems
-                </Button>
-              </CardContent>
-            </Card>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => handleStartLesson(nextLesson.title, nextLesson.chapter)}>
+              Continue Learning
+            </Button>
           </div>
         </div>
+        
+        {/* Progress Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Overall Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{progress}%</div>
+              <Progress value={progress} className="h-2 mt-2" />
+              <p className="text-xs text-muted-foreground mt-2">
+                Based on completed lessons
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Next Lesson</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-base font-bold truncate" style={{ maxWidth: "200px" }}>
+                {nextLesson.title || "No upcoming lessons"}
+              </div>
+              <div className="flex items-center text-xs text-muted-foreground mt-1">
+                <Clock className="h-3 w-3 mr-1" />
+                <span>{nextLesson.estimatedTime} minutes</span>
+              </div>
+              <Button
+                variant="link"
+                className="p-0 h-auto text-xs mt-2"
+                onClick={() => handleStartLesson(nextLesson.title, nextLesson.chapter)}
+              >
+                Start Lesson
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Chapters</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{chapters.length}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {chapters.reduce((acc, chapter) => acc + chapter.lessons.length, 0)} total lessons
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Last Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-base font-bold">{lastActivity || "No recent activity"}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Continue your progress
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Tabs Section */}
+        <Tabs defaultValue="chapters" className="mb-8" onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="chapters">Chapters</TabsTrigger>
+            <TabsTrigger value="weekly">Weekly Plan</TabsTrigger>
+            <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chapters" className="mt-6">
+            <SubjectTopicList
+              topics={mockTopics}
+              onSelectTopic={(topic) => handleStartLesson(topic.title, topic.id)}
+            />
+          </TabsContent>
+          
+          <TabsContent value="weekly" className="mt-6">
+            <WeeklyPlanView
+              weeklyPlan={{
+                subject: subjectId || '',
+                weeks: [
+                  {
+                    weekNumber: 1,
+                    theme: "Foundations",
+                    days: [
+                      {
+                        day: "Monday",
+                        activities: [
+                          { title: "Introduction", duration: 30, type: "lesson" }
+                        ]
+                      },
+                      {
+                        day: "Wednesday",
+                        activities: [
+                          { title: "Basic Concepts", duration: 45, type: "practice" }
+                        ]
+                      },
+                      {
+                        day: "Friday",
+                        activities: [
+                          { title: "Weekly Quiz", duration: 20, type: "quiz" }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    weekNumber: 2,
+                    theme: "Core Principles",
+                    days: [
+                      {
+                        day: "Tuesday",
+                        activities: [
+                          { title: "Key Theories", duration: 40, type: "lesson" }
+                        ]
+                      },
+                      {
+                        day: "Thursday",
+                        activities: [
+                          { title: "Applied Problems", duration: 30, type: "practice" }
+                        ]
+                      },
+                      {
+                        day: "Saturday",
+                        activities: [
+                          { title: "Chapter Test", duration: 25, type: "quiz" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }}
+              onSelectActivity={(activity) => {
+                toast(`Selected: ${activity.title}`);
+              }}
+            />
+          </TabsContent>
+          
+          <TabsContent value="progress" className="mt-6">
+            <StudyPlanProgress
+              subject={subject}
+              progress={progress}
+              chapters={chapters.map(chapter => ({
+                title: chapter.title,
+                progress: chapter.progress,
+                lessons: chapter.lessons.length,
+                completed: chapter.lessons.filter(l => l.completed).length
+              }))}
+              startDate="2023-09-01"
+              endDate="2023-12-15"
+              onViewChapter={(chapterTitle) => {
+                setActiveTab("chapters");
+              }}
+            />
+          </TabsContent>
+          
+          <TabsContent value="timeline" className="mt-6">
+            <StudyTimeline
+              subject={subject}
+              events={[
+                { date: "2023-09-05", title: "Started Chapter 1", type: "start" },
+                { date: "2023-09-10", title: "Completed Quiz 1", type: "quiz", score: "8/10" },
+                { date: "2023-09-15", title: "Finished Chapter 1", type: "complete" },
+                { date: "2023-09-20", title: "Started Chapter 2", type: "start" }
+              ]}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

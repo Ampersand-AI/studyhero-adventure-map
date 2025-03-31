@@ -1,11 +1,11 @@
+
 import OpenAI from 'openai';
 import { toast } from "@/hooks/use-toast";
 
-// Initialize the OpenAI client with a more secure approach
+// Initialize the OpenAI client with the proper API key
 const getOpenAI = () => {
-  // Using an environment variable would be better in production
-  // For now, we'll use a working demo key for educational purposes only
-  const apiKey = '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';
+  // Using the actual API key provided
+  const apiKey = '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';
   
   return new OpenAI({
     apiKey,

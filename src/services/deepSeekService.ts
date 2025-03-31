@@ -1,13 +1,15 @@
 
 // src/services/deepSeekService.ts
-// Just optimizing the content generation to be faster
 
 interface AIStatus {
   stage: string;
   progress: number;
 }
 
-// Mock data for speed optimization
+// DeepSeek API Configuration
+const DEEPSEEK_API_KEY = "sk-a6632f7d3f794d76b60fbe4a40d80058";
+
+// Mock data for fallback when API is unavailable
 const getDefaultSubjectsForBoard = (board: string, className: string) => {
   // Return faster default data based on board and class
   if (board === 'CBSE') {
@@ -33,13 +35,55 @@ const getDefaultSubjectsForBoard = (board: string, className: string) => {
   }
 };
 
-// Simulated DeepSeek Service
+// DeepSeek Service
 const deepSeekService = {
-  apiKey: 'sk-a53303b3873b42be8910c5fd16e0ad4a',
+  apiKey: DEEPSEEK_API_KEY,
   
   getSubjectsForBoardAndClass: async (board: string, className: string) => {
-    // Return faster with predetermined data
-    return getDefaultSubjectsForBoard(board, className);
+    try {
+      // Attempt to get data from the DeepSeek API
+      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: "You are an educational curriculum expert. Provide accurate information about school subjects."
+            },
+            {
+              role: "user",
+              content: `List the compulsory and optional subjects for ${board} curriculum in class ${className}. Format as JSON with compulsorySubjects and optionalSubjects arrays.`
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.3
+        })
+      });
+      
+      if (!response.ok) {
+        // Fallback to predetermined data if API fails
+        return getDefaultSubjectsForBoard(board, className);
+      }
+      
+      const data = await response.json();
+      try {
+        // Try to parse the result as JSON
+        const content = data.choices[0].message.content;
+        return JSON.parse(content);
+      } catch (parseError) {
+        // Fallback if parsing fails
+        return getDefaultSubjectsForBoard(board, className);
+      }
+    } catch (error) {
+      console.error("DeepSeek API error:", error);
+      // Return faster with predetermined data as fallback
+      return getDefaultSubjectsForBoard(board, className);
+    }
   },
   
   generateStudyPlan: async (
@@ -48,30 +92,97 @@ const deepSeekService = {
     className: string, 
     updateStatus?: (status: AIStatus) => void
   ) => {
-    // Simulate faster AI processing with quicker progress updates
-    const totalSteps = 5;
-    const stepDuration = 400; // ms per step - much faster
-    
-    for (let step = 1; step <= totalSteps; step++) {
+    try {
+      // Try to generate study plan using the DeepSeek API
       if (updateStatus) {
         updateStatus({
-          stage: getStageDescription(step, subject),
-          progress: Math.round((step / totalSteps) * 100)
+          stage: "Connecting to DeepSeek API",
+          progress: 10
         });
       }
       
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, stepDuration));
+      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert educational curriculum designer."
+            },
+            {
+              role: "user",
+              content: `Create a detailed study plan for ${subject} for class ${className} following the ${board} curriculum. Format as JSON with a chapters array containing title and lessons fields.`
+            }
+          ],
+          max_tokens: 2000,
+          temperature: 0.5
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status}`);
+      }
+      
+      if (updateStatus) {
+        updateStatus({
+          stage: "Processing study plan data",
+          progress: 60
+        });
+      }
+      
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      try {
+        const jsonPlan = JSON.parse(content);
+        
+        if (updateStatus) {
+          updateStatus({
+            stage: "Study plan generated successfully",
+            progress: 100
+          });
+        }
+        
+        return jsonPlan;
+      } catch (parseError) {
+        // Fallback to simulated data
+        console.error("Error parsing DeepSeek response:", parseError);
+        throw new Error("Invalid response format");
+      }
+    } catch (error) {
+      console.error("DeepSeek study plan error:", error);
+      
+      // Fallback to simulated processing
+      // Simulate faster AI processing with quicker progress updates
+      const totalSteps = 5;
+      const stepDuration = 400; // ms per step - much faster
+      
+      for (let step = 1; step <= totalSteps; step++) {
+        if (updateStatus) {
+          updateStatus({
+            stage: getStageDescription(step, subject),
+            progress: Math.round((step / totalSteps) * 100)
+          });
+        }
+        
+        // Simulate AI processing
+        await new Promise(resolve => setTimeout(resolve, stepDuration));
+      }
+      
+      // Return simulated study plan
+      return {
+        subject,
+        board,
+        className,
+        chapters: generateChapters(subject),
+        lastUpdated: new Date().toISOString()
+      };
     }
-    
-    // Return simulated study plan
-    return {
-      subject,
-      board,
-      className,
-      chapters: generateChapters(subject),
-      lastUpdated: new Date().toISOString()
-    };
   }
 };
 
