@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -24,9 +23,12 @@ const Onboarding = () => {
   const [board, setBoard] = useState<string>('');
   const [className, setClassName] = useState<string>('');
   const [schoolInfo, setSchoolInfo] = useState<{
-    state: string;
-    city: string;
+    name: string;
+    board: string;
+    class: string;
     school: string;
+    city: string;
+    state: string;
   } | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [studyPlanGenerated, setStudyPlanGenerated] = useState(false);
@@ -53,13 +55,16 @@ const Onboarding = () => {
     setStep(3);
   };
   
-  const handleSchoolSelection = (school: {
-    state: string;
-    city: string;
+  const handleSchoolSelection = (data: {
+    name: string;
+    board: string;
+    class: string;
     school: string;
+    city: string;
+    state: string;
   }) => {
-    setSchoolInfo(school);
-    localStorage.setItem('selectedSchool', JSON.stringify(school));
+    setSchoolInfo(data);
+    localStorage.setItem('selectedSchool', JSON.stringify(data));
     
     // Move to subject selection
     setStep(4);
@@ -222,10 +227,6 @@ const Onboarding = () => {
               </CardHeader>
               <CardContent>
                 <SchoolSelectionForm 
-                  userName="New Student"
-                  level={1}
-                  xp={0}
-                  board={board}
                   onComplete={handleSchoolSelection} 
                 />
               </CardContent>
@@ -248,13 +249,9 @@ const Onboarding = () => {
                   board={board}
                   className={className}
                   onComplete={handleSubjectSelection}
+                  onBack={() => setStep(3)}
                 />
               </CardContent>
-              <CardFooter className="flex justify-start">
-                <Button variant="outline" onClick={() => setStep(3)}>
-                  Back to School Selection
-                </Button>
-              </CardFooter>
             </Card>
           )}
           

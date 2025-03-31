@@ -30,6 +30,64 @@ interface StudyPlan {
   lastUpdated: string;
 }
 
+// Mock data structure for topic list
+const mockTopics = [
+  {
+    id: "1",
+    title: "Introduction to the Subject",
+    description: "Overview of key concepts and fundamentals",
+    type: "lesson" as const,
+    estimatedTimeInMinutes: 30,
+    chapterNumber: 1,
+    difficulty: "beginner" as const
+  },
+  {
+    id: "2",
+    title: "Basic Principles",
+    description: "Understanding the core principles",
+    type: "lesson" as const,
+    estimatedTimeInMinutes: 45,
+    chapterNumber: 2,
+    difficulty: "beginner" as const
+  }
+];
+
+// Mock data for weekly plans
+const mockWeeklyPlans = [
+  {
+    weekNumber: 1,
+    startDate: "Sep 1",
+    endDate: "Sep 7",
+    dailyActivities: [
+      {
+        date: "2023-09-01",
+        items: [
+          {
+            id: "activity-1",
+            title: "Introduction",
+            description: "Basic concepts",
+            type: "lesson",
+            estimatedTimeInMinutes: 30,
+            subject: "Physics"
+          }
+        ]
+      }
+    ],
+    weeklyTest: {
+      id: "test-week-1",
+      title: "Week 1 Test",
+      description: "Test your knowledge",
+      type: "quiz",
+      status: "upcoming",
+      dueDate: "Sep 7",
+      estimatedTimeInMinutes: 45,
+      subject: "Physics",
+      isWeeklyTest: true,
+      weekNumber: 1
+    }
+  }
+];
+
 const SubjectDetails = () => {
   const { subject } = useParams<{ subject: string }>();
   const navigate = useNavigate();
@@ -122,6 +180,14 @@ const SubjectDetails = () => {
       }
     }
   };
+
+  const handleWeeklyPlanStartItem = (id: string) => {
+    if (id.includes('quiz')) {
+      navigate(`/quiz/${id}`);
+    } else {
+      navigate(`/lesson/${id}`);
+    }
+  };
   
   if (loading) {
     return (
@@ -177,8 +243,8 @@ const SubjectDetails = () => {
         level={parseInt(localStorage.getItem('currentLevel') || '1')}
         xp={parseInt(localStorage.getItem('currentXp') || '0')}
         navigation={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: studyPlan.subject, href: "#" }
+          { name: "Dashboard", href: "/dashboard" },
+          { name: studyPlan.subject, href: "#" }
         ]}
       />
       
@@ -259,7 +325,12 @@ const SubjectDetails = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <SubjectTopicList chapters={studyPlan.chapters} />
+                    <SubjectTopicList
+                      subject={studyPlan.subject}
+                      className={studyPlan.className}
+                      topics={mockTopics}
+                      onSelectTopic={(topic) => navigate(`/lesson/${topic.id}`)}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -273,7 +344,10 @@ const SubjectDetails = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <WeeklyPlanView subject={studyPlan.subject} />
+                    <WeeklyPlanView 
+                      weeklyPlans={mockWeeklyPlans}
+                      onStartItem={handleWeeklyPlanStartItem}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

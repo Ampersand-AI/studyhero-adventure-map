@@ -15,6 +15,7 @@ interface SchoolSelectionFormProps {
     class: string;
     school: string;
     city: string;
+    state: string;
   }) => void;
 }
 
@@ -30,12 +31,23 @@ const CLASS_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   label: `Class ${i + 1}`
 }));
 
+const STATE_OPTIONS = [
+  "Delhi",
+  "Maharashtra",
+  "Karnataka",
+  "Tamil Nadu",
+  "Uttar Pradesh",
+  "Gujarat",
+  "West Bengal"
+];
+
 const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   onComplete
 }) => {
   const [name, setName] = useState("");
   const [board, setBoard] = useState("");
   const [classValue, setClassValue] = useState("");
+  const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [school, setSchool] = useState("");
   const [schoolOptions, setSchoolOptions] = useState<string[]>([]);
@@ -64,7 +76,7 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   }, [city]);
 
   const handleContinue = () => {
-    if (!name || !board || !classValue || !city || !school) {
+    if (!name || !board || !classValue || !city || !school || !state) {
       toast({
         title: "All fields are required",
         description: "Please fill in all the fields to continue.",
@@ -78,7 +90,8 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
       board,
       class: classValue,
       school,
-      city
+      city,
+      state
     });
   };
 
@@ -120,6 +133,22 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
               {CLASS_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="state">Which state do you live in?</Label>
+          <Select value={state} onValueChange={setState}>
+            <SelectTrigger id="state">
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATE_OPTIONS.map((stateName) => (
+                <SelectItem key={stateName} value={stateName}>
+                  {stateName}
                 </SelectItem>
               ))}
             </SelectContent>
