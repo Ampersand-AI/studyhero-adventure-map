@@ -6,67 +6,153 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import StudyAIHeader from '@/components/StudyAIHeader';
 import SubjectTopicList from '@/components/SubjectTopicList';
-import { claudeService } from '@/services/claudeService';
-import { BookOpen, ChevronLeft, RefreshCw } from "lucide-react";
+import deepSeekService, { AIStatus } from '@/services/deepSeekService';
+import { BookOpen, ChevronLeft, RefreshCw, Loader, BookOpenCheck } from "lucide-react";
+import AIContentLoader from '@/components/AIContentLoader';
 
 const SubjectDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadingStatus, setLoadingStatus] = useState<AIStatus | null>(null);
   const [subject, setSubject] = useState<string>('');
   const [className, setClassName] = useState<string>('10');
+  const [board, setBoard] = useState<string>('CBSE');
   const [topics, setTopics] = useState<any[]>([]);
+  const [studyPlan, setStudyPlan] = useState<any>(null);
   
   useEffect(() => {
-    // Get subject info from location state or localStorage
-    const subjectData = location.state?.subject || localStorage.getItem('selectedSubject');
-    const classData = location.state?.className || localStorage.getItem('selectedClass') || '10';
+    // Get subject info from localStorage
+    const subjectData = localStorage.getItem('selectedSubject');
+    
+    // Get profile info from localStorage
+    const profileData = localStorage.getItem('studyHeroProfile');
+    let parsedProfile: any = {};
+    
+    if (profileData) {
+      try {
+        parsedProfile = JSON.parse(profileData);
+      } catch (e) {
+        console.error("Error parsing profile:", e);
+      }
+    }
+    
+    const classData = parsedProfile.class || localStorage.getItem('selectedClass') || '10';
+    const boardData = parsedProfile.board || localStorage.getItem('selectedBoard') || 'CBSE';
     
     if (subjectData) {
-      const subjectName = typeof subjectData === 'string' ? subjectData : JSON.parse(subjectData);
-      setSubject(subjectName);
+      setSubject(subjectData);
       setClassName(classData);
+      setBoard(boardData);
       
-      // Load topics for this subject
-      loadSubjectTopics(subjectName, classData);
+      // Load study plan for this subject
+      loadStudyPlan(subjectData, boardData, classData);
     } else {
       // Navigate back to dashboard if no subject is selected
       navigate('/dashboard');
     }
   }, [location, navigate]);
   
-  const loadSubjectTopics = async (subjectName: string, classNum: string) => {
+  const updateLoadingStatus = (status: AIStatus) => {
+    setLoadingStatus(status);
+  };
+  
+  const loadStudyPlan = async (subjectName: string, boardName: string, classNum: string) => {
     setLoading(true);
     
     try {
-      // Check if we have cached topics first
-      const cachedTopics = localStorage.getItem(`topics_${subjectName}_${classNum}`);
-      if (cachedTopics) {
-        setTopics(JSON.parse(cachedTopics));
+      // Check if we have cached study plan first
+      const studyPlanKey = `studyPlan_${subjectName}_${boardName}_${classNum}`;
+      const cachedPlan = localStorage.getItem(studyPlanKey);
+      
+      if (cachedPlan) {
+        const parsedPlan = JSON.parse(cachedPlan);
+        setStudyPlan(parsedPlan);
+        
+        // Extract topics from study plan
+        if (parsedPlan && parsedPlan.weeks) {
+          const extractedTopics = extractTopicsFromStudyPlan(parsedPlan);
+          setTopics(extractedTopics);
+        }
+        
         setLoading(false);
         return;
       }
       
-      // Otherwise, fetch from Claude API
-      const result = await claudeService.getSubjectTopics(subjectName, classNum);
+      // Otherwise, generate with DeepSeek
+      const generatedPlan = await deepSeekService.generateStudyPlan(
+        subjectName,
+        boardName,
+        classNum,
+        updateLoadingStatus
+      );
       
-      if (result && result.topics && result.topics.length > 0) {
-        setTopics(result.topics);
-        // Cache for future use
-        localStorage.setItem(`topics_${subjectName}_${classNum}`, JSON.stringify(result.topics));
-      } else {
-        toast.error("Error", {
-          description: "Failed to load subject topics. Please try again."
-        });
+      setStudyPlan(generatedPlan);
+      
+      // Extract topics from study plan
+      if (generatedPlan && generatedPlan.weeks) {
+        const extractedTopics = extractTopicsFromStudyPlan(generatedPlan);
+        setTopics(extractedTopics);
       }
+      
+      // Cache for future use
+      localStorage.setItem(studyPlanKey, JSON.stringify(generatedPlan));
     } catch (error) {
-      console.error("Error loading subject topics:", error);
+      console.error("Error loading study plan:", error);
       toast.error("Error", {
-        description: "Failed to load subject topics. Please try again."
+        description: "Failed to load subject content. Please try again."
       });
     } finally {
       setLoading(false);
     }
+  };
+  
+  const extractTopicsFromStudyPlan = (plan: any) => {
+    if (!plan.weeks || !Array.isArray(plan.weeks)) {
+      return [];
+    }
+    
+    const allTopics: any[] = [];
+    let topicId = 1;
+    
+    // Extract daily lessons
+    plan.weeks.forEach((week: any, weekIndex: number) => {
+      if (week.days && Array.isArray(week.days)) {
+        week.days.forEach((day: any, dayIndex: number) => {
+          if (day.topic) {
+            allTopics.push({
+              id: `topic-${topicId++}`,
+              title: day.topic,
+              type: 'lesson',
+              dueDate: `Week ${weekIndex + 1}, ${day.day || 'Day ' + (dayIndex + 1)}`,
+              description: day.content?.fundamentals?.join('. ') || 'Learn about ' + day.topic,
+              status: 'current',
+              weekNumber: weekIndex + 1,
+              dayNumber: dayIndex + 1,
+              estimatedTimeInMinutes: 30,
+              content: day.content
+            });
+          }
+        });
+      }
+      
+      // Add weekly quiz
+      if (week.weeklyQuiz) {
+        allTopics.push({
+          id: `quiz-${weekIndex + 1}`,
+          title: `Week ${weekIndex + 1} Assessment`,
+          type: 'quiz',
+          dueDate: `End of Week ${weekIndex + 1}`,
+          description: `Test your knowledge on the topics covered in Week ${weekIndex + 1}`,
+          status: 'future',
+          weekNumber: weekIndex + 1,
+          estimatedTimeInMinutes: 20,
+          questions: week.weeklyQuiz.questions
+        });
+      }
+    });
+    
+    return allTopics;
   };
   
   const handleTopicSelect = (topic: any) => {
@@ -74,7 +160,8 @@ const SubjectDetails = () => {
     localStorage.setItem('currentStudyItem', JSON.stringify({
       ...topic,
       subject: subject,
-      className: className
+      className: className,
+      board: board
     }));
     
     // Navigate to the appropriate page based on topic type
@@ -87,8 +174,9 @@ const SubjectDetails = () => {
   
   const handleRefresh = () => {
     // Clear cache and reload
-    localStorage.removeItem(`topics_${subject}_${className}`);
-    loadSubjectTopics(subject, className);
+    const studyPlanKey = `studyPlan_${subject}_${board}_${className}`;
+    localStorage.removeItem(studyPlanKey);
+    loadStudyPlan(subject, board, className);
   };
   
   const navigationItems = [
@@ -106,17 +194,34 @@ const SubjectDetails = () => {
       
       <main className="flex-1 container py-6 md:py-12">
         {loading ? (
-          <Card className="w-full max-w-3xl mx-auto">
-            <CardHeader>
-              <CardTitle>Loading Curriculum</CardTitle>
-              <CardDescription>Retrieving NCERT curriculum data...</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="max-w-3xl mx-auto">
+            {loadingStatus ? (
+              <AIContentLoader
+                title={`Creating ${subject} Study Plan`}
+                description={`Generating comprehensive study materials for ${board} Class ${className}`}
+                stage={loadingStatus.stage}
+                progress={loadingStatus.progress}
+                provider="DeepSeek AI"
+                context={{
+                  subject,
+                  className,
+                  topic: `Complete ${subject} curriculum`
+                }}
+              />
+            ) : (
+              <Card className="w-full">
+                <CardHeader>
+                  <CardTitle>Loading Curriculum</CardTitle>
+                  <CardDescription>Retrieving curriculum data...</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         ) : (
           <div className="max-w-5xl mx-auto">
             <div className="mb-6 flex justify-between items-center">
@@ -138,7 +243,7 @@ const SubjectDetails = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle>{subject} - Class {className}</CardTitle>
-                    <CardDescription>NCERT Curriculum</CardDescription>
+                    <CardDescription>{board} Curriculum</CardDescription>
                   </div>
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                     {topics.length} Topics
@@ -147,17 +252,20 @@ const SubjectDetails = () => {
               </CardHeader>
               <CardContent>
                 <p className="mb-4">
-                  This curriculum follows the NCERT guidelines for {subject} Class {className}. 
-                  It covers all essential topics and is designed to provide comprehensive learning.
+                  This curriculum follows the {board} guidelines for {subject} Class {className}. 
+                  It includes daily lessons with fundamentals, examples, and visual aids, plus weekly assessments.
                 </p>
-                <Button 
-                  variant="outline" 
-                  className="text-blue-600"
-                  onClick={() => window.open(`https://ncert.nic.in/textbook.php`, '_blank')}
-                >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  View NCERT Textbook
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {topics.filter(t => t.type === 'lesson').length} Lessons
+                  </Badge>
+                  <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                    {topics.filter(t => t.type === 'quiz').length} Quizzes
+                  </Badge>
+                  <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
+                    {studyPlan?.weeks?.length || 12} Weeks
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
             

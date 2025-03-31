@@ -13,6 +13,7 @@ interface AIContentLoaderProps {
     subject?: string;
     className?: string;
     topic?: string;
+    board?: string;
   };
 }
 
@@ -48,7 +49,7 @@ const AIContentLoader: React.FC<AIContentLoaderProps> = ({
             </div>
             <Progress 
               value={progress} 
-              variant={progress >= 100 ? "success" : progress > 70 ? "info" : "default"} 
+              className={progress >= 100 ? "h-2 bg-green-100" : "h-2"} 
             />
             <p className="text-xs text-muted-foreground">Using {provider} to generate curriculum-aligned content</p>
           </div>
@@ -57,10 +58,11 @@ const AIContentLoader: React.FC<AIContentLoaderProps> = ({
             <div className="pt-4 space-y-2">
               <p className="text-sm">This content is being generated based on:</p>
               <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                {context.subject && <li>NCERT {context.subject} curriculum</li>}
+                {context.board && context.subject && <li>{context.board} {context.subject} curriculum</li>}
                 {context.className && <li>Class {context.className} textbook content</li>}
                 {context.topic && <li>Topic: {context.topic}</li>}
                 <li>Latest educational standards and learning objectives</li>
+                <li>Global best practices and teaching methodologies</li>
               </ul>
             </div>
           )}
@@ -70,6 +72,7 @@ const AIContentLoader: React.FC<AIContentLoaderProps> = ({
             <div className="h-4 bg-secondary rounded w-full"></div>
             <div className="h-4 bg-secondary rounded w-5/6"></div>
             <div className="h-4 bg-secondary rounded w-2/3"></div>
+            <div className="h-20 bg-secondary/40 rounded w-full mt-3"></div>
           </div>
         </div>
       </CardContent>

@@ -1,16 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
+import deepSeekService from "../services/deepSeekService";
 
 interface SchoolSelectionFormProps {
   userName?: string;
   level?: number;
   xp?: number;
-  board?: string; // Add the board prop to the interface
+  board?: string;
   onComplete: (school: { state: string; city: string; school: string }) => void;
 }
 
@@ -25,18 +26,38 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   const [city, setCity] = useState<string>("");
   const [school, setSchool] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [loadingSchools, setLoadingSchools] = useState(false);
+  const [schools, setSchools] = useState<string[]>([]);
 
   const handleStateChange = (value: string) => {
     setState(value);
     // Reset city and school when state changes
     setCity("");
     setSchool("");
+    setSchools([]);
   };
 
-  const handleCityChange = (value: string) => {
+  const handleCityChange = async (value: string) => {
     setCity(value);
     // Reset school when city changes
     setSchool("");
+    
+    // Fetch comprehensive list of schools for this city
+    if (value && state) {
+      setLoadingSchools(true);
+      try {
+        const schoolList = await deepSeekService.getSchoolsForCity(state, value);
+        setSchools(schoolList);
+      } catch (error) {
+        console.error("Error fetching schools:", error);
+        toast("Error loading schools", {
+          description: "Could not fetch schools for this city. Using default list."
+        });
+        setSchools(getDefaultSchools(value));
+      } finally {
+        setLoadingSchools(false);
+      }
+    }
   };
 
   const handleSchoolChange = (value: string) => {
@@ -48,7 +69,6 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
 
     // Validate form inputs
     if (!state || !city || !school) {
-      // Fixed the toast call to use correct properties for sonner
       toast("Required fields missing", {
         description: "Please fill in all required fields."
       });
@@ -93,8 +113,8 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
     return citiesMap[state] || ["City 1", "City 2", "City 3"]; // Default cities if state is not in the map
   };
 
-  // Function to get schools based on city
-  const getSchoolsForCity = (city: string) => {
+  // Function for default schools if API fails
+  const getDefaultSchools = (city: string) => {
     // Enhanced with more comprehensive school lists
     const schoolsMap: Record<string, string[]> = {
       "Mumbai": ["St. Xavier's High School", "Don Bosco High School", "R.N. Podar School", "Bombay Scottish School", "Cathedral and John Connon School", "Jamnabai Narsee School", "Dhirubhai Ambani International School", "Arya Vidya Mandir"],
@@ -111,13 +131,8 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
     return schoolsMap[city] || ["School 1", "School 2", "School 3", "School 4", "School 5", "School 6", "School 7", "School 8"]; // Default schools if city is not in the map
   };
 
-  const navigationItems = [
-    { name: "Back to Dashboard", href: "/", icon: <ChevronLeft className="h-4 w-4" /> },
-  ];
-
-  // Get relevant cities and schools based on selections
+  // Get relevant cities based on selections
   const cities = state ? getCitiesForState(state) : [];
-  const schools = city ? getSchoolsForCity(city) : [];
 
   return (
     <div>
@@ -153,19 +168,31 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
           
           <div>
             <Label htmlFor="school">School</Label>
-            <Select value={school} onValueChange={handleSchoolChange} disabled={loading || !city}>
+            <Select value={school} onValueChange={handleSchoolChange} disabled={loading || !city || loadingSchools}>
               <SelectTrigger id="school">
-                <SelectValue placeholder="Select School" />
+                <SelectValue placeholder={loadingSchools ? "Loading schools..." : "Select School"} />
               </SelectTrigger>
               <SelectContent>
-                {schools.map((schoolName) => (
-                  <SelectItem key={schoolName} value={schoolName}>{schoolName}</SelectItem>
-                ))}
+                {loadingSchools ? (
+                  <SelectItem value="loading" disabled>Loading schools...</SelectItem>
+                ) : (
+                  schools.map((schoolName) => (
+                    <SelectItem key={schoolName} value={schoolName}>{schoolName}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
+            {loadingSchools && (
+              <div className="mt-2">
+                <div className="h-1 w-full bg-gray-200 rounded overflow-hidden">
+                  <div className="h-full bg-primary animate-pulse rounded" style={{ width: '100%' }}></div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Searching for schools in {city}...</p>
+              </div>
+            )}
           </div>
           
-          <Button type="submit" disabled={loading || !state || !city || !school}>
+          <Button type="submit" disabled={loading || !state || !city || !school || loadingSchools}>
             Continue
           </Button>
         </div>

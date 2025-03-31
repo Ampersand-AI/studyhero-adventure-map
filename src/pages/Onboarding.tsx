@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -9,26 +10,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import StudyHeroHeader from '@/components/StudyHeroHeader';
 import OnboardingCard from '@/components/OnboardingCard';
 import SchoolSelectionForm from '@/components/SchoolSelectionForm';
-import { BookOpen, ChevronRight, GraduationCap, School, Home } from "lucide-react";
-
-// Define the props type for OnboardingCard if it doesn't exist
-interface CustomOnboardingCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}
+import SubjectSelectionForm from '@/components/SubjectSelectionForm';
+import StudyPlanProgress from '@/components/StudyPlanProgress';
+import { BookOpen, ChevronRight, GraduationCap, School, Home, BookOpenCheck } from "lucide-react";
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -40,6 +28,8 @@ const Onboarding = () => {
     city: string;
     school: string;
   } | null>(null);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [studyPlanGenerated, setStudyPlanGenerated] = useState(false);
   
   const handleBoardSelect = (selectedBoard: string) => {
     setBoard(selectedBoard);
@@ -69,9 +59,24 @@ const Onboarding = () => {
     school: string;
   }) => {
     setSchoolInfo(school);
+    localStorage.setItem('selectedSchool', JSON.stringify(school));
     
-    // Continue to the dashboard
+    // Move to subject selection
     setStep(4);
+  };
+  
+  const handleSubjectSelection = (subjects: string[]) => {
+    setSelectedSubjects(subjects);
+    localStorage.setItem('selectedSubjects', JSON.stringify(subjects));
+    
+    // Move to study plan generation
+    setStep(5);
+  };
+  
+  const handleStudyPlanComplete = () => {
+    setStudyPlanGenerated(true);
+    // Move to final step
+    setStep(6);
   };
   
   const handleGetStarted = () => {
@@ -79,9 +84,9 @@ const Onboarding = () => {
     localStorage.setItem('currentXp', '0');
     localStorage.setItem('currentLevel', '1');
     
-    // Initialize an empty profile with selected subjects
+    // Initialize profile with selected data
     const studyHeroProfile = {
-      subjects: ['Mathematics', 'Science', 'English', 'Social Studies'],
+      subjects: selectedSubjects,
       board,
       class: className,
       school: schoolInfo?.school,
@@ -127,6 +132,10 @@ const Onboarding = () => {
               <div className={`h-1 w-12 ${step > 3 ? 'bg-primary' : 'bg-muted'}`}></div>
               <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step >= 4 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                 4
+              </div>
+              <div className={`h-1 w-12 ${step > 4 ? 'bg-primary' : 'bg-muted'}`}></div>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${step >= 5 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                5
               </div>
             </div>
           </div>
@@ -231,6 +240,44 @@ const Onboarding = () => {
           {step === 4 && (
             <Card className="shadow-lg border-t-4 border-t-primary">
               <CardHeader>
+                <CardTitle className="text-2xl text-center">Select Your Subjects</CardTitle>
+                <CardDescription className="text-center">Choose the subjects you want to study</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SubjectSelectionForm 
+                  board={board}
+                  className={className}
+                  onComplete={handleSubjectSelection}
+                />
+              </CardContent>
+              <CardFooter className="flex justify-start">
+                <Button variant="outline" onClick={() => setStep(3)}>
+                  Back to School Selection
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+          
+          {step === 5 && (
+            <Card className="shadow-lg border-t-4 border-t-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-center">Creating Your Study Plans</CardTitle>
+                <CardDescription className="text-center">Our AI is generating personalized learning content</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StudyPlanProgress 
+                  subjects={selectedSubjects}
+                  board={board}
+                  className={className}
+                  onComplete={handleStudyPlanComplete}
+                />
+              </CardContent>
+            </Card>
+          )}
+          
+          {step === 6 && (
+            <Card className="shadow-lg border-t-4 border-t-primary">
+              <CardHeader>
                 <CardTitle className="text-2xl text-center">Ready to Start Learning!</CardTitle>
                 <CardDescription className="text-center">Your personalized learning plan is ready</CardDescription>
               </CardHeader>
@@ -260,13 +307,22 @@ const Onboarding = () => {
                       <p className="text-sm text-muted-foreground">{schoolInfo?.city}, {schoolInfo?.state}</p>
                     </div>
                   </div>
+                  
+                  <div className="flex items-center">
+                    <BookOpenCheck className="h-5 w-5 mr-3 text-primary" />
+                    <div>
+                      <p className="font-medium">Subjects</p>
+                      <p className="text-muted-foreground">{selectedSubjects.join(', ')}</p>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="text-center space-y-2">
                   <h3 className="font-medium">What's next?</h3>
                   <p className="text-muted-foreground">
                     We've prepared personalized learning materials following the {board} curriculum
-                    for Class {className}. You'll have access to lessons, quizzes, and practice exercises.
+                    for Class {className}. Daily lessons include fundamentals, examples, and visual aids.
+                    Weekly quizzes will help track your progress.
                   </p>
                 </div>
                 
@@ -276,8 +332,8 @@ const Onboarding = () => {
                 </Button>
               </CardContent>
               <CardFooter className="flex justify-start">
-                <Button variant="outline" onClick={() => setStep(3)}>
-                  Back to School Selection
+                <Button variant="outline" onClick={() => setStep(4)}>
+                  Back to Subject Selection
                 </Button>
               </CardFooter>
             </Card>
