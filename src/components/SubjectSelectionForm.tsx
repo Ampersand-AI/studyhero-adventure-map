@@ -115,7 +115,7 @@ const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
                   <Checkbox 
                     id={`subject-${subject}`} 
                     checked={selectedOptionalSubjects.includes(subject)}
-                    // Remove the onCheckedChange to prevent duplicate state changes
+                    // Important: Do not use onCheckedChange here to avoid double state updates
                   />
                   <Label 
                     htmlFor={`subject-${subject}`} 
