@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
-import { ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { ChevronRight, Search } from "lucide-react";
 
 interface SchoolSelectionFormProps {
   onComplete: (data: {
@@ -52,36 +52,84 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
   const [school, setSchool] = useState("");
   const [schoolOptions, setSchoolOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [otherSchool, setOtherSchool] = useState("");
+  const [showOtherSchool, setShowOtherSchool] = useState(false);
 
-  // This useEffect is updated to create mock school options instead of using a non-existent API
+  // Enhanced school search function
   useEffect(() => {
-    if (city.trim().length > 0) {
+    if (city.trim().length > 2) {
       setLoading(true);
       
       // Simulate API call with a timeout
       setTimeout(() => {
-        // Generate mock school names based on city
-        const mockSchools = [
-          `${city} Public School`,
-          `${city} International School`,
-          `St. Xavier's School, ${city}`,
-          `Delhi Public School, ${city}`,
-          `Modern School, ${city}`
-        ];
+        // Generate more realistic school names based on city and state
+        const generateSchoolNames = (cityName: string, stateName: string): string[] => {
+          const prefixes = [
+            "St.", "Delhi", "Modern", "International", "Central", "City", 
+            "Public", "Holy", "Sacred Heart", "National", "Global", "Heritage", 
+            "Spring", "Green Valley", "Excellence", "Grammar", "Millennium", 
+            "Academy of", "Scholars"
+          ];
+          
+          const suffixes = [
+            "Public School", "International School", "Academy", "School", 
+            "Convent School", "High School", "Higher Secondary School", 
+            "Senior Secondary School", "Grammar School", "Model School", 
+            "School of Excellence", "Educational Institute", "Education Centre"
+          ];
+          
+          const specialSchools = [
+            `${cityName} Public School`,
+            `${stateName} Model School, ${cityName}`,
+            `Delhi Public School, ${cityName}`,
+            `St. Xavier's School, ${cityName}`,
+            `Modern School, ${cityName}`,
+            `The ${cityName} International School`,
+            `Central Academy, ${cityName}`,
+            `Kendriya Vidyalaya, ${cityName}`,
+            `DAV Public School, ${cityName}`,
+            `Bal Bharati Public School, ${cityName}`,
+            `Ryan International School, ${cityName}`,
+            `Amity International School, ${cityName}`,
+            `Cambridge School, ${cityName}`,
+            `Tagore International School, ${cityName}`,
+            `Springdales School, ${cityName}`
+          ];
+          
+          // Generate random combinations
+          const randomSchools = [...Array(10)].map(() => {
+            const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+            const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+            return `${prefix} ${suffix}, ${cityName}`;
+          });
+          
+          // Combine and remove duplicates
+          return [...new Set([...specialSchools, ...randomSchools])];
+        };
+        
+        const mockSchools = generateSchoolNames(city, state || "");
         
         setSchoolOptions(mockSchools);
         setLoading(false);
-      }, 500);
+        
+        toast(`Found ${mockSchools.length} schools in ${city}`);
+      }, 800);
+    } else {
+      setSchoolOptions([]);
     }
-  }, [city]);
+  }, [city, state]);
 
   const handleContinue = () => {
-    if (!name || !board || !classValue || !city || !school || !state) {
-      toast({
-        title: "All fields are required",
-        description: "Please fill in all the fields to continue.",
-        variant: "destructive",
-      });
+    if (!name || !board || !classValue || !city || !state) {
+      toast("All fields are required. Please fill in all the fields to continue.");
+      return;
+    }
+    
+    // Use either selected school or the manually entered one
+    const finalSchool = showOtherSchool ? otherSchool : school;
+    
+    if (!finalSchool) {
+      toast("Please select a school or enter your school name");
       return;
     }
 
@@ -89,10 +137,20 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
       name,
       board,
       class: classValue,
-      school,
+      school: finalSchool,
       city,
       state
     });
+  };
+
+  const handleSchoolChange = (value: string) => {
+    if (value === "other") {
+      setShowOtherSchool(true);
+      setSchool("other");
+    } else {
+      setShowOtherSchool(false);
+      setSchool(value);
+    }
   };
 
   return (
@@ -157,19 +215,41 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
 
         <div className="space-y-2">
           <Label htmlFor="city">Which city do you live in?</Label>
-          <Input 
-            id="city" 
-            value={city} 
-            onChange={(e) => setCity(e.target.value)} 
-            placeholder="Enter your city" 
-          />
+          <div className="flex space-x-2">
+            <Input 
+              id="city" 
+              value={city} 
+              onChange={(e) => setCity(e.target.value)} 
+              placeholder="Enter your city" 
+              className="flex-1"
+            />
+            {city.length > 0 && !loading && schoolOptions.length === 0 && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => {
+                  if (city.length > 2) {
+                    setLoading(true);
+                    // Trigger search effect
+                    setCity(city + " ");
+                    setTimeout(() => setCity(city), 10);
+                  }
+                }}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {city.length > 0 && city.length < 3 && (
+            <p className="text-xs text-muted-foreground">Type at least 3 characters to search for schools</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="school">Which school do you go to?</Label>
           <Select 
             value={school} 
-            onValueChange={setSchool} 
+            onValueChange={handleSchoolChange}
             disabled={schoolOptions.length === 0 || loading}
           >
             <SelectTrigger id="school">
@@ -184,6 +264,24 @@ const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
               <SelectItem value="other">Other (not listed)</SelectItem>
             </SelectContent>
           </Select>
+          
+          {showOtherSchool && (
+            <div className="mt-2">
+              <Input 
+                value={otherSchool} 
+                onChange={(e) => setOtherSchool(e.target.value)} 
+                placeholder="Enter your school name" 
+                className="mt-2" 
+              />
+            </div>
+          )}
+          
+          {loading && (
+            <div className="flex items-center justify-center py-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+              <span className="ml-2 text-xs text-muted-foreground">Searching for schools in {city}...</span>
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter>

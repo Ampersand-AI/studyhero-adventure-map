@@ -1,290 +1,451 @@
 
-// src/services/deepSeekService.ts
+import { toast } from "sonner";
 
-interface AIStatus {
+export interface AIStatus {
   stage: string;
   progress: number;
+  provider?: string;
 }
 
-// DeepSeek API Configuration
-const DEEPSEEK_API_KEY = "sk-a6632f7d3f794d76b60fbe4a40d80058";
+// Interface for subjects returned from API
+interface SubjectsResponse {
+  compulsorySubjects: string[];
+  optionalSubjects: string[];
+}
 
-// Mock data for fallback when API is unavailable
-const getDefaultSubjectsForBoard = (board: string, className: string) => {
-  // Return faster default data based on board and class
-  if (board === 'CBSE') {
-    return {
-      compulsorySubjects: ["Mathematics", "Science", "English", "Social Studies", "Hindi"],
-      optionalSubjects: ["Computer Science", "Sanskrit", "Physical Education", "Art", "Music"]
-    };
-  } else if (board === 'ICSE') {
-    return {
-      compulsorySubjects: ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Hindi"],
-      optionalSubjects: ["Computer Science", "Physical Education", "Art", "Economics", "Geography"]
-    };
-  } else if (board === 'State Board') {
-    return {
-      compulsorySubjects: ["Mathematics", "Science", "English", "Social Science", "Hindi"],
-      optionalSubjects: ["Computer Applications", "Physical Education", "Art Education", "Music"]
-    };
-  } else { // International
-    return {
-      compulsorySubjects: ["Mathematics", "Science", "English Language", "Social Studies"],
-      optionalSubjects: ["Computer Science", "Foreign Language", "Physical Education", "Art & Design", "Music", "Economics"]
-    };
-  }
-};
+// Interface for study plans returned from API
+interface StudyPlanResponse {
+  subject: string;
+  board: string;
+  className: string;
+  chapters: Chapter[];
+  lastUpdated: string;
+}
 
-// DeepSeek Service
-const deepSeekService = {
-  apiKey: DEEPSEEK_API_KEY,
-  
-  getSubjectsForBoardAndClass: async (board: string, className: string) => {
-    try {
-      // Attempt to get data from the DeepSeek API
-      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [
-            {
-              role: "system",
-              content: "You are an educational curriculum expert. Provide accurate information about school subjects."
-            },
-            {
-              role: "user",
-              content: `List the compulsory and optional subjects for ${board} curriculum in class ${className}. Format as JSON with compulsorySubjects and optionalSubjects arrays.`
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.3
-        })
-      });
-      
-      if (!response.ok) {
-        // Fallback to predetermined data if API fails
-        return getDefaultSubjectsForBoard(board, className);
-      }
-      
-      const data = await response.json();
-      try {
-        // Try to parse the result as JSON
-        const content = data.choices[0].message.content;
-        return JSON.parse(content);
-      } catch (parseError) {
-        // Fallback if parsing fails
-        return getDefaultSubjectsForBoard(board, className);
-      }
-    } catch (error) {
-      console.error("DeepSeek API error:", error);
-      // Return faster with predetermined data as fallback
-      return getDefaultSubjectsForBoard(board, className);
+interface Chapter {
+  title: string;
+  progress: number;
+  lessons: Lesson[];
+}
+
+interface Lesson {
+  title: string;
+  type: string;
+}
+
+const API_KEY = "sk-a6632f7d3f794d76b60fbe4a40d80058";
+
+// Default/fallback subjects for different boards and classes
+const DEFAULT_SUBJECTS: Record<string, Record<string, SubjectsResponse>> = {
+  'CBSE': {
+    '7': {
+      compulsorySubjects: ["English", "Hindi", "Mathematics", "Science", "Social Science"],
+      optionalSubjects: ["Computer Science", "Sanskrit", "Art Education", "Physical Education"]
+    },
+    '8': {
+      compulsorySubjects: ["English", "Hindi", "Mathematics", "Science", "Social Science"],
+      optionalSubjects: ["Computer Science", "Sanskrit", "Art Education", "Physical Education"]
+    },
+    '9': {
+      compulsorySubjects: ["English", "Mathematics", "Science", "Social Science", "Second Language"],
+      optionalSubjects: ["Information Technology", "Art Education", "Physical Education", "Hindi", "Sanskrit"]
+    },
+    '10': {
+      compulsorySubjects: ["English", "Mathematics", "Science", "Social Science", "Second Language"],
+      optionalSubjects: ["Information Technology", "Art Education", "Physical Education", "Hindi", "Sanskrit"]
+    },
+    '11': {
+      compulsorySubjects: ["English"],
+      optionalSubjects: ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science", "Economics", "Business Studies", "Accountancy", "History", "Geography", "Political Science", "Psychology", "Sociology", "Physical Education"]
+    },
+    '12': {
+      compulsorySubjects: ["English"],
+      optionalSubjects: ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science", "Economics", "Business Studies", "Accountancy", "History", "Geography", "Political Science", "Psychology", "Sociology", "Physical Education"]
     }
   },
-  
-  generateStudyPlan: async (
-    subject: string, 
-    board: string, 
-    className: string, 
-    updateStatus?: (status: AIStatus) => void
-  ) => {
-    try {
-      // Try to generate study plan using the DeepSeek API
-      if (updateStatus) {
-        updateStatus({
-          stage: "Connecting to DeepSeek API",
-          progress: 10
-        });
-      }
-      
-      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert educational curriculum designer."
-            },
-            {
-              role: "user",
-              content: `Create a detailed study plan for ${subject} for class ${className} following the ${board} curriculum. Format as JSON with a chapters array containing title and lessons fields.`
-            }
-          ],
-          max_tokens: 2000,
-          temperature: 0.5
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`DeepSeek API error: ${response.status}`);
-      }
-      
-      if (updateStatus) {
-        updateStatus({
-          stage: "Processing study plan data",
-          progress: 60
-        });
-      }
-      
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      
-      try {
-        const jsonPlan = JSON.parse(content);
-        
-        if (updateStatus) {
-          updateStatus({
-            stage: "Study plan generated successfully",
-            progress: 100
-          });
-        }
-        
-        return jsonPlan;
-      } catch (parseError) {
-        // Fallback to simulated data
-        console.error("Error parsing DeepSeek response:", parseError);
-        throw new Error("Invalid response format");
-      }
-    } catch (error) {
-      console.error("DeepSeek study plan error:", error);
-      
-      // Fallback to simulated processing
-      // Simulate faster AI processing with quicker progress updates
-      const totalSteps = 5;
-      const stepDuration = 400; // ms per step - much faster
-      
-      for (let step = 1; step <= totalSteps; step++) {
-        if (updateStatus) {
-          updateStatus({
-            stage: getStageDescription(step, subject),
-            progress: Math.round((step / totalSteps) * 100)
-          });
-        }
-        
-        // Simulate AI processing
-        await new Promise(resolve => setTimeout(resolve, stepDuration));
-      }
-      
-      // Return simulated study plan
-      return {
-        subject,
-        board,
-        className,
-        chapters: generateChapters(subject),
-        lastUpdated: new Date().toISOString()
-      };
+  'ICSE': {
+    '7': {
+      compulsorySubjects: ["English", "Mathematics", "Science", "Social Studies", "Second Language"],
+      optionalSubjects: ["Computer Applications", "Art", "Music", "Physical Education"]
+    },
+    '8': {
+      compulsorySubjects: ["English", "Mathematics", "Science", "Social Studies", "Second Language"],
+      optionalSubjects: ["Computer Applications", "Art", "Music", "Physical Education"]
+    },
+    '9': {
+      compulsorySubjects: ["English", "Mathematics", "Science (Physics, Chemistry, Biology)", "History & Civics", "Geography"],
+      optionalSubjects: ["Computer Applications", "Economic Applications", "Modern Foreign Language", "Classical Language", "Art", "Physical Education"]
+    },
+    '10': {
+      compulsorySubjects: ["English", "Mathematics", "Science (Physics, Chemistry, Biology)", "History & Civics", "Geography"],
+      optionalSubjects: ["Computer Applications", "Economic Applications", "Modern Foreign Language", "Classical Language", "Art", "Physical Education"]
+    },
+    '11': {
+      compulsorySubjects: ["English"],
+      optionalSubjects: ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science", "Economics", "Commerce", "Accounts", "History", "Geography", "Political Science", "Psychology", "Sociology", "Physical Education"]
+    },
+    '12': {
+      compulsorySubjects: ["English"],
+      optionalSubjects: ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science", "Economics", "Commerce", "Accounts", "History", "Geography", "Political Science", "Psychology", "Sociology", "Physical Education"]
+    }
+  },
+  'State Board': {
+    '7': {
+      compulsorySubjects: ["English", "Regional Language", "Mathematics", "Science", "Social Science"],
+      optionalSubjects: ["Computer Education", "Arts", "Physical Education"]
+    },
+    '8': {
+      compulsorySubjects: ["English", "Regional Language", "Mathematics", "Science", "Social Science"],
+      optionalSubjects: ["Computer Education", "Arts", "Physical Education"]
+    },
+    '9': {
+      compulsorySubjects: ["English", "Regional Language", "Mathematics", "Science", "Social Science"],
+      optionalSubjects: ["Computer Science", "Arts", "Physical Education", "Third Language"]
+    },
+    '10': {
+      compulsorySubjects: ["English", "Regional Language", "Mathematics", "Science", "Social Science"],
+      optionalSubjects: ["Computer Science", "Arts", "Physical Education", "Third Language"]
+    },
+    '11': {
+      compulsorySubjects: ["English", "Regional Language"],
+      optionalSubjects: ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science", "Economics", "Commerce", "Accountancy", "History", "Geography", "Political Science"]
+    },
+    '12': {
+      compulsorySubjects: ["English", "Regional Language"],
+      optionalSubjects: ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science", "Economics", "Commerce", "Accountancy", "History", "Geography", "Political Science"]
+    }
+  },
+  'International': {
+    '7': {
+      compulsorySubjects: ["English", "Mathematics", "Science", "Humanities"],
+      optionalSubjects: ["Second Language", "Digital Literacy", "Art & Design", "Music", "Drama", "Physical Education"]
+    },
+    '8': {
+      compulsorySubjects: ["English", "Mathematics", "Science", "Humanities"],
+      optionalSubjects: ["Second Language", "Digital Literacy", "Art & Design", "Music", "Drama", "Physical Education"]
+    },
+    '9': {
+      compulsorySubjects: ["English", "Mathematics", "Science (Physics, Chemistry, Biology)", "Humanities"],
+      optionalSubjects: ["Second Language", "Computer Science", "Business Studies", "Economics", "Art & Design", "Music", "Drama", "Physical Education"]
+    },
+    '10': {
+      compulsorySubjects: ["English", "Mathematics", "Science (Physics, Chemistry, Biology)", "Humanities"],
+      optionalSubjects: ["Second Language", "Computer Science", "Business Studies", "Economics", "Art & Design", "Music", "Drama", "Physical Education"]
+    },
+    '11': {
+      compulsorySubjects: ["English"],
+      optionalSubjects: ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "Economics", "Business Management", "Psychology", "History", "Geography", "Global Politics", "Visual Arts", "Music", "Theatre", "Foreign Languages"]
+    },
+    '12': {
+      compulsorySubjects: ["English"],
+      optionalSubjects: ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "Economics", "Business Management", "Psychology", "History", "Geography", "Global Politics", "Visual Arts", "Music", "Theatre", "Foreign Languages"]
     }
   }
 };
 
-// Helper functions
-function getStageDescription(step: number, subject: string): string {
-  const stages = [
-    `Analyzing ${subject} curriculum`,
-    `Structuring ${subject} lessons`,
-    `Creating practice exercises`,
-    `Generating visual aids`,
-    `Finalizing study plan`
-  ];
-  
-  return stages[step - 1];
+/**
+ * Gets the appropriate subjects for a given board and class
+ */
+async function getSubjectsForBoardAndClass(board: string, className: string): Promise<SubjectsResponse> {
+  try {
+    console.log(`Getting subjects for ${board} class ${className}`);
+    
+    // Try to fetch from DeepSeek API
+    const prompt = `List the compulsory and optional subjects for ${board} curriculum in class ${className}. Format as JSON with compulsorySubjects and optionalSubjects arrays.`;
+    
+    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "You are an educational curriculum expert. Provide accurate information about school subjects."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (!content) {
+      throw new Error("No content returned from API");
+    }
+    
+    // Extract JSON from the response (which might contain markdown and other text)
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || 
+                      content.match(/```\n([\s\S]*?)\n```/) || 
+                      content.match(/{[\s\S]*?}/);
+    
+    let jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : content;
+    
+    // Clean up the string to ensure it's valid JSON
+    jsonStr = jsonStr.replace(/^```json\n|^```\n|```$/g, '').trim();
+    
+    try {
+      const result = JSON.parse(jsonStr);
+      
+      // Validate the result has the expected structure
+      if (Array.isArray(result.compulsorySubjects) && Array.isArray(result.optionalSubjects)) {
+        console.log("Successfully parsed subjects from API:", result);
+        return result;
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (parseError) {
+      console.error("Error parsing DeepSeek response:", parseError);
+      throw new Error("Failed to parse API response");
+    }
+  } catch (error) {
+    console.error("DeepSeek subjects error:", error);
+    
+    // Fallback to default subjects
+    const defaultSubjects = DEFAULT_SUBJECTS[board]?.[className];
+    
+    if (defaultSubjects) {
+      console.log("Using default subjects for", board, "class", className);
+      return defaultSubjects;
+    }
+    
+    // Fallback for any board/class combination not in our defaults
+    return {
+      compulsorySubjects: ["English", "Mathematics", "Science"],
+      optionalSubjects: ["Social Studies", "Computer Science", "Arts", "Physical Education"]
+    };
+  }
 }
 
-function generateChapters(subject: string) {
-  const baseChapters = [
-    {
-      title: "Introduction",
-      lessons: [
-        { title: "Basic Concepts", type: "lesson" },
-        { title: "Fundamentals Quiz", type: "quiz" }
-      ]
-    },
-    {
-      title: "Core Principles",
-      lessons: [
-        { title: "Key Theories", type: "lesson" },
-        { title: "Applied Problems", type: "practice" },
-        { title: "Chapter Assessment", type: "quiz" }
-      ]
-    },
-    {
-      title: "Advanced Topics",
-      lessons: [
-        { title: "Complex Concepts", type: "lesson" },
-        { title: "Problem Solving", type: "practice" },
-        { title: "Final Evaluation", type: "quiz" }
-      ]
-    }
-  ];
+/**
+ * Generate study plan for a subject
+ */
+async function generateStudyPlan(
+  subject: string, 
+  board: string, 
+  className: string,
+  onStatusUpdate?: (status: AIStatus) => void
+): Promise<StudyPlanResponse> {
+  const updateStatus = onStatusUpdate || (() => {});
   
-  // Customize chapters based on subject
-  if (subject === "Mathematics") {
-    return [
-      {
-        title: "Numbers and Operations",
-        lessons: [
-          { title: "Number Systems", type: "lesson" },
-          { title: "Operations Practice", type: "practice" },
-          { title: "Quiz: Numbers", type: "quiz" }
-        ]
+  try {
+    updateStatus({
+      stage: "Initializing DeepSeek API",
+      progress: 10,
+      provider: "DeepSeek AI"
+    });
+    
+    const prompt = `Create a detailed study plan for ${subject} for class ${className} following the ${board} curriculum. Format as JSON with a chapters array containing title and lessons fields.`;
+    
+    updateStatus({
+      stage: "Requesting curriculum data",
+      progress: 30,
+      provider: "DeepSeek AI"
+    });
+    
+    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`
       },
-      {
-        title: "Algebra Basics",
-        lessons: [
-          { title: "Equations and Expressions", type: "lesson" },
-          { title: "Solving Linear Equations", type: "practice" },
-          { title: "Algebra Test", type: "quiz" }
-        ]
-      },
-      {
-        title: "Geometry",
-        lessons: [
-          { title: "Shapes and Properties", type: "lesson" },
-          { title: "Geometry Problems", type: "practice" },
-          { title: "Final Assessment", type: "quiz" }
-        ]
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert educational curriculum designer."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.5
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+    
+    updateStatus({
+      stage: "Processing curriculum data",
+      progress: 70,
+      provider: "DeepSeek AI"
+    });
+    
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (!content) {
+      throw new Error("No content returned from API");
+    }
+    
+    // Extract JSON from the response (which might contain markdown and other text)
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || 
+                      content.match(/```\n([\s\S]*?)\n```/) || 
+                      content.match(/{[\s\S]*?}/);
+    
+    let jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : content;
+    
+    // Clean up the string to ensure it's valid JSON
+    jsonStr = jsonStr.replace(/^```json\n|^```\n|```$/g, '').trim();
+    
+    try {
+      const result = JSON.parse(jsonStr);
+      
+      // Validate the result has the expected structure
+      if (result.chapters && Array.isArray(result.chapters)) {
+        updateStatus({
+          stage: "Study plan successfully generated",
+          progress: 100,
+          provider: "DeepSeek AI"
+        });
+        
+        return {
+          subject,
+          board,
+          className,
+          chapters: result.chapters,
+          lastUpdated: new Date().toISOString()
+        };
+      } else {
+        throw new Error("Invalid response format");
       }
+    } catch (parseError) {
+      console.error("Error parsing DeepSeek response:", parseError);
+      throw new Error("Failed to parse API response");
+    }
+  } catch (error) {
+    console.error("DeepSeek study plan error:", error);
+    updateStatus({
+      stage: "Error generating study plan, using fallback",
+      progress: 50,
+      provider: "System Fallback"
+    });
+    
+    // Fallback with generic chapters
+    const defaultChapters = generateDefaultChapters(subject);
+    
+    updateStatus({
+      stage: "Generated fallback study plan",
+      progress: 100,
+      provider: "System Fallback"
+    });
+    
+    return {
+      subject,
+      board,
+      className,
+      chapters: defaultChapters,
+      lastUpdated: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Generate default chapters for fallback
+ */
+function generateDefaultChapters(subject: string): Chapter[] {
+  const subjectLower = subject.toLowerCase();
+  let topics: string[] = [];
+  
+  if (subjectLower.includes('math')) {
+    topics = [
+      'Numbers and Number Systems',
+      'Algebra: Linear Equations',
+      'Geometry: Triangles and Quadrilaterals',
+      'Statistics: Data Handling',
+      'Mensuration: Areas and Volumes'
     ];
-  } else if (subject === "Science") {
-    return [
-      {
-        title: "Matter and Energy",
-        lessons: [
-          { title: "Properties of Matter", type: "lesson" },
-          { title: "Energy Transformations", type: "lesson" },
-          { title: "Science Quiz 1", type: "quiz" }
-        ]
-      },
-      {
-        title: "Life Sciences",
-        lessons: [
-          { title: "Cell Structure", type: "lesson" },
-          { title: "Plant and Animal Systems", type: "practice" },
-          { title: "Biology Test", type: "quiz" }
-        ]
-      },
-      {
-        title: "Earth and Space",
-        lessons: [
-          { title: "Planet Earth", type: "lesson" },
-          { title: "Solar System", type: "practice" },
-          { title: "Final Exam", type: "quiz" }
-        ]
-      }
+  } else if (subjectLower.includes('science')) {
+    topics = [
+      'Matter in Our Surroundings',
+      'Cell Structure and Functions',
+      'Force and Laws of Motion',
+      'Work and Energy',
+      'Natural Resources and Conservation'
+    ];
+  } else if (subjectLower.includes('english')) {
+    topics = [
+      'Reading Comprehension',
+      'Grammar: Parts of Speech',
+      'Essay Writing',
+      'Literature: Poetry Analysis',
+      'Vocabulary Building'
+    ];
+  } else if (subjectLower.includes('social') || subjectLower.includes('history')) {
+    topics = [
+      'The French Revolution',
+      'Physical Features of India',
+      'Democracy and Constitution',
+      'Resources and Development',
+      'The Industrial Revolution'
+    ];
+  } else if (subjectLower.includes('physics')) {
+    topics = [
+      'Mechanics: Laws of Motion',
+      'Electrostatics and Current Electricity',
+      'Magnetism and Electromagnetic Induction',
+      'Optics: Light and Reflection',
+      'Thermodynamics'
+    ];
+  } else if (subjectLower.includes('chemistry')) {
+    topics = [
+      'Classification of Elements: Periodic Table',
+      'Chemical Bonding and Molecular Structure',
+      'Acids, Bases and Salts',
+      'Organic Chemistry: Hydrocarbons',
+      'Electrochemistry'
+    ];
+  } else if (subjectLower.includes('biology')) {
+    topics = [
+      'Cell Biology and Cell Division',
+      'Plant Physiology',
+      'Human Physiology: Digestive System',
+      'Genetics and Evolution',
+      'Ecology and Ecosystem'
+    ];
+  } else {
+    topics = [
+      'Introduction to the Subject',
+      'Fundamental Concepts',
+      'Advanced Applications',
+      'Practical Techniques',
+      'Modern Developments'
     ];
   }
   
-  return baseChapters;
+  return topics.map((topic, index) => ({
+    title: topic,
+    progress: 0,
+    lessons: [
+      { title: `Introduction to ${topic}`, type: "lesson" },
+      { title: `${topic} Practice`, type: "practice" },
+      { title: `${topic} Quiz`, type: "quiz" }
+    ]
+  }));
 }
 
-export type { AIStatus };
+// Export default and named functions
+const deepSeekService = {
+  getSubjectsForBoardAndClass,
+  generateStudyPlan
+};
+
 export default deepSeekService;

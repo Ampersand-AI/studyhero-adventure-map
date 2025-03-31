@@ -16,7 +16,7 @@ const MAX_RETRIES = 2;
 export type AIStatus = {
   stage: string;
   progress: number;
-  provider: "Claude" | "OpenAI" | "Gemini" | "DeepSeek" | "Fallback";
+  provider: string;
 };
 
 // AI provider interface
@@ -818,7 +818,7 @@ export const generateAIContent = async (
       onStatusUpdate({
         stage: `Initializing ${provider.name} service`,
         progress: 5,
-        provider: provider.name as any
+        provider: provider.name
       });
       
       const result = await provider.generateContent(prompt, onStatusUpdate, context);
@@ -826,38 +826,34 @@ export const generateAIContent = async (
       onStatusUpdate({
         stage: `Content successfully generated with ${provider.name}`,
         progress: 100,
-        provider: provider.name as any
+        provider: provider.name
       });
       
-      // Try to parse JSON if it's a string (for structured content)
-      if (typeof result === 'string') {
+      // Try to parse JSON if the response looks like JSON
+      if (typeof result === 'string' && (result.trim().startsWith('{') || result.trim().startsWith('['))) {
         try {
           return JSON.parse(result);
-        } catch (e) {
-          // If not valid JSON, return as is
+        } catch (parseError) {
+          console.log("Not valid JSON, returning as string");
           return result;
         }
       }
       
       return result;
     } catch (error) {
-      console.error(`${provider.name} provider failed:`, error);
       errorCount++;
+      console.error(`Error with ${provider.name} provider:`, error);
+      onStatusUpdate({
+        stage: `Error with ${provider.name}, trying next provider`,
+        progress: 5,
+        provider: provider.name
+      });
       
-      // If this isn't the fallback provider, try the next one
-      if (provider !== fallbackProvider) {
-        onStatusUpdate({
-          stage: `${provider.name} unavailable, trying alternative source`,
-          progress: 5,
-          provider: provider.name as any
-        });
-      } else {
-        // If even the fallback fails, return a minimal response
-        return { error: "Could not generate content", isError: true };
-      }
+      // Continue to next provider
+      continue;
     }
   }
   
-  // This should never happen since fallbackProvider should always succeed
-  return { error: "All providers failed", isError: true };
+  // If all providers failed, return fallback content
+  return fallbackProvider.generateContent(prompt, onStatusUpdate, context);
 };

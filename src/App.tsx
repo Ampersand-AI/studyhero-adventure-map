@@ -1,50 +1,45 @@
 
-import React from "react";
-import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "next-themes";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import Quiz from "./pages/Quiz";
-import Lesson from "./pages/Lesson";
-import SubjectDetails from "./pages/SubjectDetails";
-import Achievements from "./pages/Achievements";
-import Analytics from "./pages/Analytics";
-import NotFound from "./pages/NotFound";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
+import { ThemeProvider } from './components/theme-provider';
+import Dashboard from './pages/Dashboard';
+import Lesson from './pages/Lesson';
+import Quiz from './pages/Quiz';
+import Onboarding from './pages/Onboarding';
+import SubjectDetails from './pages/SubjectDetails';
+import { StudyPlanProvider } from './contexts/StudyPlanContext';
 
-// Create a new query client
+// Initialize QueryClient for React Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: false,
-      retry: 1,
     },
   },
 });
 
-const App = () => {
+function App() {
   return (
-    <BrowserRouter>
+    <ThemeProvider defaultTheme="light" storageKey="theme-preference">
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/subject/:subject" element={<SubjectDetails />} />
-            <Route path="/quiz/:id" element={<Quiz />} />
-            <Route path="/lesson/:id" element={<Lesson />} />
-            <Route path="/achievements" element={<Achievements />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </ThemeProvider>
+        <StudyPlanProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Onboarding />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/lesson" element={<Lesson />} />
+              <Route path="/quiz" element={<Quiz />} />
+              <Route path="/subject/:subjectName" element={<SubjectDetails />} />
+            </Routes>
+          </Router>
+          <Toaster position="top-center" richColors />
+        </StudyPlanProvider>
       </QueryClientProvider>
-    </BrowserRouter>
+    </ThemeProvider>
   );
-};
+}
 
 export default App;

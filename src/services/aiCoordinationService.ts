@@ -1,320 +1,260 @@
 
-import { generateAIContent, generateEnhancedContent, AIStatus } from './aiService';
 import { toast } from "sonner";
+import { generateAIContent, AIStatus } from './aiService';
 
-// Types for content generation
-export interface ContentGenerationContext {
+// Interface for lesson generation parameters
+export interface LessonGenerationParams {
   subject: string;
   topic: string;
   className?: string;
-  board?: string;
-  difficulty?: 'basic' | 'intermediate' | 'advanced';
   includeVisuals?: boolean;
   includeActivities?: boolean;
 }
 
-// Types for specific content components
-export interface ExampleContent {
-  title: string;
-  content: string;
-}
-
-export interface VisualAidContent {
-  title: string;
-  description: string;
-  visualType: string;
-}
-
-export interface ActivityContent {
-  title: string;
-  instructions: string;
-  learningOutcome: string;
-}
-
-export interface TextbookReferenceContent {
-  chapter: string;
-  pageNumbers: string;
-  description: string;
-}
-
+// Interface for lesson content
 export interface LessonContent {
   title: string;
-  keyPoints: string[];
   explanation: string[];
-  examples: ExampleContent[];
-  visualAids?: VisualAidContent[];
-  activities?: ActivityContent[];
-  summary: string;
-  textbookReferences?: TextbookReferenceContent[];
+  keyPoints: string[];
+  examples: {
+    title: string;
+    content: string;
+  }[];
+  visualAids?: {
+    title: string;
+    description: string;
+    visualType: string;
+  }[];
+  activities?: {
+    title: string;
+    instructions: string;
+    learningOutcome: string;
+  }[];
   interestingFacts?: string[];
-}
-
-export interface QuizContent {
-  questions: {
-    id: string;
-    question: string;
-    options: string[];
-    correctAnswer: string;
-    explanation: string;
+  summary?: string;
+  textbookReferences?: {
+    chapter: string;
+    pageNumbers: string;
+    description: string;
   }[];
 }
 
-/**
- * Generate a complete lesson with coordinated AI services
- */
-export const generateLessonContent = async (
-  context: ContentGenerationContext,
-  onStatusUpdate?: (status: AIStatus) => void
-): Promise<LessonContent | null> => {
+// Safe JSON parsing helper
+function safeParseJSON(jsonString: string): any {
   try {
-    // Show initial toast
-    toast(`Generating ${context.subject} lesson content`, {
-      description: "Researching comprehensive educational content from various global sources..."
-    });
-
-    // Update status if callback provided
-    const updateStatus = (status: AIStatus) => {
-      if (onStatusUpdate) {
-        onStatusUpdate(status);
-      }
-    };
-
-    // First, check if we have cached lesson content
-    try {
-      const cachedContent = localStorage.getItem(`lesson_${context.subject}_${context.topic.replace(/\s+/g, '_')}`);
-      if (cachedContent) {
-        updateStatus({
-          stage: "Retrieved from cache",
-          progress: 100,
-          provider: "Fallback"
-        });
-        return JSON.parse(cachedContent);
-      }
-    } catch (e) {
-      console.warn("Cache check failed:", e);
-    }
-
-    // Build the prompt for lesson content generation
-    const comprehensivePrompt = `
-      Create a comprehensive educational lesson on "${context.topic}" for the subject "${context.subject}" for students in class ${context.className || '10'}.
-      
-      IMPORTANT: Research and compile information from various educational sources and curriculums worldwide. Find the most engaging and effective teaching methods for this topic. 
-      Draw from global best practices, international curriculums, and modern educational resources available online.
-      
-      The lesson should include:
-      1. Key learning points (5-7 points) that align with standard educational objectives
-      2. Detailed explanation (3-5 paragraphs) using language appropriate for the age group
-      3. Practical examples (2-3) that demonstrate real-world applications
-      4. Visual learning aids (3-4 descriptions) that would enhance understanding
-      5. Hands-on activities (2-3) that reinforce learning through practical application
-      6. A concise summary that highlights the most important points
-      7. References to additional learning resources
-      8. Interesting facts to engage students and spark curiosity
-
-      Format the response as a well-structured JSON object following this schema:
-      {
-        "title": "full topic title",
-        "keyPoints": ["point 1", "point 2", ...],
-        "explanation": ["paragraph 1", "paragraph 2", ...],
-        "examples": [{"title": "Example 1", "content": "..."}, ...],
-        "visualAids": [{"title": "Visual 1", "description": "...", "visualType": "diagram"}, ...],
-        "activities": [{"title": "Activity 1", "instructions": "...", "learningOutcome": "..."}, ...],
-        "summary": "summary text",
-        "textbookReferences": [{"chapter": "1", "pageNumbers": "10-15", "description": "..."}, ...],
-        "interestingFacts": ["fact 1", "fact 2", ...]
-      }
-      
-      Ensure the content is accurate, age-appropriate, and follows best educational practices from around the world.
-    `;
-
-    // Generate content using the service that coordinates multiple AI providers
-    const result = await generateEnhancedContent(
-      comprehensivePrompt,
-      context,
-      updateStatus
-    );
-
-    if (!result) {
-      throw new Error("Failed to generate lesson content");
-    }
-
-    // Try to parse the result if it's a string
-    let parsedResult;
-    if (typeof result === 'string') {
-      try {
-        // Attempt to parse JSON from the string
-        // Clean up potential JSON issues
-        const cleanedJson = result
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .trim();
-        
-        parsedResult = JSON.parse(cleanedJson);
-      } catch (e) {
-        console.error("Failed to parse lesson content as JSON:", e);
-        console.error("Raw content:", result);
-        
-        // Attempt a fallback generic lesson structure
-        parsedResult = {
-          title: context.topic,
-          keyPoints: ["This topic is important for understanding " + context.subject],
-          explanation: ["The content for this lesson couldn't be properly formatted. Please try again."],
-          examples: [{ title: "Example", content: "Example content" }],
-          summary: "Summary of " + context.topic
-        };
-      }
-    } else {
-      parsedResult = result;
-    }
-
-    // Transform to expected format
-    const formattedLesson: LessonContent = {
-      title: parsedResult.title || context.topic,
-      keyPoints: parsedResult.keyPoints || [],
-      explanation: Array.isArray(parsedResult.explanation) ? parsedResult.explanation : 
-        (typeof parsedResult.explanation === 'string' ? [parsedResult.explanation] : 
-        (typeof parsedResult.summary === 'string' ? [parsedResult.summary] : [])),
-      examples: Array.isArray(parsedResult.examples) ? parsedResult.examples : 
-        (parsedResult.exampleProblems ? parsedResult.exampleProblems.map((ep: any) => ({
-          title: "Example",
-          content: `Problem: ${ep.problem}\nSolution: ${ep.solution}`
-        })) : []),
-      summary: parsedResult.summary || "",
-      visualAids: parsedResult.visualAids || [],
-      activities: parsedResult.activities || [],
-      textbookReferences: parsedResult.textbookReferences || [],
-      interestingFacts: parsedResult.interestingFacts || []
-    };
-
-    // Cache the lesson
-    try {
-      localStorage.setItem(
-        `lesson_${context.subject}_${context.topic.replace(/\s+/g, '_')}`, 
-        JSON.stringify(formattedLesson)
-      );
-    } catch (e) {
-      console.warn("Could not cache lesson:", e);
-    }
-
-    toast.success("Lesson content created successfully");
-    return formattedLesson;
+    return JSON.parse(jsonString);
   } catch (error) {
-    console.error("Error in generateLessonContent:", error);
-    toast.error("Failed to generate lesson content");
+    console.error("JSON parsing failed:", error);
+    
+    // Try to extract JSON from the string if it's wrapped in other content
+    try {
+      const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/) || 
+                       jsonString.match(/```\n([\s\S]*?)\n```/) || 
+                       jsonString.match(/{[\s\S]*?}/);
+      
+      if (jsonMatch) {
+        const extractedJson = jsonMatch[1] || jsonMatch[0];
+        // Clean up the string to ensure it's valid JSON
+        const cleanedJson = extractedJson.replace(/^```json\n|^```\n|```$/g, '').trim();
+        return JSON.parse(cleanedJson);
+      }
+    } catch (nestedError) {
+      console.error("Extraction attempt failed:", nestedError);
+    }
+    
     return null;
   }
-};
+}
 
 /**
- * Generate a quiz with coordinated AI services
+ * Generate lesson content with a structured approach
  */
-export const generateQuizContent = async (
-  context: ContentGenerationContext,
-  questionCount: number = 5,
-  onStatusUpdate?: (status: AIStatus) => void
-): Promise<QuizContent | null> => {
+export async function generateLessonContent(
+  params: LessonGenerationParams,
+  statusCallback?: (status: AIStatus) => void
+): Promise<LessonContent | null> {
+  // Default status callback if none provided
+  const updateStatus = statusCallback || (() => {});
+  
   try {
-    // Show initial toast
-    toast(`Generating ${context.subject} quiz questions`, {
-      description: "Creating assessment questions from comprehensive educational sources..."
+    updateStatus({
+      stage: "Preparing lesson content generation",
+      progress: 10,
+      provider: "AI Service"
     });
-
-    // Update status if callback provided
-    const updateStatus = (status: AIStatus) => {
-      if (onStatusUpdate) {
-        onStatusUpdate(status);
-      }
-    };
-
-    // Check for cached quiz
-    try {
-      const cachedQuiz = localStorage.getItem(`quiz_${context.subject}_${context.topic.replace(/\s+/g, '_')}`);
-      if (cachedQuiz) {
-        updateStatus({
-          stage: "Retrieved from cache",
-          progress: 100,
-          provider: "Fallback"
-        });
-        return JSON.parse(cachedQuiz);
-      }
-    } catch (e) {
-      console.warn("Cache check failed:", e);
+    
+    // Get the lesson from cache if available
+    const cacheKey = `lesson_${params.subject}_${params.topic.replace(/\s+/g, '_')}`;
+    const cachedLesson = localStorage.getItem(cacheKey);
+    
+    if (cachedLesson) {
+      updateStatus({
+        stage: "Retrieved from cache",
+        progress: 100,
+        provider: "Cache"
+      });
+      return JSON.parse(cachedLesson);
     }
-
-    // Build the prompt for quiz generation
+    
+    // Create a prompt that instructs the AI to provide structured lesson content
     const prompt = `
-      Create a quiz with ${questionCount} questions to test understanding of "${context.topic}" for ${context.subject} at class ${context.className || '10'} level.
+      Create an educational lesson on "${params.topic}" for a ${params.className || ''} student studying ${params.subject}.
       
-      IMPORTANT: Research and draw from various educational resources, textbooks, and online learning platforms to create effective assessment questions.
-      
-      Each question should be multiple choice with 4 options.
-      
-      Format the response as a JSON object with this structure:
+      Format your response as a JSON object with the following structure:
       {
-        "questions": [
-          {
-            "id": "q1",
-            "question": "Question text",
-            "options": ["Option A", "Option B", "Option C", "Option D"],
-            "correctAnswer": "Option that's correct (exact text match to one of the options)",
-            "explanation": "Explanation of why the answer is correct"
-          }
+        "title": "Lesson title",
+        "explanation": ["paragraph1", "paragraph2"],
+        "keyPoints": ["key point 1", "key point 2"],
+        "examples": [
+          {"title": "Example 1", "content": "Example content"},
+          {"title": "Example 2", "content": "Example content"}
+        ],
+        ${params.includeVisuals ? `
+        "visualAids": [
+          {"title": "Aid title", "description": "Description", "visualType": "Type"},
+          {"title": "Aid title", "description": "Description", "visualType": "Type"}
+        ],` : ''}
+        ${params.includeActivities ? `
+        "activities": [
+          {"title": "Activity title", "instructions": "Instructions", "learningOutcome": "Outcome"},
+          {"title": "Activity title", "instructions": "Instructions", "learningOutcome": "Outcome"}
+        ],` : ''}
+        "interestingFacts": ["fact 1", "fact 2"],
+        "summary": "Brief summary of the lesson",
+        "textbookReferences": [
+          {"chapter": "Chapter name", "pageNumbers": "1-10", "description": "What's in these pages"}
         ]
       }
       
-      Ensure questions are:
-      1. Clear and unambiguous
-      2. Appropriate difficulty for class ${context.className || '10'}
-      3. Focused on core concepts from standard educational curricula worldwide
-      4. Includes a mix of recall and application questions
-      5. Contains helpful explanations that reinforce learning
+      The content should be appropriate for the student's level, follow curriculum standards, and be educationally accurate.
     `;
-
-    // Generate content using our service
+    
+    updateStatus({
+      stage: "Requesting AI content generation",
+      progress: 20,
+      provider: "AI Service"
+    });
+    
+    // Generate the content using our cascading AI service
     const result = await generateAIContent(
-      prompt,
+      prompt, 
       updateStatus,
-      context
-    );
-
-    if (!result || (typeof result === 'object' && 'isError' in result && result.isError)) {
-      throw new Error("Failed to generate quiz content");
-    }
-
-    // Try to parse the result if it's a string
-    let parsedResult;
-    if (typeof result === 'string') {
-      try {
-        parsedResult = JSON.parse(result);
-      } catch (e) {
-        console.error("Failed to parse quiz content as JSON:", e);
-        return null;
+      {
+        subject: params.subject,
+        topic: params.topic,
+        className: params.className
       }
-    } else {
-      parsedResult = result;
+    );
+    
+    // If result is already an object, use it directly
+    if (result && typeof result === 'object') {
+      // Save to cache
+      localStorage.setItem(cacheKey, JSON.stringify(result));
+      
+      updateStatus({
+        stage: "Lesson content generated successfully",
+        progress: 100,
+        provider: "AI Service"
+      });
+      
+      return result;
     }
-
-    // Ensure the result has the expected format
-    if (!parsedResult.questions || !Array.isArray(parsedResult.questions)) {
-      console.error("Quiz result is missing questions array");
-      return null;
+    
+    // If result is a string, try to parse it as JSON
+    if (result && typeof result === 'string') {
+      const parsedResult = safeParseJSON(result);
+      
+      if (parsedResult) {
+        // Save to cache
+        localStorage.setItem(cacheKey, JSON.stringify(parsedResult));
+        
+        updateStatus({
+          stage: "Lesson content generated successfully",
+          progress: 100,
+          provider: "AI Service"
+        });
+        
+        return parsedResult;
+      }
     }
-
-    // Cache the quiz
-    try {
-      localStorage.setItem(
-        `quiz_${context.subject}_${context.topic.replace(/\s+/g, '_')}`, 
-        JSON.stringify(parsedResult)
-      );
-    } catch (e) {
-      console.warn("Could not cache quiz:", e);
-    }
-
-    toast.success("Quiz questions created successfully");
-    return parsedResult as QuizContent;
+    
+    throw new Error("Failed to generate properly structured lesson content");
+    
   } catch (error) {
-    console.error("Error in generateQuizContent:", error);
-    toast.error("Failed to generate quiz questions");
-    return null;
+    console.error("Lesson generation error:", error);
+    
+    updateStatus({
+      stage: "Error generating lesson, creating fallback content",
+      progress: 50,
+      provider: "System Fallback"
+    });
+    
+    // Generate a fallback lesson
+    const fallbackLesson = createFallbackLesson(params);
+    
+    updateStatus({
+      stage: "Fallback content ready",
+      progress: 100,
+      provider: "System Fallback"
+    });
+    
+    return fallbackLesson;
   }
-};
+}
+
+/**
+ * Create a fallback lesson when AI generation fails
+ */
+function createFallbackLesson(params: LessonGenerationParams): LessonContent {
+  const { subject, topic } = params;
+  
+  // Basic fallback structure
+  return {
+    title: topic,
+    explanation: [
+      `This lesson explores ${topic} as part of the ${subject} curriculum.`,
+      `Understanding ${topic} helps build a foundation for more advanced concepts in ${subject}.`
+    ],
+    keyPoints: [
+      `${topic} is an important concept in ${subject}`,
+      "This topic builds on previous foundations",
+      "Understanding the core principles will help with future learning"
+    ],
+    examples: [
+      {
+        title: "Basic Example",
+        content: `A simple illustration of ${topic} and how it applies in real-world situations.`
+      },
+      {
+        title: "Advanced Application",
+        content: `A more complex example showing the broader implications of ${topic} in ${subject}.`
+      }
+    ],
+    visualAids: [
+      {
+        title: "Conceptual Diagram",
+        description: `Visual representation of key components in ${topic}`,
+        visualType: "Diagram"
+      }
+    ],
+    activities: [
+      {
+        title: "Practice Exercise",
+        instructions: `Work through these problems related to ${topic} to reinforce your understanding.`,
+        learningOutcome: "Building practical skills and conceptual understanding"
+      }
+    ],
+    interestingFacts: [
+      `${topic} has interesting historical origins and development`,
+      `${topic} is applied in many modern technologies and fields`
+    ],
+    summary: `${topic} is a fundamental concept in ${subject} that helps explain how certain processes work and provides a foundation for more advanced study.`,
+    textbookReferences: [
+      {
+        chapter: "Standard Curriculum",
+        pageNumbers: "Varies by textbook",
+        description: "Refer to your textbook's chapter on this topic for additional reading"
+      }
+    ]
+  };
+}

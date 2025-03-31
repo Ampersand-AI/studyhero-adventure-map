@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -32,6 +33,15 @@ const Onboarding = () => {
   } | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [studyPlanGenerated, setStudyPlanGenerated] = useState(false);
+  
+  // Check if onboarding was already completed
+  useEffect(() => {
+    const studyHeroProfile = localStorage.getItem('studyHeroProfile');
+    if (studyHeroProfile) {
+      // Redirect to dashboard if onboarding is already completed
+      navigate('/dashboard');
+    }
+  }, [navigate]);
   
   const handleBoardSelect = (selectedBoard: string) => {
     setBoard(selectedBoard);
