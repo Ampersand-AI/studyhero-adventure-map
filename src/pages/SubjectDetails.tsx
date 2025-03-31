@@ -351,6 +351,67 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
     type: topic.type as "lesson" | "quiz" | "practice",
     estimatedTimeInMinutes: topic.estimatedTimeInMinutes
   }));
+
+// This section in SubjectDetails generates the timeline items
+// We need to modify this part to ensure proper status values
+const generateTimelineItems = () => {
+  if (!chapters || chapters.length === 0) {
+    return [];
+  }
+
+  // Create timeline items from chapters and lessons with proper status types
+  const timelineItems: TimelineItem[] = [];
+  
+  // First few completed items
+  if (chapters.length > 0 && chapters[0].lessons && chapters[0].lessons.length > 0) {
+    timelineItems.push({
+      id: "event1",
+      title: `Started ${chapters[0].title}`,
+      description: "Beginning your learning journey",
+      status: "completed" as "completed", // Explicitly cast to the correct type
+      dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      type: "lesson" as "lesson" // Explicitly cast to the correct type
+    });
+  }
+  
+  if (chapters.length > 0 && chapters[0].lessons && chapters[0].lessons.length > 0) {
+    timelineItems.push({
+      id: "event2",
+      title: `Completed Quiz on ${chapters[0].title}`,
+      description: "8/10 questions answered correctly",
+      status: "completed" as "completed",
+      dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      type: "quiz" as "quiz"
+    });
+  }
+  
+  // Current item
+  if (chapters.length > 1) {
+    timelineItems.push({
+      id: "event3",
+      title: `Start ${chapters[1].title}`,
+      description: "Moving to advanced concepts",
+      status: "current" as "current",
+      dueDate: new Date().toLocaleDateString(),
+      type: "lesson" as "lesson"
+    });
+  }
+  
+  // Future items
+  if (chapters.length > 2) {
+    timelineItems.push({
+      id: "event4",
+      title: `Upcoming ${chapters[2].title}`,
+      description: "Get ready for the next topic",
+      status: "future" as "future",
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      type: "practice" as "practice"
+    });
+  }
+  
+  return timelineItems;
+};
+
   
   return (
     <div className="min-h-screen bg-background">
@@ -481,7 +542,7 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
           
           <TabsContent value="timeline" className="mt-6">
             <StudyTimeline
-              items={mockTimelineItems}
+              items={generateTimelineItems()}
               onStartItem={(id) => {
                 toast(`Starting item: ${id}`);
               }}
