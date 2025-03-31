@@ -92,7 +92,7 @@ const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
           <div className="grid gap-3 sm:grid-cols-2">
             {compulsorySubjects.map(subject => (
               <div key={subject} className="flex items-center space-x-2 border p-3 rounded-md bg-muted/30">
-                <Checkbox id={`subject-${subject}`} checked disabled />
+                <Checkbox id={`subject-${subject}`} checked readOnly />
                 <Label htmlFor={`subject-${subject}`} className="font-medium">{subject}</Label>
               </div>
             ))}
@@ -115,7 +115,7 @@ const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
                   <Checkbox 
                     id={`subject-${subject}`} 
                     checked={selectedOptionalSubjects.includes(subject)}
-                    onCheckedChange={() => handleOptionalSubjectToggle(subject)}
+                    // Remove the onCheckedChange to prevent duplicate state changes
                   />
                   <Label 
                     htmlFor={`subject-${subject}`} 
