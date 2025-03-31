@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,18 +6,45 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Check, ChevronRight, BookOpen, Clock, BarChart } from "lucide-react";
+import { Check, ChevronRight, BookOpen, Clock, BarChart, Home, Settings } from "lucide-react";
 import StudyAIHeader from '@/components/StudyAIHeader';
 import SubjectTopicList from '@/components/SubjectTopicList';
 import { useStudyPlan } from '@/contexts/StudyPlanContext';
-import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline'; // Import the TimelineItem interface
-import { generateStudyPlan } from '@/services/studyPlanService';
+import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline';
+import { studyPlanService } from '@/services/studyPlanService';
+
+interface SubjectTopic {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  estimatedTimeInMinutes: number;
+  completed: boolean;
+}
 
 interface Topic {
   id: string;
   title: string;
   completed: boolean;
 }
+
+const mapToSubjectTopics = (topics: Topic[]): SubjectTopic[] => {
+  return topics.map(topic => ({
+    id: topic.id,
+    title: topic.title,
+    description: `Learn about ${topic.title}`,
+    type: 'lesson',
+    estimatedTimeInMinutes: 30,
+    completed: topic.completed
+  }));
+};
+
+const defaultNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: <Home className="h-4 w-4" /> },
+  { name: 'Subjects', href: '/subjects', icon: <BookOpen className="h-4 w-4" /> },
+  { name: 'Analytics', href: '/analytics', icon: <BarChart className="h-4 w-4" /> },
+  { name: 'Settings', href: '/settings', icon: <Settings className="h-4 w-4" /> }
+];
 
 const initialTopics: Topic[] = [
   { id: '1', title: 'Introduction to Subject', completed: false },
@@ -86,6 +114,8 @@ const SubjectDetails = () => {
   }, [subjectName]);
 
   const generateTimelineItems = (): TimelineItem[] => {
+    if (!subjectName) return [];
+    
     const timeline: TimelineItem[] = [];
     
     // Add topic overview
@@ -95,7 +125,7 @@ const SubjectDetails = () => {
       description: `Introduction to ${subjectName}`,
       date: 'Day 1',
       type: 'lesson',
-      status: 'upcoming' // Now this property is allowed
+      status: 'upcoming'
     });
 
     // Add fundamentals
@@ -105,7 +135,7 @@ const SubjectDetails = () => {
       description: `Understanding the fundamentals of ${subjectName}`,
       date: 'Day 2-3',
       type: 'lesson',
-      status: 'upcoming' // Now this property is allowed
+      status: 'upcoming'
     });
     
     // Add practice quiz
@@ -115,7 +145,7 @@ const SubjectDetails = () => {
       description: 'Test your understanding of core concepts',
       date: 'Day 4',
       type: 'quiz',
-      status: 'upcoming' // Now this property is allowed
+      status: 'upcoming'
     });
     
     // Add advanced topics
@@ -125,7 +155,7 @@ const SubjectDetails = () => {
       description: `Deeper exploration of ${subjectName}`,
       date: 'Day 5-7',
       type: 'lesson',
-      status: 'upcoming' // Now this property is allowed
+      status: 'upcoming'
     });
     
     return timeline;
@@ -133,7 +163,12 @@ const SubjectDetails = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <StudyAIHeader />
+      <StudyAIHeader 
+        userName="Student"
+        level={3}
+        xp={750}
+        navigation={defaultNavigation}
+      />
       
       <div className="container max-w-6xl mx-auto p-4">
         <Button variant="ghost" onClick={handleBackToDashboard} className="mb-4">
@@ -187,7 +222,7 @@ const SubjectDetails = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SubjectTopicList topics={topics} onTopicToggle={handleTopicToggle} />
+                <SubjectTopicList topics={mapToSubjectTopics(topics)} onTopicToggle={handleTopicToggle} />
                 {!studyPlanGenerated && (
                   <Button onClick={handleGenerateStudyPlan} className="mt-4 w-full">
                     <Check className="h-4 w-4 mr-2" />
@@ -210,7 +245,7 @@ const SubjectDetails = () => {
                 <CardContent>
                   <StudyTimeline 
                     items={timelineItems} 
-                    onStartItem={(id) => handleStartItem(id)} 
+                    onStartItem={handleStartItem} 
                   />
                 </CardContent>
               </Card>
@@ -232,7 +267,14 @@ const SubjectDetails = () => {
           </TabsContent>
         </Tabs>
 
-        {showAIModal && <StudyAIHeader />}
+        {showAIModal && (
+          <StudyAIHeader 
+            userName="Student"
+            level={3}
+            xp={750}
+            navigation={defaultNavigation}
+          />
+        )}
       </div>
     </div>
   );

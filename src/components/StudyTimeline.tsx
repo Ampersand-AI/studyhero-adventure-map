@@ -10,12 +10,12 @@ export interface TimelineItem {
   description: string;
   date: string;
   type: 'lesson' | 'quiz' | 'milestone';
-  status?: 'completed' | 'in-progress' | 'upcoming'; // Make status optional with a proper type
+  status: 'completed' | 'in-progress' | 'upcoming';
 }
 
 export interface StudyTimelineProps {
   items: TimelineItem[];
-  onStartItem?: (id: string) => void; // Make this prop optional
+  onStartItem?: (id: string) => void;
 }
 
 const StudyTimeline: React.FC<StudyTimelineProps> = ({ items, onStartItem }) => {
@@ -45,7 +45,7 @@ const StudyTimeline: React.FC<StudyTimelineProps> = ({ items, onStartItem }) => 
           description={item.description}
           date={item.date}
           type={item.type}
-          status={item.status || 'upcoming'}
+          status={item.status}
           onStart={handleStartItem}
         />
       ))}

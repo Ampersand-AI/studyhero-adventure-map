@@ -1,17 +1,17 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { BookOpen, BarChart, Clock, ChevronRight } from "lucide-react";
+import { BookOpen, BarChart, Clock, ChevronRight, Home, Settings } from "lucide-react";
 
 import ProgressCard from '@/components/ProgressCard';
 import SubjectCardGrid from '@/components/SubjectCardGrid'; 
 import WeeklyPlanView from '@/components/WeeklyPlanView';
 import StudyHeroHeader from '@/components/StudyHeroHeader';
-import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline'; // Import TimelineItem
+import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline';
 
 interface DashboardData {
   subjects: { name: string; progress: number; }[];
@@ -19,6 +19,17 @@ interface DashboardData {
   totalSubjects: number;
   completedSubjects: number;
 }
+
+interface WeeklyPlanViewProps {
+  weeklyProgress: { day: string; completed: number; total: number; }[];
+}
+
+const defaultNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: <Home className="h-4 w-4" /> },
+  { name: 'Subjects', href: '/subjects', icon: <BookOpen className="h-4 w-4" /> },
+  { name: 'Analytics', href: '/analytics', icon: <BarChart className="h-4 w-4" /> },
+  { name: 'Settings', href: '/settings', icon: <Settings className="h-4 w-4" /> }
+];
 
 const dashboardData: DashboardData = {
   subjects: [
@@ -87,7 +98,12 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <StudyHeroHeader />
+      <StudyHeroHeader 
+        userName="Student"
+        level={3}
+        xp={750}
+        navigation={defaultNavigation}
+      />
       
       <main className="container mx-auto px-4 py-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Bell, Menu } from "lucide-react";
+import { Bell, Menu, BookOpen, Home, BarChart, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
@@ -14,13 +14,23 @@ interface StudyHeroHeaderProps {
   navigation: Array<{ name: string; href: string; icon: React.ReactNode }>;
 }
 
-const StudyHeroHeader = ({ 
-  userName, 
+const defaultNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: <Home className="h-4 w-4" /> },
+  { name: 'Subjects', href: '/subjects', icon: <BookOpen className="h-4 w-4" /> },
+  { name: 'Analytics', href: '/analytics', icon: <BarChart className="h-4 w-4" /> },
+  { name: 'Settings', href: '/settings', icon: <Settings className="h-4 w-4" /> }
+];
+
+const StudyHeroHeader: React.FC<Partial<StudyHeroHeaderProps>> = ({ 
+  userName = "Student", 
   avatarUrl, 
-  level, 
-  xp,
-  navigation
-}: StudyHeroHeaderProps) => {
+  level = 1, 
+  xp = 0,
+  navigation = defaultNavigation
+}) => {
+  // Ensure userName is a non-empty string for the avatar fallback
+  const fallbackInitial = (userName && userName.length > 0) ? userName[0].toUpperCase() : "S";
+  
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="container flex h-16 items-center justify-between py-4">
@@ -38,7 +48,7 @@ const StudyHeroHeader = ({
                   <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={avatarUrl} alt={userName} />
-                      <AvatarFallback>{userName[0]}</AvatarFallback>
+                      <AvatarFallback>{fallbackInitial}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium">{userName}</p>
@@ -93,7 +103,7 @@ const StudyHeroHeader = ({
           </div>
           <Avatar>
             <AvatarImage src={avatarUrl} alt={userName} />
-            <AvatarFallback>{userName[0]}</AvatarFallback>
+            <AvatarFallback>{fallbackInitial}</AvatarFallback>
           </Avatar>
         </div>
       </div>

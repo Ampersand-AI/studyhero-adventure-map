@@ -349,6 +349,168 @@ const getTopicsForSubject = (subject: string): string[] => {
   }
 };
 
+export const generateStudyPlan = (subject: string) => {
+  const getTopicsForSubject = (subject: string): string[] => {
+    switch(subject.toLowerCase()) {
+      case 'mathematics':
+        return [
+          'Numbers and Number Systems', 
+          'Algebra: Linear Equations', 
+          'Geometry: Triangles and Quadrilaterals', 
+          'Statistics: Data Handling',
+          'Mensuration: Areas and Volumes', 
+          'Trigonometry: Introduction',
+          'Coordinate Geometry',
+          'Quadratic Equations',
+          'Probability'
+        ];
+      case 'science':
+        return [
+          'Matter in Our Surroundings', 
+          'Cell Structure and Functions', 
+          'Force and Laws of Motion', 
+          'Work and Energy',
+          'Sound and Wave Motion', 
+          'Natural Resources and Conservation',
+          'Human Body Systems',
+          'Light: Reflection and Refraction',
+          'Chemical Reactions and Equations'
+        ];
+      case 'english':
+        return [
+          'Reading Comprehension', 
+          'Grammar: Parts of Speech', 
+          'Essay Writing', 
+          'Literature: Poetry Analysis',
+          'Vocabulary Building', 
+          'Oral Communication',
+          'Creative Writing',
+          'Literature: Prose Analysis',
+          'Letter Writing'
+        ];
+      case 'social studies':
+        return [
+          'The French Revolution', 
+          'Physical Features of India', 
+          'Democracy and Constitution', 
+          'Resources and Development',
+          'The Industrial Revolution', 
+          'Climate and Weather Patterns',
+          'Agriculture and Food Security',
+          'Indian National Movement',
+          'Modern World History'
+        ];
+      case 'physics':
+        return [
+          'Mechanics: Laws of Motion', 
+          'Electrostatics and Current Electricity', 
+          'Magnetism and Electromagnetic Induction', 
+          'Optics: Light and Reflection',
+          'Thermodynamics', 
+          'Waves and Sound',
+          'Modern Physics: Atoms and Nuclei',
+          'Energy and Work',
+          'Semiconductor Devices'
+        ];
+      case 'chemistry':
+        return [
+          'Classification of Elements: Periodic Table', 
+          'Chemical Bonding and Molecular Structure', 
+          'Acids, Bases and Salts', 
+          'Organic Chemistry: Hydrocarbons',
+          'Electrochemistry', 
+          'Chemical Kinetics',
+          'States of Matter',
+          'Coordination Compounds',
+          'Environmental Chemistry'
+        ];
+      case 'biology':
+        return [
+          'Cell Biology and Cell Division', 
+          'Plant Physiology', 
+          'Human Physiology: Digestive System', 
+          'Genetics and Evolution',
+          'Ecology and Ecosystem', 
+          'Reproduction in Organisms',
+          'Molecular Basis of Inheritance',
+          'Biotechnology: Principles and Applications',
+          'Human Health and Disease'
+        ];
+      case 'history':
+        return [
+          'Ancient India: Harappan Civilization', 
+          'Medieval India: Delhi Sultanate', 
+          'Modern India: British Colonialism', 
+          'Indian National Movement',
+          'World War I and its Impact', 
+          'World War II and its Aftermath',
+          'Post-Independence India',
+          'The Cold War Era',
+          'Contemporary World History'
+        ];
+      case 'geography':
+        return [
+          'Physical Geography of India', 
+          'Climate and Weather Patterns', 
+          'Natural Vegetation and Wildlife', 
+          'Water Resources',
+          'Agriculture and Food Security', 
+          'Mineral and Energy Resources',
+          'Industries and Economic Development',
+          'Population: Distribution and Density',
+          'Human Settlements'
+        ];
+      case 'economics':
+        return [
+          'Introduction to Economics', 
+          'Consumer Behavior and Demand', 
+          'Production and Supply', 
+          'Market Structures',
+          'National Income Accounting', 
+          'Money and Banking',
+          'Government Budget and Economy',
+          'Balance of Payments',
+          'Indian Economic Development'
+        ];
+      case 'computer science':
+        return [
+          'Introduction to Programming', 
+          'Data Structures', 
+          'Algorithms and Problem Solving', 
+          'Database Management Systems',
+          'Computer Networks', 
+          'Web Technologies',
+          'Object-Oriented Programming',
+          'Software Engineering',
+          'Information Security'
+        ];
+      default:
+        return [
+          'Fundamental Concepts', 
+          'Advanced Theory', 
+          'Practical Applications', 
+          'Historical Development',
+          'Modern Perspectives', 
+          'Problem Solving Methods',
+          'Analysis Techniques',
+          'Case Studies',
+          'Future Trends'
+        ];
+    }
+  };
+
+  const topics = getTopicsForSubject(subject);
+  
+  return topics.map((topic, index) => ({
+    id: index.toString(),
+    title: topic,
+    description: `Learn about ${topic} in ${subject}`,
+    date: `Day ${index + 1}`,
+    type: index % 3 === 0 ? 'lesson' : index % 3 === 1 ? 'quiz' : 'milestone',
+    status: index === 0 ? 'in-progress' : 'upcoming'
+  }));
+};
+
 export const studyPlanService = {
   /**
    * Get study plans for the current user
