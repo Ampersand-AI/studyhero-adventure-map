@@ -10,7 +10,21 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, ArrowRight, BookOpenCheck } from "lucide-react";
+import { 
+  BookOpen, 
+  ArrowRight, 
+  BookOpenCheck, 
+  Calculator, 
+  Flask, 
+  BookText, 
+  Globe, 
+  Music, 
+  Dumbbell,
+  Palette, 
+  Code, 
+  Languages,
+  Atom
+} from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import deepSeekService, { AIStatus } from '../services/deepSeekService';
@@ -34,6 +48,86 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<AIStatus | null>(null);
   
+  // Get subject-specific icon
+  const getSubjectIcon = () => {
+    const iconProps = { className: "h-5 w-5" };
+    
+    switch(subject.toLowerCase()) {
+      case 'mathematics':
+        return <Calculator {...iconProps} />;
+      case 'science':
+        return <Flask {...iconProps} />;
+      case 'physics':
+        return <Atom {...iconProps} />;
+      case 'chemistry':
+        return <Flask {...iconProps} />;
+      case 'biology':
+        return <BookOpenCheck {...iconProps} />;
+      case 'english':
+        return <BookText {...iconProps} />;
+      case 'social studies':
+        return <Globe {...iconProps} />;
+      case 'history':
+        return <BookText {...iconProps} />;
+      case 'geography':
+        return <Globe {...iconProps} />;
+      case 'computer science':
+        return <Code {...iconProps} />;
+      case 'physical education':
+        return <Dumbbell {...iconProps} />;
+      case 'art':
+        return <Palette {...iconProps} />;
+      case 'music':
+        return <Music {...iconProps} />;
+      case 'sanskrit':
+      case 'hindi':
+      case 'french':
+      case 'german':
+        return <Languages {...iconProps} />;
+      default:
+        return <BookOpen {...iconProps} />;
+    }
+  };
+  
+  // Get subject-specific color for icon background
+  const getSubjectColor = () => {
+    switch(subject.toLowerCase()) {
+      case 'mathematics':
+        return "text-blue-600 bg-blue-50";
+      case 'science':
+        return "text-green-600 bg-green-50";
+      case 'physics':
+        return "text-purple-600 bg-purple-50";
+      case 'chemistry':
+        return "text-teal-600 bg-teal-50";
+      case 'biology':
+        return "text-emerald-600 bg-emerald-50";
+      case 'english':
+        return "text-purple-600 bg-purple-50";
+      case 'social studies':
+        return "text-orange-600 bg-orange-50";
+      case 'history':
+        return "text-amber-600 bg-amber-50";
+      case 'geography':
+        return "text-cyan-600 bg-cyan-50";
+      case 'computer science':
+        return "text-indigo-600 bg-indigo-50";
+      case 'physical education':
+        return "text-red-600 bg-red-50";
+      case 'art':
+        return "text-pink-600 bg-pink-50";
+      case 'music':
+        return "text-violet-600 bg-violet-50";
+      case 'sanskrit':
+      case 'hindi':
+      case 'french':
+      case 'german':
+        return "text-yellow-600 bg-yellow-50";
+      default:
+        return "text-gray-600 bg-gray-50";
+    }
+  };
+  
   const handleStudyClick = async () => {
     setLoading(true);
     
@@ -45,7 +139,7 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       if (existingPlan) {
         // Plan exists, navigate to subject details
         localStorage.setItem('selectedSubject', subject);
-        navigate('/subject');
+        navigate('/subject-details');
         return;
       }
       
@@ -71,7 +165,7 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       
       // Navigate to subject details
       localStorage.setItem('selectedSubject', subject);
-      navigate('/subject');
+      navigate('/subject-details');
     } catch (error) {
       console.error(`Error generating study plan for ${subject}:`, error);
       toast.error("Failed to load subject content", {
@@ -87,27 +181,9 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {subject === "Mathematics" ? (
-            <span className="text-blue-600 bg-blue-50 p-1 rounded-md">
-              <BookOpen className="h-5 w-5" />
-            </span>
-          ) : subject === "Science" ? (
-            <span className="text-green-600 bg-green-50 p-1 rounded-md">
-              <BookOpen className="h-5 w-5" />
-            </span>
-          ) : subject === "English" ? (
-            <span className="text-purple-600 bg-purple-50 p-1 rounded-md">
-              <BookOpen className="h-5 w-5" />
-            </span>
-          ) : subject === "Social Studies" ? (
-            <span className="text-orange-600 bg-orange-50 p-1 rounded-md">
-              <BookOpen className="h-5 w-5" />
-            </span>
-          ) : (
-            <span className="text-gray-600 bg-gray-50 p-1 rounded-md">
-              <BookOpen className="h-5 w-5" />
-            </span>
-          )}
+          <span className={`p-1 rounded-md ${getSubjectColor()}`}>
+            {getSubjectIcon()}
+          </span>
           {subject}
         </CardTitle>
         <CardDescription>
@@ -154,7 +230,7 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       <CardFooter>
         <Button 
           className="w-full" 
-          variant="outline" 
+          variant={loading ? "secondary" : "outline"} 
           onClick={handleStudyClick}
           disabled={loading}
         >

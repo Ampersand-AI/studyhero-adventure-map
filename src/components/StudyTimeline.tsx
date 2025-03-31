@@ -16,10 +16,10 @@ interface StudyTimelineProps {
   onStartItem?: (id: string) => void;
 }
 
-const StudyTimeline = ({ 
+const StudyTimeline: React.FC<StudyTimelineProps> = ({ 
   items = [], 
   onStartItem = () => {} 
-}: StudyTimelineProps) => {
+}) => {
   // Show placeholder message if no items
   if (items.length === 0) {
     return (

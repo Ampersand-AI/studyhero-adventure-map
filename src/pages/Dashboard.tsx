@@ -73,7 +73,7 @@ const Dashboard = () => {
   
   const handleSubjectClick = (subject: string) => {
     localStorage.setItem('selectedSubject', subject);
-    navigate('/subject');
+    navigate('/subject-details');
   };
   
   const handleStartItem = (id: string) => {
@@ -97,9 +97,9 @@ const Dashboard = () => {
       />
       
       <main className="flex-1 container py-6 md:py-10">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
           {/* Progress Overview */}
-          <Card className="col-span-1 lg:col-span-2">
+          <Card className="col-span-1 lg:col-span-3">
             <CardHeader>
               <CardTitle>Weekly Progress</CardTitle>
               <CardDescription>
@@ -130,8 +130,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          {/* Timeline */}
-          <Card className="col-span-1">
+          {/* Timeline (now moved under Weekly Progress) */}
+          <Card className="col-span-1 lg:col-span-3">
             <CardHeader>
               <CardTitle>Today's Schedule</CardTitle>
               <CardDescription>

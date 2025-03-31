@@ -94,8 +94,8 @@ const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
               <div key={subject} className="flex items-center space-x-2 border p-3 rounded-md bg-muted/30">
                 <Checkbox 
                   id={`subject-${subject}`} 
-                  checked 
-                  disabled 
+                  checked={true}
+                  disabled={true}
                 />
                 <Label htmlFor={`subject-${subject}`} className="font-medium">{subject}</Label>
               </div>
@@ -119,7 +119,9 @@ const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
                   <Checkbox 
                     id={`subject-${subject}`} 
                     checked={selectedOptionalSubjects.includes(subject)}
-                    // Important: Do not use onCheckedChange here to avoid double state updates
+                    // Prevent onChange to avoid double state updates
+                    // Let the parent div's onClick handle it
+                    readOnly
                   />
                   <Label 
                     htmlFor={`subject-${subject}`} 
