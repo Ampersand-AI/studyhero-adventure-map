@@ -1,180 +1,197 @@
-
-import React, { useEffect, useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import StudyAIHeader from '@/components/StudyAIHeader';
-import ProgressCard from '@/components/ProgressCard';
-import StudyTimeline from '@/components/StudyTimeline';
-import SubjectCardGrid from '@/components/SubjectCardGrid';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, GraduationCap, Trophy, BookOpenCheck } from "lucide-react";
-import DashboardSubjectCard from '@/components/DashboardSubjectCard';
-import { v4 as uuidv4 } from 'uuid';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { BookOpen, BarChart, Clock, ChevronRight } from "lucide-react";
 
-// Define a sample timeline item type to match what StudyTimeline expects
-interface TimelineItem {
-  id: string;
-  title: string;
-  description: string;
-  status: "completed" | "current" | "future";
-  dueDate: string;
-  type: "lesson" | "quiz" | "practice";
+import ProgressCard from '@/components/ProgressCard';
+import SubjectCardGrid from '@/components/SubjectCardGrid'; 
+import WeeklyPlanView from '@/components/WeeklyPlanView';
+import StudyHeroHeader from '@/components/StudyHeroHeader';
+import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline'; // Import TimelineItem
+
+interface DashboardData {
+  subjects: { name: string; progress: number; }[];
+  weeklyProgress: { day: string; completed: number; total: number; }[];
+  totalSubjects: number;
+  completedSubjects: number;
 }
+
+const dashboardData: DashboardData = {
+  subjects: [
+    { name: 'Mathematics', progress: 75 },
+    { name: 'Science', progress: 40 },
+    { name: 'History', progress: 90 },
+  ],
+  weeklyProgress: [
+    { day: 'Mon', completed: 3, total: 5 },
+    { day: 'Tue', completed: 4, total: 6 },
+    { day: 'Wed', completed: 2, total: 4 },
+    { day: 'Thu', completed: 5, total: 5 },
+    { day: 'Fri', completed: 3, total: 3 },
+  ],
+  totalSubjects: 10,
+  completedSubjects: 3,
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [subjects, setSubjects] = useState<string[]>([]);
-  const [todayItems, setTodayItems] = useState<TimelineItem[]>([]);
-  
-  useEffect(() => {
-    // Load user profile
-    const profile = localStorage.getItem('studyHeroProfile');
-    if (profile) {
-      try {
-        const parsedProfile = JSON.parse(profile);
-        setUserProfile(parsedProfile);
-        
-        // Load subjects
-        if (parsedProfile.subjects && Array.isArray(parsedProfile.subjects)) {
-          setSubjects(parsedProfile.subjects);
-          
-          // Generate some sample timeline items based on subjects
-          const sampleItems: TimelineItem[] = parsedProfile.subjects.slice(0, 3).map((subject: string, index: number) => ({
-            id: uuidv4(),
-            title: `${subject} Lesson`,
-            description: `Introduction to key concepts in ${subject}`,
-            status: index === 0 ? "current" : (index < 0 ? "completed" : "future"),
-            dueDate: new Date().toLocaleDateString(),
-            type: index === 2 ? "quiz" : "lesson"
-          }));
-          
-          setTodayItems(sampleItems);
-        } else {
-          // Default subjects
-          setSubjects(['Mathematics', 'Science', 'English', 'Social Studies']);
-        }
-      } catch (e) {
-        console.error("Error parsing profile:", e);
-        // Redirect to onboarding if profile is invalid
-        navigate('/onboarding');
-      }
-    } else {
-      // Redirect to onboarding if no profile
-      navigate('/onboarding');
-    }
-  }, [navigate]);
-  
-  const handleSubjectClick = (subject: string) => {
-    localStorage.setItem('selectedSubject', subject);
-    navigate('/subject-details');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGeneratePlan = () => {
+    setIsGenerating(true);
+    toast.loading("Generating personalized plan...", { duration: 5000 });
+    setTimeout(() => {
+      setIsGenerating(false);
+      toast.success("Personalized plan generated successfully!");
+    }, 5000);
   };
-  
-  const handleStartItem = (id: string) => {
-    const item = todayItems.find(item => item.id === id);
-    if (item) {
-      if (item.type === 'quiz') {
-        navigate('/quiz/sample');
-      } else {
-        navigate('/lesson/sample');
-      }
+
+  // Sample timeline data
+  const sampleTimelineItems: TimelineItem[] = [
+    {
+      id: '1',
+      title: 'Calculus: Derivatives',
+      description: 'Learn the fundamentals of derivatives and their applications',
+      date: 'Today',
+      type: 'lesson',
+      status: 'in-progress'
+    },
+    {
+      id: '2',
+      title: 'Chemistry: Periodic Table Quiz',
+      description: 'Test your knowledge of the periodic table of elements',
+      date: 'Tomorrow',
+      type: 'quiz',
+      status: 'upcoming'
+    },
+    {
+      id: '3',
+      title: 'Physics: Forces and Motion',
+      description: 'Explore Newton\'s laws of motion and their real-world applications',
+      date: 'May 25',
+      type: 'lesson',
+      status: 'upcoming'
     }
+  ];
+
+  // Handle starting a timeline item
+  const handleStartTimelineItem = (id: string) => {
+    toast.success("Starting study session");
+    // Navigate based on item type (can be expanded)
+    navigate('/lesson');
   };
-  
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <StudyAIHeader
-        userName={userProfile?.name || "Student"}
-        level={parseInt(localStorage.getItem('currentLevel') || '1')}
-        xp={parseInt(localStorage.getItem('currentXp') || '0')}
-        navigation={[]}
-      />
+    <div className="min-h-screen bg-background">
+      <StudyHeroHeader />
       
-      <main className="flex-1 container py-6 md:py-10">
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-          {/* Progress Overview */}
-          <Card className="col-span-1 lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Weekly Progress</CardTitle>
-              <CardDescription>
-                Your study activity and achievements this week
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-                <ProgressCard
-                  title="Study Streak"
-                  value="5 Days"
-                  description="Current streak"
-                  icon={<GraduationCap />}
-                />
-                <ProgressCard
-                  title="Minutes Studied"
-                  value="120"
-                  description="This week"
-                  icon={<BookOpenCheck />}
-                />
-                <ProgressCard
-                  title="Quizzes Completed"
-                  value="3"
-                  description="Average score: 86%"
-                  icon={<Trophy />}
-                />
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Timeline (now moved under Weekly Progress) */}
-          <Card className="col-span-1 lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Today's Schedule</CardTitle>
-              <CardDescription>
-                Your personalized study plan for today
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StudyTimeline 
-                items={todayItems}
-                onStartItem={handleStartItem}
-              />
-            </CardContent>
-          </Card>
-          
-          {/* Subjects Grid */}
-          <Card className="col-span-1 lg:col-span-3">
-            <CardHeader className="flex flex-row justify-between items-center">
-              <div>
-                <CardTitle>Your Subjects</CardTitle>
-                <CardDescription>
-                  {userProfile?.board || "CBSE"} curriculum for Class {userProfile?.class || "10"}
-                </CardDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/onboarding')}>
-                Add Subjects
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {subjects.map((subject) => (
-                  <DashboardSubjectCard
-                    key={subject}
-                    subject={subject}
-                    board={userProfile?.board || "CBSE"}
-                    className={userProfile?.class || "10"}
-                    progress={0}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      <main className="container mx-auto px-4 py-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <ProgressCard
+            title="Overall Progress"
+            value={Math.round((dashboardData.completedSubjects / dashboardData.totalSubjects) * 100)}
+            total={100}
+            description="Keep pushing forward!"
+            icon={<BarChart className="h-4 w-4" />}
+          />
+          <ProgressCard
+            title="Subjects Completed"
+            value={dashboardData.completedSubjects}
+            total={dashboardData.totalSubjects}
+            description="Your completed subjects this semester"
+            icon={<BookOpen className="h-4 w-4" />}
+          />
+          <ProgressCard
+            title="Weekly Study Time"
+            value={4.5}
+            total={10}
+            description="Hours studied this week"
+            icon={<Clock className="h-4 w-4" />}
+          />
         </div>
+        
+        <Tabs defaultValue="today" className="mt-8">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="today">Today</TabsTrigger>
+            <TabsTrigger value="weekly">Weekly Plan</TabsTrigger>
+            <TabsTrigger value="subjects">My Subjects</TabsTrigger>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="today" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle>Up Next</CardTitle>
+                  <CardDescription>Your upcoming study sessions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StudyTimeline 
+                    items={sampleTimelineItems} 
+                    onStartItem={handleStartTimelineItem} 
+                  />
+                </CardContent>
+              </Card>
+              
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>Jump into your subjects</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button variant="secondary" onClick={() => navigate('/lesson')}>
+                      Continue Lesson <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="secondary" onClick={() => navigate('/quiz')}>
+                      Start Quiz <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="weekly" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Plan</CardTitle>
+                <CardDescription>Your study plan for the week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WeeklyPlanView weeklyProgress={dashboardData.weeklyProgress} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="subjects" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Subjects</CardTitle>
+                <CardDescription>Your subjects and their progress</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SubjectCardGrid subjects={dashboardData.subjects} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="achievements" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Achievements</CardTitle>
+                <CardDescription>Your earned achievements</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Coming soon!</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
