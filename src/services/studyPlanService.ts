@@ -363,17 +363,13 @@ export const studyPlanService = {
       subjects = profile.subjects || [];
     }
     
-    toast({
-      description: "Fetching your NCERT-aligned study plans...",
-    });
+    toast("Fetching your NCERT-aligned study plans...");
     
     return new Promise<StudyPlan[]>((resolve) => {
       setTimeout(() => {
         const plans = generateMockStudyPlans(subjects);
         
-        toast({
-          description: `Successfully loaded ${plans.length} study plans based on NCERT curriculum.`,
-        });
+        toast(`Successfully loaded ${plans.length} study plans based on NCERT curriculum.`);
         
         resolve(plans);
       }, 1000);
@@ -384,17 +380,13 @@ export const studyPlanService = {
    * Get weekly study plans with subject integration
    */
   getWeeklyPlans: async () => {
-    toast({
-      description: "Creating your optimized weekly study plan from NCERT curriculum...",
-    });
+    toast("Creating your optimized weekly study plan from NCERT curriculum...");
     
     return new Promise<{weeklyPlans: WeeklyPlan[]}>(resolve => {
       setTimeout(() => {
         const weeklyPlans = generateWeeklyPlans();
         
-        toast({
-          description: `Successfully created a ${weeklyPlans.length}-week study plan with all your NCERT subjects.`,
-        });
+        toast(`Successfully created a ${weeklyPlans.length}-week study plan with all your NCERT subjects.`);
         
         localStorage.setItem('weeklyPlans', JSON.stringify(weeklyPlans));
         resolve({weeklyPlans});
@@ -406,9 +398,7 @@ export const studyPlanService = {
    * Create a new study plan for a subject
    */
   createStudyPlan: async (subject: string) => {
-    toast({
-      description: `Creating NCERT-aligned content for ${subject}...`,
-    });
+    toast(`Creating NCERT-aligned content for ${subject}...`);
     
     return new Promise<StudyPlan>((resolve) => {
       setTimeout(() => {
@@ -420,9 +410,7 @@ export const studyPlanService = {
           items
         };
         
-        toast({
-          description: `${subject} has been added to your study plan with ${items.length} NCERT-aligned lessons.`,
-        });
+        toast(`${subject} has been added to your study plan with ${items.length} NCERT-aligned lessons.`);
         
         resolve(newPlan);
       }, 2000);
@@ -457,9 +445,7 @@ export const studyPlanService = {
     const xpGained = Math.round(score * 10); // 10 XP per 1% score
     await userService.updateUserXP(xpGained);
     
-    toast({
-      description: `You scored ${score}% and earned ${xpGained} XP!`,
-    });
+    toast(`You scored ${score}% and earned ${xpGained} XP!`);
     
     return newScore;
   },
@@ -491,9 +477,7 @@ export const studyPlanService = {
       }
 
       // If not, generate a new plan using API services
-      toast({
-        description: `Creating NCERT-aligned study plan for ${subject}...`,
-      });
+      toast(`Creating NCERT-aligned study plan for ${subject}...`);
 
       // First try with deepSeekService, which will try multiple AI providers in sequence
       try {
