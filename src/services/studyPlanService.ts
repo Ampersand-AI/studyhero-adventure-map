@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { userService } from './userService';
 import deepSeekService, { AIStatus } from './deepSeekService';
 
@@ -474,41 +474,88 @@ export const studyPlanService = {
   /**
    * Get or generate study plan for a specific subject
    */
-  getStudyPlan: async (subject: string, board: string, className: string): Promise<any> => {
-    const updateStatus = (status: AIStatus) => {
+  getStudyPlan: async (
+    subject: string, 
+    board: string, 
+    className: string,
+    onStatusUpdate?: (status: AIStatus) => void
+  ): Promise<any> => {
+    const defaultStatusUpdate = (status: AIStatus) => {
       console.log("Study plan generation status:", status);
     };
+
+    const updateStatus = onStatusUpdate || defaultStatusUpdate;
 
     try {
       // First check if we have a stored plan
       const storedPlan = localStorage.getItem(`studyPlan_${subject}`);
       if (storedPlan) {
+        updateStatus({
+          stage: "Retrieved from cache",
+          progress: 100,
+          provider: "Cache"
+        });
         return JSON.parse(storedPlan);
       }
 
-      // If not, generate a new plan using deepSeekService
+      // If not, generate a new plan using API services
       toast({
         title: "Generating study plan",
         description: `Creating NCERT-aligned study plan for ${subject}...`,
       });
 
-      const plan = await deepSeekService.generateStudyPlan(subject, board, className, updateStatus);
-      
-      // Save to localStorage
-      localStorage.setItem(`studyPlan_${subject}`, JSON.stringify({
-        subject,
-        board,
-        className,
-        chapters: plan.chapters,
-        lastUpdated: new Date().toISOString()
-      }));
-      
-      return plan;
+      // First try with deepSeekService, which will try multiple AI providers in sequence
+      try {
+        updateStatus({
+          stage: "Initializing AI services",
+          progress: 10,
+          provider: "System"
+        });
+
+        const plan = await deepSeekService.generateStudyPlan(subject, board, className, updateStatus);
+        
+        // Save to localStorage
+        localStorage.setItem(`studyPlan_${subject}`, JSON.stringify({
+          subject,
+          board,
+          className,
+          chapters: plan.chapters,
+          lastUpdated: new Date().toISOString()
+        }));
+        
+        updateStatus({
+          stage: "Study plan complete",
+          progress: 100,
+          provider: "System"
+        });
+        
+        return plan;
+      } catch (error) {
+        console.error("AI service error:", error);
+        updateStatus({
+          stage: "AI Service Error",
+          progress: 0,
+          provider: "System"
+        });
+        throw error; // Let the fallback handle it
+      }
     } catch (error) {
       console.error("Error in getStudyPlan:", error);
+      updateStatus({
+        stage: "Falling back to default content",
+        progress: 50,
+        provider: "Fallback"
+      });
       
       // Generate a fallback plan
       const topics = getTopicsForSubject(subject);
+      
+      updateStatus({
+        stage: "Generated fallback content",
+        progress: 100,
+        provider: "Fallback"
+      });
+      
       return {
         subject,
         board,

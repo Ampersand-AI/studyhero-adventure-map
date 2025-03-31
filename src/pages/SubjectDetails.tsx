@@ -27,6 +27,16 @@ interface Chapter {
   }[];
 }
 
+// Define the TimelineItem interface to match what's expected in StudyTimeline
+interface TimelineItem {
+  id: string;
+  title: string;
+  description: string;
+  status: "completed" | "current" | "future";
+  dueDate: string;
+  type: "lesson" | "quiz" | "practice";
+}
+
 interface SubjectDetailsProps {}
 
 // Mock data for topics if needed
@@ -50,9 +60,9 @@ const mockTopics = [
     type: "lesson",
     estimatedTimeInMinutes: 45,
     lessons: [
-      { id: "2.1", title: "Complex Theories", type: "lesson" },
-      { id: "2.2", title: "Practical Applications", type: "lesson" },
-      { id: "2.3", title: "Problem Solving", type: "practice" }
+      { id: "2.1", title: "Complex Theories", title: "Complex Theories" },
+      { id: "2.2", title: "Practical Applications", title: "Practical Applications" },
+      { id: "2.3", title: "Problem Solving", title: "Problem Solving" }
     ]
   }
 ];
@@ -155,7 +165,6 @@ const mockTimelineItems = [
 
 // SubjectDetails component
 const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
-  // ... keep existing code (state and hooks)
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
   const [subject, setSubject] = useState<string>(subjectId || "Unknown Subject");
@@ -227,8 +236,29 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
             const className = localStorage.getItem('selectedClass') || '10';
             const board = localStorage.getItem('selectedBoard') || 'CBSE';
             
-            toast("Loading study plan...");
-            const studyPlan = await studyPlanService.getStudyPlan(subject, board, className);
+            toast.loading("Generating study plan...", {
+              description: "Connecting to AI services to create your personalized plan"
+            });
+            
+            const handleStatusUpdate = (status: { stage: string; progress: number; provider: string }) => {
+              toast.loading(`${status.provider} AI: ${status.stage}`, {
+                description: `Progress: ${status.progress}%`,
+                id: "ai-progress-toast"
+              });
+              
+              if (status.progress === 100) {
+                toast.success(`${status.provider} generated content successfully`, {
+                  id: "ai-progress-toast"
+                });
+              }
+            };
+            
+            const studyPlan = await studyPlanService.getStudyPlan(
+              subject, 
+              board, 
+              className, 
+              handleStatusUpdate
+            );
             
             if (studyPlan && studyPlan.chapters) {
               // Calculate progress for each chapter
@@ -256,6 +286,8 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
                   estimatedTime: 20
                 });
               }
+              
+              toast.success("Study plan created successfully!");
             } else {
               // If API fails, use default chapters
               setChapters(
@@ -268,6 +300,7 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
                   }))
                 }))
               );
+              toast.error("Could not generate AI plan, using fallback data");
             }
           } catch (error) {
             console.error("Error generating study plan:", error);
@@ -282,6 +315,7 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
                 }))
               }))
             );
+            toast.error("Failed to generate study plan, using default content");
           }
         }
       } catch (error) {
@@ -352,66 +386,64 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
     estimatedTimeInMinutes: topic.estimatedTimeInMinutes
   }));
 
-// This section in SubjectDetails generates the timeline items
-// We need to modify this part to ensure proper status values
-const generateTimelineItems = () => {
-  if (!chapters || chapters.length === 0) {
-    return [];
-  }
+  // This function generates the timeline items with proper types
+  const generateTimelineItems = (): TimelineItem[] => {
+    if (!chapters || chapters.length === 0) {
+      return [];
+    }
 
-  // Create timeline items from chapters and lessons with proper status types
-  const timelineItems: TimelineItem[] = [];
-  
-  // First few completed items
-  if (chapters.length > 0 && chapters[0].lessons && chapters[0].lessons.length > 0) {
-    timelineItems.push({
-      id: "event1",
-      title: `Started ${chapters[0].title}`,
-      description: "Beginning your learning journey",
-      status: "completed" as "completed", // Explicitly cast to the correct type
-      dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      type: "lesson" as "lesson" // Explicitly cast to the correct type
-    });
-  }
-  
-  if (chapters.length > 0 && chapters[0].lessons && chapters[0].lessons.length > 0) {
-    timelineItems.push({
-      id: "event2",
-      title: `Completed Quiz on ${chapters[0].title}`,
-      description: "8/10 questions answered correctly",
-      status: "completed" as "completed",
-      dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      type: "quiz" as "quiz"
-    });
-  }
-  
-  // Current item
-  if (chapters.length > 1) {
-    timelineItems.push({
-      id: "event3",
-      title: `Start ${chapters[1].title}`,
-      description: "Moving to advanced concepts",
-      status: "current" as "current",
-      dueDate: new Date().toLocaleDateString(),
-      type: "lesson" as "lesson"
-    });
-  }
-  
-  // Future items
-  if (chapters.length > 2) {
-    timelineItems.push({
-      id: "event4",
-      title: `Upcoming ${chapters[2].title}`,
-      description: "Get ready for the next topic",
-      status: "future" as "future",
-      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      type: "practice" as "practice"
-    });
-  }
-  
-  return timelineItems;
-};
-
+    // Create timeline items from chapters and lessons with proper status types
+    const timelineItems: TimelineItem[] = [];
+    
+    // First few completed items
+    if (chapters.length > 0 && chapters[0].lessons && chapters[0].lessons.length > 0) {
+      timelineItems.push({
+        id: "event1",
+        title: `Started ${chapters[0].title}`,
+        description: "Beginning your learning journey",
+        status: "completed",
+        dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        type: "lesson"
+      });
+    }
+    
+    if (chapters.length > 0 && chapters[0].lessons && chapters[0].lessons.length > 0) {
+      timelineItems.push({
+        id: "event2",
+        title: `Completed Quiz on ${chapters[0].title}`,
+        description: "8/10 questions answered correctly",
+        status: "completed",
+        dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        type: "quiz"
+      });
+    }
+    
+    // Current item
+    if (chapters.length > 1) {
+      timelineItems.push({
+        id: "event3",
+        title: `Start ${chapters[1].title}`,
+        description: "Moving to advanced concepts",
+        status: "current",
+        dueDate: new Date().toLocaleDateString(),
+        type: "lesson"
+      });
+    }
+    
+    // Future items
+    if (chapters.length > 2) {
+      timelineItems.push({
+        id: "event4",
+        title: `Upcoming ${chapters[2].title}`,
+        description: "Get ready for the next topic",
+        status: "future",
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        type: "practice"
+      });
+    }
+    
+    return timelineItems;
+  };
   
   return (
     <div className="min-h-screen bg-background">
