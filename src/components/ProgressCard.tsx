@@ -5,12 +5,17 @@ import { Progress } from "@/components/ui/progress";
 
 interface ProgressCardProps {
   title: string;
-  percentage: number;
+  percentage?: number;
+  value?: string;
+  description: string;
   icon: React.ReactNode;
-  color: "purple" | "blue" | "green" | "yellow" | "pink" | "orange";
+  color?: "purple" | "blue" | "green" | "yellow" | "pink" | "orange";
 }
 
-const ProgressCard = ({ title, percentage, icon, color }: ProgressCardProps) => {
+const ProgressCard = ({ title, percentage, value, description, icon, color = "blue" }: ProgressCardProps) => {
+  // If percentage is provided, use it; otherwise display value without progress bar
+  const hasPercentage = percentage !== undefined;
+  
   return (
     <Card className="study-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -20,13 +25,21 @@ const ProgressCard = ({ title, percentage, icon, color }: ProgressCardProps) => 
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{percentage}%</div>
-        <Progress value={percentage} className="h-2 mt-2" />
+        {hasPercentage ? (
+          <>
+            <div className="text-2xl font-bold">{percentage}%</div>
+            <Progress value={percentage} className="h-2 mt-2" />
+          </>
+        ) : (
+          <div className="text-2xl font-bold">{value}</div>
+        )}
       </CardContent>
       <CardFooter className="p-2">
         <p className="text-xs text-muted-foreground">
-          {percentage < 30 ? "Just starting" : 
-           percentage < 70 ? "Making progress" : "Almost there!"}
+          {hasPercentage ? 
+            (percentage < 30 ? "Just starting" : 
+             percentage < 70 ? "Making progress" : "Almost there!") 
+            : description}
         </p>
       </CardFooter>
     </Card>

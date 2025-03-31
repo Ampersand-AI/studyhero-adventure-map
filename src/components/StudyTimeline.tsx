@@ -12,11 +12,24 @@ interface TimelineItem {
 }
 
 interface StudyTimelineProps {
-  items: TimelineItem[];
-  onStartItem: (id: string) => void;
+  items?: TimelineItem[];
+  onStartItem?: (id: string) => void;
 }
 
-const StudyTimeline = ({ items, onStartItem }: StudyTimelineProps) => {
+const StudyTimeline = ({ 
+  items = [], 
+  onStartItem = () => {} 
+}: StudyTimelineProps) => {
+  // Show placeholder message if no items
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-6 text-muted-foreground">
+        <p>Your personalized schedule will appear here soon.</p>
+        <p className="text-sm mt-2">Check back after selecting your subjects!</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 w-full">
       <div className="flex items-center justify-center mb-8">

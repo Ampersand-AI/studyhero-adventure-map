@@ -15,11 +15,23 @@ import SubjectCardGrid from '@/components/SubjectCardGrid';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, GraduationCap, Trophy, BookOpenCheck } from "lucide-react";
 import DashboardSubjectCard from '@/components/DashboardSubjectCard';
+import { v4 as uuidv4 } from 'uuid';
+
+// Define a sample timeline item type to match what StudyTimeline expects
+interface TimelineItem {
+  id: string;
+  title: string;
+  description: string;
+  status: "completed" | "current" | "future";
+  dueDate: string;
+  type: "lesson" | "quiz" | "practice";
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [todayItems, setTodayItems] = useState<TimelineItem[]>([]);
   
   useEffect(() => {
     // Load user profile
@@ -32,6 +44,18 @@ const Dashboard = () => {
         // Load subjects
         if (parsedProfile.subjects && Array.isArray(parsedProfile.subjects)) {
           setSubjects(parsedProfile.subjects);
+          
+          // Generate some sample timeline items based on subjects
+          const sampleItems: TimelineItem[] = parsedProfile.subjects.slice(0, 3).map((subject: string, index: number) => ({
+            id: uuidv4(),
+            title: `${subject} Lesson`,
+            description: `Introduction to key concepts in ${subject}`,
+            status: index === 0 ? "current" : (index < 0 ? "completed" : "future"),
+            dueDate: new Date().toLocaleDateString(),
+            type: index === 2 ? "quiz" : "lesson"
+          }));
+          
+          setTodayItems(sampleItems);
         } else {
           // Default subjects
           setSubjects(['Mathematics', 'Science', 'English', 'Social Studies']);
@@ -50,6 +74,17 @@ const Dashboard = () => {
   const handleSubjectClick = (subject: string) => {
     localStorage.setItem('selectedSubject', subject);
     navigate('/subject');
+  };
+  
+  const handleStartItem = (id: string) => {
+    const item = todayItems.find(item => item.id === id);
+    if (item) {
+      if (item.type === 'quiz') {
+        navigate('/quiz/sample');
+      } else {
+        navigate('/lesson/sample');
+      }
+    }
   };
   
   return (
@@ -104,7 +139,10 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <StudyTimeline />
+              <StudyTimeline 
+                items={todayItems}
+                onStartItem={handleStartItem}
+              />
             </CardContent>
           </Card>
           
