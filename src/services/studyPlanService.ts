@@ -1,7 +1,7 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/hooks/use-toast";
 import { userService } from './userService';
+import deepSeekService, { AIStatus } from './deepSeekService';
 
 // Interface definitions
 interface StudyItem {
@@ -469,5 +469,61 @@ export const studyPlanService = {
     });
     
     return newScore;
+  },
+
+  /**
+   * Get or generate study plan for a specific subject
+   */
+  getStudyPlan: async (subject: string, board: string, className: string): Promise<any> => {
+    const updateStatus = (status: AIStatus) => {
+      console.log("Study plan generation status:", status);
+    };
+
+    try {
+      // First check if we have a stored plan
+      const storedPlan = localStorage.getItem(`studyPlan_${subject}`);
+      if (storedPlan) {
+        return JSON.parse(storedPlan);
+      }
+
+      // If not, generate a new plan using deepSeekService
+      toast({
+        title: "Generating study plan",
+        description: `Creating NCERT-aligned study plan for ${subject}...`,
+      });
+
+      const plan = await deepSeekService.generateStudyPlan(subject, board, className, updateStatus);
+      
+      // Save to localStorage
+      localStorage.setItem(`studyPlan_${subject}`, JSON.stringify({
+        subject,
+        board,
+        className,
+        chapters: plan.chapters,
+        lastUpdated: new Date().toISOString()
+      }));
+      
+      return plan;
+    } catch (error) {
+      console.error("Error in getStudyPlan:", error);
+      
+      // Generate a fallback plan
+      const topics = getTopicsForSubject(subject);
+      return {
+        subject,
+        board,
+        className,
+        chapters: topics.map((topic, index) => ({
+          title: topic,
+          progress: 0,
+          lessons: [
+            { title: `Introduction to ${topic}`, type: "lesson" },
+            { title: `${topic} Practice`, type: "practice" },
+            { title: `${topic} Quiz`, type: "quiz" }
+          ]
+        })),
+        lastUpdated: new Date().toISOString()
+      };
+    }
   }
 };

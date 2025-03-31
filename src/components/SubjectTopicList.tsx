@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Clock, Calendar } from "lucide-react";
 
-interface SubjectTopic {
+export interface SubjectTopic {
   id: string;
   title: string;
   description: string;

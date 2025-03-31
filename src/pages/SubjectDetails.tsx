@@ -1,4 +1,3 @@
-
 // Import required for the ReactNode type and icons
 import React, { useEffect, useState, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -35,6 +34,9 @@ const mockTopics = [
   {
     id: "chapter1",
     title: "Introduction to the Subject",
+    description: "Basic overview of fundamental concepts",
+    type: "lesson",
+    estimatedTimeInMinutes: 30,
     lessons: [
       { id: "1.1", title: "Basic Concepts", type: "lesson" },
       { id: "1.2", title: "Fundamental Principles", type: "lesson" },
@@ -44,6 +46,9 @@ const mockTopics = [
   {
     id: "chapter2",
     title: "Advanced Concepts",
+    description: "Deeper exploration of complex theories",
+    type: "lesson",
+    estimatedTimeInMinutes: 45,
     lessons: [
       { id: "2.1", title: "Complex Theories", type: "lesson" },
       { id: "2.2", title: "Practical Applications", type: "lesson" },
@@ -52,8 +57,105 @@ const mockTopics = [
   }
 ];
 
+// Weekly plan mock data that matches WeeklyPlanView props
+const mockWeeklyPlans = [
+  {
+    weekNumber: 1,
+    startDate: "2023-09-01",
+    endDate: "2023-09-07",
+    dailyActivities: [
+      {
+        date: "2023-09-01",
+        items: [
+          {
+            id: "1",
+            title: "Introduction to Subject",
+            description: "Getting started with basic concepts",
+            type: "lesson",
+            status: "completed",
+            dueDate: "2023-09-01",
+            estimatedTimeInMinutes: 30,
+            subject: "Mathematics"
+          }
+        ]
+      },
+      {
+        date: "2023-09-03",
+        items: [
+          {
+            id: "2",
+            title: "Basic Practice",
+            description: "Apply what you've learned",
+            type: "practice",
+            status: "current",
+            dueDate: "2023-09-03",
+            estimatedTimeInMinutes: 45,
+            subject: "Mathematics"
+          }
+        ]
+      },
+      {
+        date: "2023-09-05",
+        items: [
+          {
+            id: "3",
+            title: "Weekly Quiz",
+            description: "Test your knowledge",
+            type: "quiz",
+            status: "future",
+            dueDate: "2023-09-05",
+            estimatedTimeInMinutes: 20,
+            subject: "Mathematics"
+          }
+        ]
+      }
+    ],
+    weeklyTest: {
+      id: "test1",
+      title: "Week 1 Comprehensive Test",
+      description: "Test covering all week 1 content",
+      type: "quiz",
+      status: "future",
+      dueDate: "2023-09-07",
+      estimatedTimeInMinutes: 60,
+      subject: "Mathematics",
+      isWeeklyTest: true,
+      weekNumber: 1
+    }
+  }
+];
+
+// Timeline events
+const mockTimelineItems = [
+  {
+    id: "event1",
+    title: "Started Chapter 1",
+    description: "Beginning your learning journey",
+    status: "completed",
+    dueDate: "2023-09-05",
+    type: "lesson"
+  },
+  {
+    id: "event2",
+    title: "Completed Quiz 1",
+    description: "8/10 questions answered correctly",
+    status: "completed",
+    dueDate: "2023-09-10",
+    type: "quiz"
+  },
+  {
+    id: "event3",
+    title: "Start Chapter 2",
+    description: "Moving to advanced concepts",
+    status: "current",
+    dueDate: "2023-09-15",
+    type: "lesson"
+  }
+];
+
 // SubjectDetails component
 const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
+  // ... keep existing code (state and hooks)
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
   const [subject, setSubject] = useState<string>(subjectId || "Unknown Subject");
@@ -241,6 +343,15 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
     );
   }
   
+  // Map chapters data to SubjectTopic format
+  const subjectTopics = mockTopics.map(topic => ({
+    id: topic.id,
+    title: topic.title,
+    description: topic.description,
+    type: topic.type as "lesson" | "quiz" | "practice",
+    estimatedTimeInMinutes: topic.estimatedTimeInMinutes
+  }));
+  
   return (
     <div className="min-h-screen bg-background">
       <StudyAIHeader
@@ -340,99 +451,40 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
           
           <TabsContent value="chapters" className="mt-6">
             <SubjectTopicList
-              topics={mockTopics}
+              subject={subject}
+              className={localStorage.getItem('selectedClass') || '10'}
+              topics={subjectTopics}
               onSelectTopic={(topic) => handleStartLesson(topic.title, topic.id)}
             />
           </TabsContent>
           
           <TabsContent value="weekly" className="mt-6">
             <WeeklyPlanView
-              weeklyPlan={{
-                subject: subjectId || '',
-                weeks: [
-                  {
-                    weekNumber: 1,
-                    theme: "Foundations",
-                    days: [
-                      {
-                        day: "Monday",
-                        activities: [
-                          { title: "Introduction", duration: 30, type: "lesson" }
-                        ]
-                      },
-                      {
-                        day: "Wednesday",
-                        activities: [
-                          { title: "Basic Concepts", duration: 45, type: "practice" }
-                        ]
-                      },
-                      {
-                        day: "Friday",
-                        activities: [
-                          { title: "Weekly Quiz", duration: 20, type: "quiz" }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    weekNumber: 2,
-                    theme: "Core Principles",
-                    days: [
-                      {
-                        day: "Tuesday",
-                        activities: [
-                          { title: "Key Theories", duration: 40, type: "lesson" }
-                        ]
-                      },
-                      {
-                        day: "Thursday",
-                        activities: [
-                          { title: "Applied Problems", duration: 30, type: "practice" }
-                        ]
-                      },
-                      {
-                        day: "Saturday",
-                        activities: [
-                          { title: "Chapter Test", duration: 25, type: "quiz" }
-                        ]
-                      }
-                    ]
-                  }
-                ]
+              weeklyPlans={mockWeeklyPlans}
+              onStartItem={(id) => {
+                toast(`Selected: ${id}`);
               }}
-              onSelectActivity={(activity) => {
-                toast(`Selected: ${activity.title}`);
-              }}
+              testScores={{}}
             />
           </TabsContent>
           
           <TabsContent value="progress" className="mt-6">
             <StudyPlanProgress
-              subject={subject}
-              progress={progress}
-              chapters={chapters.map(chapter => ({
-                title: chapter.title,
-                progress: chapter.progress,
-                lessons: chapter.lessons.length,
-                completed: chapter.lessons.filter(l => l.completed).length
-              }))}
-              startDate="2023-09-01"
-              endDate="2023-12-15"
-              onViewChapter={(chapterTitle) => {
-                setActiveTab("chapters");
+              subjects={[subject]}
+              board={localStorage.getItem('selectedBoard') || 'CBSE'}
+              className={localStorage.getItem('selectedClass') || '10'}
+              onComplete={() => {
+                toast("Study plans generated");
               }}
             />
           </TabsContent>
           
           <TabsContent value="timeline" className="mt-6">
             <StudyTimeline
-              subject={subject}
-              events={[
-                { date: "2023-09-05", title: "Started Chapter 1", type: "start" },
-                { date: "2023-09-10", title: "Completed Quiz 1", type: "quiz", score: "8/10" },
-                { date: "2023-09-15", title: "Finished Chapter 1", type: "complete" },
-                { date: "2023-09-20", title: "Started Chapter 2", type: "start" }
-              ]}
+              items={mockTimelineItems}
+              onStartItem={(id) => {
+                toast(`Starting item: ${id}`);
+              }}
             />
           </TabsContent>
         </Tabs>
