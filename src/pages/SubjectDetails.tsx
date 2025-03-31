@@ -12,7 +12,7 @@ import StudyAIHeader from '@/components/StudyAIHeader';
 import SubjectTopicList from '@/components/SubjectTopicList';
 import WeeklyPlanView from '@/components/WeeklyPlanView';
 import StudyPlanProgress from '@/components/StudyPlanProgress';
-import StudyTimeline from '@/components/StudyTimeline';
+import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline';
 import { claudeService } from '@/services/claudeService';
 import { studyPlanService } from '@/services/studyPlanService';
 
@@ -25,16 +25,6 @@ interface Chapter {
     type: string;
     completed?: boolean;
   }[];
-}
-
-// Define the TimelineItem interface to match what's expected in StudyTimeline
-interface TimelineItem {
-  id: string;
-  title: string;
-  description: string;
-  status: "completed" | "current" | "future";
-  dueDate: string;
-  type: "lesson" | "quiz" | "practice";
 }
 
 interface SubjectDetailsProps {}
@@ -60,9 +50,9 @@ const mockTopics = [
     type: "lesson",
     estimatedTimeInMinutes: 45,
     lessons: [
-      { id: "2.1", title: "Complex Theories", title: "Complex Theories" },
-      { id: "2.2", title: "Practical Applications", title: "Practical Applications" },
-      { id: "2.3", title: "Problem Solving", title: "Problem Solving" }
+      { id: "2.1", title: "Complex Theories", type: "lesson" },
+      { id: "2.2", title: "Practical Applications", type: "practice" },
+      { id: "2.3", title: "Problem Solving", type: "quiz" }
     ]
   }
 ];
@@ -132,34 +122,6 @@ const mockWeeklyPlans = [
       isWeeklyTest: true,
       weekNumber: 1
     }
-  }
-];
-
-// Timeline events
-const mockTimelineItems = [
-  {
-    id: "event1",
-    title: "Started Chapter 1",
-    description: "Beginning your learning journey",
-    status: "completed",
-    dueDate: "2023-09-05",
-    type: "lesson"
-  },
-  {
-    id: "event2",
-    title: "Completed Quiz 1",
-    description: "8/10 questions answered correctly",
-    status: "completed",
-    dueDate: "2023-09-10",
-    type: "quiz"
-  },
-  {
-    id: "event3",
-    title: "Start Chapter 2",
-    description: "Moving to advanced concepts",
-    status: "current",
-    dueDate: "2023-09-15",
-    type: "lesson"
   }
 ];
 
@@ -377,8 +339,14 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
     );
   }
   
-  // Map chapters data to SubjectTopic format
-  const subjectTopics = mockTopics.map(topic => ({
+  // Map chapters data to SubjectTopic format for the SubjectTopicList component
+  const subjectTopics = chapters.length > 0 ? chapters.map(chapter => ({
+    id: chapter.title,
+    title: chapter.title,
+    description: `Progress: ${chapter.progress}%`,
+    type: "lesson" as "lesson" | "quiz" | "practice",
+    estimatedTimeInMinutes: 30
+  })) : mockTopics.map(topic => ({
     id: topic.id,
     title: topic.title,
     description: topic.description,
@@ -401,9 +369,9 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
         id: "event1",
         title: `Started ${chapters[0].title}`,
         description: "Beginning your learning journey",
-        status: "completed",
+        status: "completed" as "completed",
         dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        type: "lesson"
+        type: "lesson" as "lesson"
       });
     }
     
@@ -412,9 +380,9 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
         id: "event2",
         title: `Completed Quiz on ${chapters[0].title}`,
         description: "8/10 questions answered correctly",
-        status: "completed",
+        status: "completed" as "completed",
         dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        type: "quiz"
+        type: "quiz" as "quiz"
       });
     }
     
@@ -424,9 +392,9 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
         id: "event3",
         title: `Start ${chapters[1].title}`,
         description: "Moving to advanced concepts",
-        status: "current",
+        status: "current" as "current",
         dueDate: new Date().toLocaleDateString(),
-        type: "lesson"
+        type: "lesson" as "lesson"
       });
     }
     
@@ -436,9 +404,9 @@ const SubjectDetails: React.FC<SubjectDetailsProps> = () => {
         id: "event4",
         title: `Upcoming ${chapters[2].title}`,
         description: "Get ready for the next topic",
-        status: "future",
+        status: "future" as "future",
         dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        type: "practice"
+        type: "practice" as "practice"
       });
     }
     

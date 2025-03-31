@@ -364,7 +364,6 @@ export const studyPlanService = {
     }
     
     toast({
-      title: "Loading study plans",
       description: "Fetching your NCERT-aligned study plans...",
     });
     
@@ -373,7 +372,6 @@ export const studyPlanService = {
         const plans = generateMockStudyPlans(subjects);
         
         toast({
-          title: "Study plans loaded",
           description: `Successfully loaded ${plans.length} study plans based on NCERT curriculum.`,
         });
         
@@ -387,7 +385,6 @@ export const studyPlanService = {
    */
   getWeeklyPlans: async () => {
     toast({
-      title: "Generating weekly schedule",
       description: "Creating your optimized weekly study plan from NCERT curriculum...",
     });
     
@@ -396,7 +393,6 @@ export const studyPlanService = {
         const weeklyPlans = generateWeeklyPlans();
         
         toast({
-          title: "Weekly plan ready",
           description: `Successfully created a ${weeklyPlans.length}-week study plan with all your NCERT subjects.`,
         });
         
@@ -411,7 +407,6 @@ export const studyPlanService = {
    */
   createStudyPlan: async (subject: string) => {
     toast({
-      title: "Generating study plan",
       description: `Creating NCERT-aligned content for ${subject}...`,
     });
     
@@ -426,7 +421,6 @@ export const studyPlanService = {
         };
         
         toast({
-          title: "Subject Added",
           description: `${subject} has been added to your study plan with ${items.length} NCERT-aligned lessons.`,
         });
         
@@ -464,7 +458,6 @@ export const studyPlanService = {
     await userService.updateUserXP(xpGained);
     
     toast({
-      title: "Test Completed",
       description: `You scored ${score}% and earned ${xpGained} XP!`,
     });
     
@@ -492,15 +485,13 @@ export const studyPlanService = {
       if (storedPlan) {
         updateStatus({
           stage: "Retrieved from cache",
-          progress: 100,
-          provider: "Cache"
+          progress: 100
         });
         return JSON.parse(storedPlan);
       }
 
       // If not, generate a new plan using API services
       toast({
-        title: "Generating study plan",
         description: `Creating NCERT-aligned study plan for ${subject}...`,
       });
 
@@ -508,8 +499,7 @@ export const studyPlanService = {
       try {
         updateStatus({
           stage: "Initializing AI services",
-          progress: 10,
-          provider: "System"
+          progress: 10
         });
 
         const plan = await deepSeekService.generateStudyPlan(subject, board, className, updateStatus);
@@ -525,8 +515,7 @@ export const studyPlanService = {
         
         updateStatus({
           stage: "Study plan complete",
-          progress: 100,
-          provider: "System"
+          progress: 100
         });
         
         return plan;
@@ -534,8 +523,7 @@ export const studyPlanService = {
         console.error("AI service error:", error);
         updateStatus({
           stage: "AI Service Error",
-          progress: 0,
-          provider: "System"
+          progress: 0
         });
         throw error; // Let the fallback handle it
       }
@@ -543,8 +531,7 @@ export const studyPlanService = {
       console.error("Error in getStudyPlan:", error);
       updateStatus({
         stage: "Falling back to default content",
-        progress: 50,
-        provider: "Fallback"
+        progress: 50
       });
       
       // Generate a fallback plan
@@ -552,8 +539,7 @@ export const studyPlanService = {
       
       updateStatus({
         stage: "Generated fallback content",
-        progress: 100,
-        provider: "Fallback"
+        progress: 100
       });
       
       return {

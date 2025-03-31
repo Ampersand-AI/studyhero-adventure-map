@@ -4,7 +4,7 @@ import TimelineCard from "./TimelineCard";
 import { Progress } from "@/components/ui/progress";
 import { Clock } from "lucide-react";
 
-interface TimelineItem {
+export interface TimelineItem {
   id: string;
   title: string;
   description: string;
