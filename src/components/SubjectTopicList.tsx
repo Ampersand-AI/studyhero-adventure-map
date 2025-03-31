@@ -10,21 +10,24 @@ export interface SubjectTopic {
   description: string;
   type: "lesson" | "quiz" | "practice";
   estimatedTimeInMinutes: number;
+  completed?: boolean;
   chapterNumber?: number;
   difficulty?: "beginner" | "intermediate" | "advanced";
 }
 
 interface SubjectTopicListProps {
-  subject: string;
-  className: string;
   topics: SubjectTopic[];
+  subject?: string;
+  className?: string;
+  onTopicToggle?: (id: string) => void;
   onSelectTopic?: (topic: SubjectTopic) => void;
 }
 
 const SubjectTopicList: React.FC<SubjectTopicListProps> = ({ 
-  subject, 
-  className, 
+  subject = "General Subject", 
+  className = "", 
   topics,
+  onTopicToggle,
   onSelectTopic
 }) => {
   // Function to get style based on topic type
@@ -57,7 +60,7 @@ const SubjectTopicList: React.FC<SubjectTopicListProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">{subject} - Class {className}</h2>
+        <h2 className="text-2xl font-bold">{subject} {className && `- Class ${className}`}</h2>
         <Badge variant="outline" className="px-3 py-1">
           <BookOpen className="h-4 w-4 mr-1" />
           NCERT Curriculum
@@ -68,7 +71,7 @@ const SubjectTopicList: React.FC<SubjectTopicListProps> = ({
         {topics.map((topic, index) => (
           <Card 
             key={topic.id} 
-            className="hover:shadow-md transition-shadow cursor-pointer"
+            className={`hover:shadow-md transition-shadow cursor-pointer ${topic.completed ? 'border-l-4 border-l-green-500' : ''}`}
             onClick={() => onSelectTopic && onSelectTopic(topic)}
           >
             <CardHeader className="pb-2">

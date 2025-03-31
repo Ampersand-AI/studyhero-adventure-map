@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ interface WeeklyPlan {
   weeklyTest: WeeklyTest;
 }
 
-interface WeeklyPlanViewProps {
+export interface WeeklyPlanViewProps {
   weeklyPlans: WeeklyPlan[];
   onStartItem: (id: string) => void;
   testScores?: Record<string, number>;
@@ -280,6 +281,78 @@ const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ weeklyPlans, onStartIte
       </Card>
     </div>
   );
+};
+
+// Function to get style based on topic type
+const getTypeColor = (type: string) => {
+  switch(type) {
+    case 'lesson': return 'bg-blue-500 text-white';
+    case 'quiz': return 'bg-purple-500 text-white';
+    case 'practice': return 'bg-orange-500 text-white';
+    default: return 'bg-gray-500 text-white';
+  }
+};
+
+// Function to get subject color
+const getSubjectColor = (subject: string) => {
+  if (!subject) return 'bg-gray-100 text-gray-800';
+  
+  const colors: Record<string, string> = {
+    'Mathematics': 'bg-green-100 text-green-800',
+    'Physics': 'bg-blue-100 text-blue-800',
+    'Chemistry': 'bg-purple-100 text-purple-800',
+    'Biology': 'bg-teal-100 text-teal-800',
+    'English': 'bg-yellow-100 text-yellow-800',
+    'History': 'bg-orange-100 text-orange-800',
+    'Geography': 'bg-indigo-100 text-indigo-800',
+    'Economics': 'bg-red-100 text-red-800',
+    'Computer Science': 'bg-cyan-100 text-cyan-800',
+    'Science': 'bg-emerald-100 text-emerald-800',
+    'Social Studies': 'bg-amber-100 text-amber-800',
+    'All Subjects': 'bg-gray-100 text-gray-800'
+  };
+  
+  return colors[subject] || 'bg-gray-100 text-gray-800';
+};
+
+// Function to get appropriate icon based on content type
+const getItemIcon = (type: string) => {
+  switch(type) {
+    case 'lesson': return <BookOpen className="h-4 w-4 mr-2 text-blue-500" />;
+    case 'quiz': return <Award className="h-4 w-4 mr-2 text-purple-500" />;
+    case 'practice': return <FileSpreadsheet className="h-4 w-4 mr-2 text-orange-500" />;
+    default: return <BookOpen className="h-4 w-4 mr-2 text-blue-500" />;
+  }
+};
+
+// Function to get textbook URL based on subject
+const getTextbookUrl = (subject: string) => {
+  const subjectLower = subject.toLowerCase();
+  const baseUrl = "https://ncert.nic.in/textbook.php";
+  
+  if (subjectLower.includes('math')) {
+    return `${baseUrl}?lemh1=0-10`;
+  } else if (subjectLower.includes('physics')) {
+    return `${baseUrl}?leph1=0-8`;
+  } else if (subjectLower.includes('chemistry')) {
+    return `${baseUrl}?lech1=0-14`;
+  } else if (subjectLower.includes('english')) {
+    return `${baseUrl}?lefl1=0-11`;
+  } else if (subjectLower.includes('economics')) {
+    return `${baseUrl}?leec1=0-10`;
+  } else if (subjectLower.includes('geography')) {
+    return `${baseUrl}?legy1=0-7`;
+  } else if (subjectLower.includes('computer')) {
+    return `${baseUrl}?lecs1=0-10`;
+  } else if (subjectLower.includes('biology')) {
+    return `${baseUrl}?lebo1=0-16`;
+  } else if (subjectLower.includes('social')) {
+    return `${baseUrl}?less1=0-9`;
+  } else if (subjectLower.includes('science') && !subjectLower.includes('computer')) {
+    return `${baseUrl}?lesc1=0-18`;
+  } else {
+    return baseUrl;
+  }
 };
 
 export default WeeklyPlanView;

@@ -20,9 +20,60 @@ interface DashboardData {
   completedSubjects: number;
 }
 
-interface WeeklyPlanViewProps {
-  weeklyProgress: { day: string; completed: number; total: number; }[];
-}
+// Add dummy data for WeeklyPlanView
+const weeklyPlans = [
+  {
+    weekNumber: 1,
+    startDate: "May 1, 2023",
+    endDate: "May 7, 2023",
+    dailyActivities: [
+      {
+        date: "2023-05-01",
+        items: [
+          {
+            id: "item1",
+            title: "Introduction to Algebra",
+            description: "Learn the basics of algebraic expressions",
+            type: "lesson",
+            estimatedTimeInMinutes: 30,
+            subject: "Mathematics",
+            status: "completed"
+          }
+        ]
+      },
+      {
+        date: "2023-05-02",
+        items: [
+          {
+            id: "item2",
+            title: "Chemical Reactions",
+            description: "Understand different types of chemical reactions",
+            type: "lesson",
+            estimatedTimeInMinutes: 45,
+            subject: "Chemistry",
+            status: "in-progress"
+          }
+        ]
+      },
+      {
+        date: "2023-05-03",
+        items: []
+      }
+    ],
+    weeklyTest: {
+      id: "test-week-1",
+      title: "Week 1 Assessment",
+      description: "Test your understanding of this week's topics",
+      type: "quiz",
+      status: "upcoming",
+      dueDate: "2023-05-07",
+      estimatedTimeInMinutes: 60,
+      subject: "All Subjects",
+      isWeeklyTest: true,
+      weekNumber: 1
+    }
+  }
+];
 
 const defaultNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: <Home className="h-4 w-4" /> },
@@ -93,6 +144,11 @@ const Dashboard = () => {
   const handleStartTimelineItem = (id: string) => {
     toast.success("Starting study session");
     // Navigate based on item type (can be expanded)
+    navigate('/lesson');
+  };
+
+  const handleStartWeeklyItem = (id: string) => {
+    toast.success(`Starting weekly item: ${id}`);
     navigate('/lesson');
   };
 
@@ -179,7 +235,10 @@ const Dashboard = () => {
                 <CardDescription>Your study plan for the week</CardDescription>
               </CardHeader>
               <CardContent>
-                <WeeklyPlanView weeklyProgress={dashboardData.weeklyProgress} />
+                <WeeklyPlanView 
+                  weeklyPlans={weeklyPlans} 
+                  onStartItem={handleStartWeeklyItem}
+                />
               </CardContent>
             </Card>
           </TabsContent>

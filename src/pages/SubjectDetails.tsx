@@ -8,19 +8,10 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Check, ChevronRight, BookOpen, Clock, BarChart, Home, Settings } from "lucide-react";
 import StudyAIHeader from '@/components/StudyAIHeader';
-import SubjectTopicList from '@/components/SubjectTopicList';
+import SubjectTopicList, { SubjectTopic } from '@/components/SubjectTopicList';
 import { useStudyPlan } from '@/contexts/StudyPlanContext';
 import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline';
 import { studyPlanService } from '@/services/studyPlanService';
-
-interface SubjectTopic {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  estimatedTimeInMinutes: number;
-  completed: boolean;
-}
 
 interface Topic {
   id: string;
@@ -33,7 +24,7 @@ const mapToSubjectTopics = (topics: Topic[]): SubjectTopic[] => {
     id: topic.id,
     title: topic.title,
     description: `Learn about ${topic.title}`,
-    type: 'lesson',
+    type: "lesson" as "lesson" | "quiz" | "practice",
     estimatedTimeInMinutes: 30,
     completed: topic.completed
   }));
@@ -222,7 +213,11 @@ const SubjectDetails = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SubjectTopicList topics={mapToSubjectTopics(topics)} onTopicToggle={handleTopicToggle} />
+                <SubjectTopicList 
+                  topics={mapToSubjectTopics(topics)} 
+                  subject={subjectName || "Subject"}
+                  onTopicToggle={handleTopicToggle} 
+                />
                 {!studyPlanGenerated && (
                   <Button onClick={handleGenerateStudyPlan} className="mt-4 w-full">
                     <Check className="h-4 w-4 mr-2" />
