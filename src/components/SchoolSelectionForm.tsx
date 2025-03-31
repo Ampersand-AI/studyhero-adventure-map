@@ -1,202 +1,169 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import deepSeekService from "../services/deepSeekService";
+import { toast } from "@/hooks/use-toast";
+import { ChevronRight } from "lucide-react";
 
 interface SchoolSelectionFormProps {
-  userName?: string;
-  level?: number;
-  xp?: number;
-  board?: string;
-  onComplete: (school: { state: string; city: string; school: string }) => void;
+  onComplete: (data: {
+    name: string;
+    board: string;
+    class: string;
+    school: string;
+    city: string;
+  }) => void;
 }
 
-const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({ 
-  userName = "Student", 
-  level = 1, 
-  xp = 0,
-  board,
-  onComplete 
+const BOARD_TYPES = [
+  { value: "CBSE", label: "CBSE" },
+  { value: "ICSE", label: "ICSE" },
+  { value: "State Board", label: "State Board" },
+  { value: "International", label: "International" }
+];
+
+const CLASS_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1),
+  label: `Class ${i + 1}`
+}));
+
+const SchoolSelectionForm: React.FC<SchoolSelectionFormProps> = ({
+  onComplete
 }) => {
-  const [state, setState] = useState<string>("");
-  const [city, setCity] = useState<string>("");
-  const [school, setSchool] = useState<string>("");
+  const [name, setName] = useState("");
+  const [board, setBoard] = useState("");
+  const [classValue, setClassValue] = useState("");
+  const [city, setCity] = useState("");
+  const [school, setSchool] = useState("");
+  const [schoolOptions, setSchoolOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingSchools, setLoadingSchools] = useState(false);
-  const [schools, setSchools] = useState<string[]>([]);
 
-  const handleStateChange = (value: string) => {
-    setState(value);
-    // Reset city and school when state changes
-    setCity("");
-    setSchool("");
-    setSchools([]);
-  };
-
-  const handleCityChange = async (value: string) => {
-    setCity(value);
-    // Reset school when city changes
-    setSchool("");
-    
-    // Fetch comprehensive list of schools for this city
-    if (value && state) {
-      setLoadingSchools(true);
-      try {
-        const schoolList = await deepSeekService.getSchoolsForCity(state, value);
-        setSchools(schoolList);
-      } catch (error) {
-        console.error("Error fetching schools:", error);
-        toast("Error loading schools", {
-          description: "Could not fetch schools for this city. Using default list."
-        });
-        setSchools(getDefaultSchools(value));
-      } finally {
-        setLoadingSchools(false);
-      }
+  // This useEffect is updated to create mock school options instead of using a non-existent API
+  useEffect(() => {
+    if (city.trim().length > 0) {
+      setLoading(true);
+      
+      // Simulate API call with a timeout
+      setTimeout(() => {
+        // Generate mock school names based on city
+        const mockSchools = [
+          `${city} Public School`,
+          `${city} International School`,
+          `St. Xavier's School, ${city}`,
+          `Delhi Public School, ${city}`,
+          `Modern School, ${city}`
+        ];
+        
+        setSchoolOptions(mockSchools);
+        setLoading(false);
+      }, 500);
     }
-  };
+  }, [city]);
 
-  const handleSchoolChange = (value: string) => {
-    setSchool(value);
-  };
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-
-    // Validate form inputs
-    if (!state || !city || !school) {
-      toast("Required fields missing", {
-        description: "Please fill in all required fields."
+  const handleContinue = () => {
+    if (!name || !board || !classValue || !city || !school) {
+      toast({
+        title: "All fields are required",
+        description: "Please fill in all the fields to continue.",
+        variant: "destructive",
       });
       return;
     }
 
-    // Call the onComplete callback with the selected school data
     onComplete({
-      state,
-      city,
-      school
+      name,
+      board,
+      class: classValue,
+      school,
+      city
     });
   };
 
-  // States data
-  const states = [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
-    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
-    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", 
-    "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", 
-    "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh", "Puducherry", 
-    "Chandigarh"
-  ];
-
-  // Function to get cities based on state
-  const getCitiesForState = (state: string) => {
-    // This is a simplified example. In a real app, you would fetch this from an API
-    const citiesMap: Record<string, string[]> = {
-      "Delhi": ["New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi"],
-      "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Aurangabad", "Solapur", "Kolhapur"],
-      "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangaluru", "Belgaum", "Gulbarga", "Davanagere", "Shimoga"],
-      "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Trichy", "Tirunelveli", "Erode", "Vellore"],
-      "Uttar Pradesh": ["Lucknow", "Kanpur", "Agra", "Varanasi", "Meerut", "Prayagraj", "Ghaziabad", "Noida"],
-      "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar", "Junagadh"],
-      "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Kota", "Bikaner", "Ajmer", "Sikar", "Bhilwara"],
-      "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri", "Baharampur", "Haldia", "Kharagpur"],
-      "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam", "Ramagundam", "Mahbubnagar", "Nalgonda"],
-      "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Rajahmundry", "Tirupati", "Kakinada"],
-      // Add more states and cities as needed
-    };
-
-    return citiesMap[state] || ["City 1", "City 2", "City 3"]; // Default cities if state is not in the map
-  };
-
-  // Function for default schools if API fails
-  const getDefaultSchools = (city: string) => {
-    // Enhanced with more comprehensive school lists
-    const schoolsMap: Record<string, string[]> = {
-      "Mumbai": ["St. Xavier's High School", "Don Bosco High School", "R.N. Podar School", "Bombay Scottish School", "Cathedral and John Connon School", "Jamnabai Narsee School", "Dhirubhai Ambani International School", "Arya Vidya Mandir"],
-      "New Delhi": ["Delhi Public School (R.K. Puram)", "Modern School (Barakhamba Road)", "Springdales School (Pusa Road)", "Sanskriti School", "The Shri Ram School", "Mother's International School", "St. Columba's School", "Don Bosco School"],
-      "Bengaluru": ["Bishop Cotton Boys' School", "National Public School (Indiranagar)", "The Valley School", "Inventure Academy", "Vidyashilp Academy", "Delhi Public School (Bangalore East)", "Mallya Aditi International School", "Ekya School"],
-      "Chennai": ["Don Bosco Matriculation Higher Secondary School", "DAV Boys Senior Secondary School", "Chettinad Vidyashram", "P.S. Senior Secondary School", "Sir Mutha School", "Padma Seshadri Bala Bhavan", "Lady Andal Venkatasubba Rao School", "Chennai Public School"],
-      "Pune": ["The Bishop's School", "St. Mary's School", "Symbiosis International School", "Delhi Public School Pune", "The Orchid School", "Hutchings High School", "St. Vincent's High School", "Loyola High School"],
-      "Hyderabad": ["Hyderabad Public School", "Delhi Public School (Nacharam)", "Oakridge International School", "Chirec International School", "Johnson Grammar School", "Meridian School", "Silver Oaks International School", "Glendale Academy"],
-      "Kolkata": ["La Martiniere for Boys/Girls", "Don Bosco School (Park Circus)", "St. Xavier's Collegiate School", "Modern High School for Girls", "South Point High School", "The Heritage School", "Calcutta International School", "St. James' School"],
-      "Ahmedabad": ["Delhi Public School (Bopal)", "Anand Niketan School", "Nirma Vidyavihar", "Udgam School", "Riverside School", "Eklavya School", "St. Kabir School", "SGVP International School"],
-      // Add more cities and schools as needed
-    };
-
-    return schoolsMap[city] || ["School 1", "School 2", "School 3", "School 4", "School 5", "School 6", "School 7", "School 8"]; // Default schools if city is not in the map
-  };
-
-  // Get relevant cities based on selections
-  const cities = state ? getCitiesForState(state) : [];
-
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <div className="grid gap-4">
-          <div>
-            <Label htmlFor="state">State</Label>
-            <Select value={state} onValueChange={handleStateChange} disabled={loading}>
-              <SelectTrigger id="state">
-                <SelectValue placeholder="Select State" />
-              </SelectTrigger>
-              <SelectContent>
-                {states.map((stateName) => (
-                  <SelectItem key={stateName} value={stateName}>{stateName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="city">City</Label>
-            <Select value={city} onValueChange={handleCityChange} disabled={loading || !state}>
-              <SelectTrigger id="city">
-                <SelectValue placeholder="Select City" />
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map((cityName) => (
-                  <SelectItem key={cityName} value={cityName}>{cityName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="school">School</Label>
-            <Select value={school} onValueChange={handleSchoolChange} disabled={loading || !city || loadingSchools}>
-              <SelectTrigger id="school">
-                <SelectValue placeholder={loadingSchools ? "Loading schools..." : "Select School"} />
-              </SelectTrigger>
-              <SelectContent>
-                {loadingSchools ? (
-                  <SelectItem value="loading" disabled>Loading schools...</SelectItem>
-                ) : (
-                  schools.map((schoolName) => (
-                    <SelectItem key={schoolName} value={schoolName}>{schoolName}</SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {loadingSchools && (
-              <div className="mt-2">
-                <div className="h-1 w-full bg-gray-200 rounded overflow-hidden">
-                  <div className="h-full bg-primary animate-pulse rounded" style={{ width: '100%' }}></div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Searching for schools in {city}...</p>
-              </div>
-            )}
-          </div>
-          
-          <Button type="submit" disabled={loading || !state || !city || !school || loadingSchools}>
-            Continue
-          </Button>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle className="text-xl">Let's set up your profile</CardTitle>
+        <CardDescription>Tell us about yourself to customize your learning experience</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">What's your name?</Label>
+          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
         </div>
-      </form>
-    </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="board">Which board are you studying under?</Label>
+          <Select value={board} onValueChange={setBoard}>
+            <SelectTrigger id="board">
+              <SelectValue placeholder="Select board" />
+            </SelectTrigger>
+            <SelectContent>
+              {BOARD_TYPES.map((boardType) => (
+                <SelectItem key={boardType.value} value={boardType.value}>
+                  {boardType.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="class">Which class are you in?</Label>
+          <Select value={classValue} onValueChange={setClassValue}>
+            <SelectTrigger id="class">
+              <SelectValue placeholder="Select class" />
+            </SelectTrigger>
+            <SelectContent>
+              {CLASS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="city">Which city do you live in?</Label>
+          <Input 
+            id="city" 
+            value={city} 
+            onChange={(e) => setCity(e.target.value)} 
+            placeholder="Enter your city" 
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="school">Which school do you go to?</Label>
+          <Select 
+            value={school} 
+            onValueChange={setSchool} 
+            disabled={schoolOptions.length === 0 || loading}
+          >
+            <SelectTrigger id="school">
+              <SelectValue placeholder={loading ? "Loading schools..." : "Select school"} />
+            </SelectTrigger>
+            <SelectContent>
+              {schoolOptions.map((schoolName) => (
+                <SelectItem key={schoolName} value={schoolName}>
+                  {schoolName}
+                </SelectItem>
+              ))}
+              <SelectItem value="other">Other (not listed)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button className="w-full" onClick={handleContinue}>
+          Continue
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 

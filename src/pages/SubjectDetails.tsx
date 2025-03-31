@@ -1,282 +1,365 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import StudyAIHeader from "@/components/StudyAIHeader";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, BookOpenCheck, CheckCircle, Clock, Settings } from "lucide-react";
+import SubjectTopicList from "@/components/SubjectTopicList";
+import WeeklyPlanView from "@/components/WeeklyPlanView";
+import StudyTimeline from "@/components/StudyTimeline";
 import { toast } from "sonner";
-import StudyAIHeader from '@/components/StudyAIHeader';
-import SubjectTopicList from '@/components/SubjectTopicList';
-import deepSeekService, { AIStatus } from '@/services/deepSeekService';
-import { BookOpen, ChevronLeft, RefreshCw, Loader, BookOpenCheck } from "lucide-react";
-import AIContentLoader from '@/components/AIContentLoader';
+
+interface Lesson {
+  title: string;
+  type: string;
+}
+
+interface Chapter {
+  title: string;
+  lessons: Lesson[];
+}
+
+interface StudyPlan {
+  subject: string;
+  board: string;
+  className: string;
+  chapters: Chapter[];
+  lastUpdated: string;
+}
 
 const SubjectDetails = () => {
-  const location = useLocation();
+  const { subject } = useParams<{ subject: string }>();
   const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingStatus, setLoadingStatus] = useState<AIStatus | null>(null);
-  const [subject, setSubject] = useState<string>('');
-  const [className, setClassName] = useState<string>('10');
-  const [board, setBoard] = useState<string>('CBSE');
-  const [topics, setTopics] = useState<any[]>([]);
-  const [studyPlan, setStudyPlan] = useState<any>(null);
   
   useEffect(() => {
-    // Get subject info from localStorage
-    const subjectData = localStorage.getItem('selectedSubject');
-    
-    // Get profile info from localStorage
+    // Load user profile
     const profileData = localStorage.getItem('studyHeroProfile');
-    let parsedProfile: any = {};
-    
     if (profileData) {
-      try {
-        parsedProfile = JSON.parse(profileData);
-      } catch (e) {
-        console.error("Error parsing profile:", e);
-      }
+      const parsedProfile = JSON.parse(profileData);
+      setUserProfile(parsedProfile);
+    } else {
+      navigate('/onboarding');
+      return;
     }
     
-    const classData = parsedProfile.class || localStorage.getItem('selectedClass') || '10';
-    const boardData = parsedProfile.board || localStorage.getItem('selectedBoard') || 'CBSE';
-    
-    if (subjectData) {
-      setSubject(subjectData);
-      setClassName(classData);
-      setBoard(boardData);
-      
-      // Load study plan for this subject
-      loadStudyPlan(subjectData, boardData, classData);
-    } else {
-      // Navigate back to dashboard if no subject is selected
+    // Get selected subject from localStorage
+    const selectedSubject = localStorage.getItem('selectedSubject') || subject;
+    if (!selectedSubject) {
       navigate('/dashboard');
+      return;
     }
-  }, [location, navigate]);
-  
-  const updateLoadingStatus = (status: AIStatus) => {
-    setLoadingStatus(status);
-  };
-  
-  const loadStudyPlan = async (subjectName: string, boardName: string, classNum: string) => {
-    setLoading(true);
     
-    try {
-      // Check if we have cached study plan first
-      const studyPlanKey = `studyPlan_${subjectName}_${boardName}_${classNum}`;
-      const cachedPlan = localStorage.getItem(studyPlanKey);
+    // Load study plan for the subject
+    const loadStudyPlan = () => {
+      setLoading(true);
       
-      if (cachedPlan) {
-        const parsedPlan = JSON.parse(cachedPlan);
-        setStudyPlan(parsedPlan);
-        
-        // Extract topics from study plan
-        if (parsedPlan && parsedPlan.weeks) {
-          const extractedTopics = extractTopicsFromStudyPlan(parsedPlan);
-          setTopics(extractedTopics);
+      // Try to get from localStorage
+      const studyPlanKey = `studyPlan_${selectedSubject}_${userProfile?.board}_${userProfile?.class}`;
+      const savedPlan = localStorage.getItem(studyPlanKey);
+      
+      if (savedPlan) {
+        try {
+          const parsedPlan = JSON.parse(savedPlan);
+          setStudyPlan(parsedPlan);
+        } catch (e) {
+          console.error("Error parsing saved study plan:", e);
         }
-        
-        setLoading(false);
-        return;
       }
       
-      // Otherwise, generate with DeepSeek
-      const generatedPlan = await deepSeekService.generateStudyPlan(
-        subjectName,
-        boardName,
-        classNum,
-        updateLoadingStatus
-      );
-      
-      setStudyPlan(generatedPlan);
-      
-      // Extract topics from study plan
-      if (generatedPlan && generatedPlan.weeks) {
-        const extractedTopics = extractTopicsFromStudyPlan(generatedPlan);
-        setTopics(extractedTopics);
-      }
-      
-      // Cache for future use
-      localStorage.setItem(studyPlanKey, JSON.stringify(generatedPlan));
-    } catch (error) {
-      console.error("Error loading study plan:", error);
-      toast.error("Error", {
-        description: "Failed to load subject content. Please try again."
-      });
-    } finally {
       setLoading(false);
+    };
+    
+    if (userProfile) {
+      loadStudyPlan();
     }
-  };
+  }, [navigate, subject, userProfile]);
   
-  const extractTopicsFromStudyPlan = (plan: any) => {
-    if (!plan.weeks || !Array.isArray(plan.weeks)) {
-      return [];
-    }
+  const generateTimelineItems = () => {
+    if (!studyPlan) return [];
     
-    const allTopics: any[] = [];
-    let topicId = 1;
+    let items = [];
+    let id = 1;
     
-    // Extract daily lessons
-    plan.weeks.forEach((week: any, weekIndex: number) => {
-      if (week.days && Array.isArray(week.days)) {
-        week.days.forEach((day: any, dayIndex: number) => {
-          if (day.topic) {
-            allTopics.push({
-              id: `topic-${topicId++}`,
-              title: day.topic,
-              type: 'lesson',
-              dueDate: `Week ${weekIndex + 1}, ${day.day || 'Day ' + (dayIndex + 1)}`,
-              description: day.content?.fundamentals?.join('. ') || 'Learn about ' + day.topic,
-              status: 'current',
-              weekNumber: weekIndex + 1,
-              dayNumber: dayIndex + 1,
-              estimatedTimeInMinutes: 30,
-              content: day.content
-            });
-          }
+    // Extract lessons from chapters and convert to timeline items
+    for (const chapter of studyPlan.chapters) {
+      for (const lesson of chapter.lessons) {
+        // Calculate a due date (just for display purposes)
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + id);
+        
+        items.push({
+          id: String(id),
+          title: lesson.title,
+          description: `${chapter.title} - ${lesson.title}`,
+          status: id === 1 ? "current" : "future",
+          dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          type: lesson.type as "lesson" | "quiz" | "practice"
         });
+        
+        id++;
       }
-      
-      // Add weekly quiz
-      if (week.weeklyQuiz) {
-        allTopics.push({
-          id: `quiz-${weekIndex + 1}`,
-          title: `Week ${weekIndex + 1} Assessment`,
-          type: 'quiz',
-          dueDate: `End of Week ${weekIndex + 1}`,
-          description: `Test your knowledge on the topics covered in Week ${weekIndex + 1}`,
-          status: 'future',
-          weekNumber: weekIndex + 1,
-          estimatedTimeInMinutes: 20,
-          questions: week.weeklyQuiz.questions
-        });
-      }
-    });
+    }
     
-    return allTopics;
+    return items;
   };
   
-  const handleTopicSelect = (topic: any) => {
-    // Save the selected topic to localStorage
-    localStorage.setItem('currentStudyItem', JSON.stringify({
-      ...topic,
-      subject: subject,
-      className: className,
-      board: board
-    }));
+  const handleStartItem = (id: string) => {
+    // Navigate based on the type of item
+    const timelineItems = generateTimelineItems();
+    const item = timelineItems.find(item => item.id === id);
     
-    // Navigate to the appropriate page based on topic type
-    if (topic.type === 'quiz') {
-      navigate(`/quiz/${topic.id}`);
-    } else {
-      navigate(`/lesson/${topic.id}`);
+    if (item) {
+      if (item.type === "quiz") {
+        navigate(`/quiz/${id}`);
+      } else {
+        navigate(`/lesson/${id}`);
+      }
     }
   };
   
-  const handleRefresh = () => {
-    // Clear cache and reload
-    const studyPlanKey = `studyPlan_${subject}_${board}_${className}`;
-    localStorage.removeItem(studyPlanKey);
-    loadStudyPlan(subject, board, className);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader 
+          userName={userProfile?.name || "Student"}
+          level={1}
+          xp={0}
+          navigation={[]}
+        />
+        <main className="flex-1 container py-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4">Loading subject data...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
   
-  const navigationItems = [
-    { name: "Dashboard", href: "/dashboard", icon: <ChevronLeft className="h-4 w-4" /> },
-  ];
+  if (!studyPlan) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <StudyAIHeader 
+          userName={userProfile?.name || "Student"}
+          level={1}
+          xp={0}
+          navigation={[]}
+        />
+        <main className="flex-1 container py-6 flex items-center justify-center">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle>Subject Not Found</CardTitle>
+              <CardDescription>We couldn't find study material for this subject.</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button onClick={() => navigate('/dashboard')} className="w-full">
+                Return to Dashboard
+              </Button>
+            </CardFooter>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+  
+  const timelineItems = generateTimelineItems();
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <StudyAIHeader
-        userName="Student"
+      <StudyAIHeader 
+        userName={userProfile?.name || "Student"}
         level={parseInt(localStorage.getItem('currentLevel') || '1')}
         xp={parseInt(localStorage.getItem('currentXp') || '0')}
-        navigation={navigationItems}
+        navigation={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: studyPlan.subject, href: "#" }
+        ]}
       />
       
-      <main className="flex-1 container py-6 md:py-12">
-        {loading ? (
-          <div className="max-w-3xl mx-auto">
-            {loadingStatus ? (
-              <AIContentLoader
-                title={`Creating ${subject} Study Plan`}
-                description={`Generating comprehensive study materials for ${board} Class ${className}`}
-                stage={loadingStatus.stage}
-                progress={loadingStatus.progress}
-                provider="DeepSeek AI"
-                context={{
-                  subject,
-                  className,
-                  topic: `Complete ${subject} curriculum`
-                }}
-              />
-            ) : (
-              <Card className="w-full">
-                <CardHeader>
-                  <CardTitle>Loading Curriculum</CardTitle>
-                  <CardDescription>Retrieving curriculum data...</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        ) : (
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-6 flex justify-between items-center">
-              <h1 className="text-3xl font-bold">{subject} Curriculum</h1>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleRefresh}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Back to Dashboard
-                </Button>
-              </div>
-            </div>
-            
-            <Card className="mb-6">
-              <CardHeader>
+      <main className="flex-1 container py-6 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-2/3 space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{subject} - Class {className}</CardTitle>
-                    <CardDescription>{board} Curriculum</CardDescription>
+                    <CardTitle className="text-2xl">{studyPlan.subject}</CardTitle>
+                    <CardDescription>
+                      {studyPlan.board} Curriculum for Class {studyPlan.className}
+                    </CardDescription>
                   </div>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    {topics.length} Topics
-                  </Badge>
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Customize
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="mb-4">
-                  This curriculum follows the {board} guidelines for {subject} Class {className}. 
-                  It includes daily lessons with fundamentals, examples, and visual aids, plus weekly assessments.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
-                    {topics.filter(t => t.type === 'lesson').length} Lessons
-                  </Badge>
-                  <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
-                    {topics.filter(t => t.type === 'quiz').length} Quizzes
-                  </Badge>
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
-                    {studyPlan?.weeks?.length || 12} Weeks
-                  </Badge>
+                <div className="space-y-4">
+                  <div className="flex flex-col md:flex-row gap-4 justify-between">
+                    <div className="flex gap-2 items-center">
+                      <div className="p-2 bg-primary/10 rounded-full">
+                        <BookOpen className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Progress</p>
+                        <p className="text-2xl font-bold">10%</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 items-center">
+                      <div className="p-2 bg-green-100 rounded-full">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Completed</p>
+                        <p className="text-2xl font-bold">2/20</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 items-center">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <Clock className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Time Spent</p>
+                        <p className="text-2xl font-bold">1h 20m</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Progress value={10} className="h-2" />
+                  
+                  <div className="text-sm text-muted-foreground">
+                    Current Chapter: Introduction to {studyPlan.subject}
+                  </div>
                 </div>
               </CardContent>
             </Card>
             
-            <SubjectTopicList 
-              subject={subject}
-              className={className}
-              topics={topics}
-              onSelectTopic={handleTopicSelect}
-            />
+            <Tabs defaultValue="topics">
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="topics">Topics</TabsTrigger>
+                <TabsTrigger value="weekly">Weekly Plan</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="topics" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Course Content</CardTitle>
+                    <CardDescription>
+                      Complete curriculum based on {studyPlan.board} standards
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <SubjectTopicList chapters={studyPlan.chapters} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="weekly" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Weekly Study Plan</CardTitle>
+                    <CardDescription>
+                      Your customized weekly schedule for {studyPlan.subject}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <WeeklyPlanView subject={studyPlan.subject} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="timeline" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Study Timeline</CardTitle>
+                    <CardDescription>
+                      Your personalized learning pathway
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <StudyTimeline 
+                      items={timelineItems}
+                      onStartItem={handleStartItem}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
-        )}
+          
+          <div className="lg:w-1/3 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Next Up</CardTitle>
+                <CardDescription>Continue where you left off</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <BookOpenCheck className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">20 min</span>
+                  </div>
+                  <h3 className="font-medium">Introduction to {studyPlan.subject}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Learn the fundamental concepts and terminology of {studyPlan.subject}
+                  </p>
+                  <Button onClick={() => navigate('/lesson/intro')} className="w-full">
+                    Continue Learning
+                  </Button>
+                </div>
+                
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="p-2 bg-orange-100 rounded-full">
+                      <BookOpenCheck className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">15 min</span>
+                  </div>
+                  <h3 className="font-medium">Practice Quiz</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Test your understanding of the introduction to {studyPlan.subject}
+                  </p>
+                  <Button onClick={() => navigate('/quiz/intro')} variant="outline" className="w-full">
+                    Start Quiz
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Study Resources</CardTitle>
+                <CardDescription>Additional learning materials</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button variant="outline" className="w-full justify-start" onClick={() => toast("Opening PDF resources")}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  {studyPlan.subject} Textbook PDF
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => toast("Opening video resources")}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Video Lessons
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => toast("Opening practice problems")}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Practice Problems
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
     </div>
   );

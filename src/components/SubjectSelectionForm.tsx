@@ -1,56 +1,58 @@
 
 import React, { useState, useEffect } from 'react';
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Loader } from "lucide-react";
-import deepSeekService from "../services/deepSeekService";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/hooks/use-toast";
+import { CheckCircle, ChevronRight } from "lucide-react";
+import deepSeekService from '@/services/deepSeekService';
 
 interface SubjectSelectionFormProps {
   board: string;
   className: string;
-  onComplete: (subjects: string[]) => void;
+  onComplete: (selectedSubjects: string[]) => void;
+  onBack: () => void;
 }
 
 const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
   board,
   className,
-  onComplete
+  onComplete,
+  onBack
 }) => {
-  const [loading, setLoading] = useState(true);
   const [compulsorySubjects, setCompulsorySubjects] = useState<string[]>([]);
   const [optionalSubjects, setOptionalSubjects] = useState<string[]>([]);
-  const [selectedOptionalSubjects, setSelectedOptionalSubjects] = useState<string[]>([]);
-  
-  // Fetch subjects based on board and class
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchSubjects = async () => {
-      setLoading(true);
+    const loadSubjects = async () => {
       try {
-        const subjects = await deepSeekService.getSubjectsForBoardAndClass(board, className);
-        setCompulsorySubjects(subjects.compulsorySubjects);
-        setOptionalSubjects(subjects.optionalSubjects);
+        setLoading(true);
+        const result = await deepSeekService.getSubjectsForBoardAndClass(board, className);
+        
+        setCompulsorySubjects(result.compulsorySubjects);
+        setOptionalSubjects(result.optionalSubjects);
+        
+        // Automatically select all compulsory subjects
+        setSelectedSubjects(result.compulsorySubjects);
       } catch (error) {
-        console.error("Error fetching subjects:", error);
-        toast("Error loading subjects", {
-          description: "Could not fetch subjects for this board and class. Using default list."
+        console.error("Error loading subjects:", error);
+        toast({
+          title: "Failed to load subjects",
+          description: "There was an error loading the subjects. Please try again.",
+          variant: "destructive",
         });
-        // Set default subjects
-        setCompulsorySubjects(["Mathematics", "Science", "English", "Social Studies", "Hindi"]);
-        setOptionalSubjects(["Computer Science", "Sanskrit", "Physical Education", "Art", "Music"]);
       } finally {
         setLoading(false);
       }
     };
 
-    if (board && className) {
-      fetchSubjects();
-    }
+    loadSubjects();
   }, [board, className]);
 
   const handleOptionalSubjectToggle = (subject: string) => {
-    setSelectedOptionalSubjects(prev => {
+    setSelectedSubjects(prev => {
       if (prev.includes(subject)) {
         return prev.filter(s => s !== subject);
       } else {
@@ -59,90 +61,90 @@ const SubjectSelectionForm: React.FC<SubjectSelectionFormProps> = ({
     });
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    // Combine compulsory and selected optional subjects
-    const selectedSubjects = [...compulsorySubjects, ...selectedOptionalSubjects];
-    
+  const handleContinue = () => {
     if (selectedSubjects.length === 0) {
-      toast("No subjects selected", {
-        description: "Please select at least one subject to continue."
+      toast({
+        title: "Please select at least one subject",
+        description: "You need to select at least one subject to continue.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     onComplete(selectedSubjects);
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <Loader className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading subjects for {board} Class {className}...</p>
-      </div>
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle className="text-xl">Loading Subjects</CardTitle>
+          <CardDescription>Please wait while we load the subjects for {board} Class {className}...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center p-6">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Compulsory Subjects</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle className="text-xl">Select Your Subjects</CardTitle>
+        <CardDescription>Choose the subjects you want to study for {board} Class {className}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Compulsory Subjects</h3>
+          <div className="grid grid-cols-1 gap-2">
             {compulsorySubjects.map(subject => (
-              <div key={subject} className="flex items-center space-x-2 border p-3 rounded-md bg-muted/30">
+              <div key={subject} className="flex items-center space-x-3 p-2 rounded-md border bg-muted/50">
                 <Checkbox 
-                  id={`subject-${subject}`} 
-                  checked={true}
+                  id={subject} 
+                  checked={true} 
                   disabled={true}
                 />
-                <Label htmlFor={`subject-${subject}`} className="font-medium">{subject}</Label>
+                <label htmlFor={subject} className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  {subject}
+                </label>
+                <CheckCircle className="h-4 w-4 text-primary" />
               </div>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">These subjects are required based on your curriculum</p>
         </div>
 
-        {optionalSubjects.length > 0 && (
-          <div>
-            <h3 className="text-lg font-medium mb-2">Optional Subjects</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {optionalSubjects.map(subject => (
-                <div 
-                  key={subject} 
-                  className={`flex items-center space-x-2 border p-3 rounded-md ${
-                    selectedOptionalSubjects.includes(subject) ? 'bg-primary/10 border-primary/30' : 'bg-background'
-                  } cursor-pointer transition-colors`}
-                  onClick={() => handleOptionalSubjectToggle(subject)}
-                >
-                  <Checkbox 
-                    id={`subject-${subject}`} 
-                    checked={selectedOptionalSubjects.includes(subject)}
-                    // Prevent onChange to avoid double state updates
-                    // Let the parent div's onClick handle it
-                    readOnly
-                  />
-                  <Label 
-                    htmlFor={`subject-${subject}`} 
-                    className="cursor-pointer font-medium"
-                  >
-                    {subject}
-                  </Label>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">Select any additional subjects you want to study</p>
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Optional Subjects</h3>
+          <div className="grid grid-cols-1 gap-2">
+            {optionalSubjects.map(subject => (
+              <div 
+                key={subject} 
+                className="flex items-center space-x-3 p-2 rounded-md border hover:bg-muted cursor-pointer"
+                onClick={() => handleOptionalSubjectToggle(subject)}
+              >
+                <Checkbox 
+                  id={subject} 
+                  checked={selectedSubjects.includes(subject)}
+                />
+                <label htmlFor={subject} className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  {subject}
+                </label>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <Button type="submit">
-          Continue with {compulsorySubjects.length + selectedOptionalSubjects.length} Subjects
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={onBack}>
+          Back
         </Button>
-      </div>
-    </form>
+        <Button onClick={handleContinue}>
+          Continue
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 

@@ -15,7 +15,7 @@ import {
   ArrowRight, 
   BookOpenCheck, 
   Calculator, 
-  Flask, 
+  Beaker, 
   BookText, 
   Globe, 
   Music, 
@@ -56,11 +56,11 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       case 'mathematics':
         return <Calculator {...iconProps} />;
       case 'science':
-        return <Flask {...iconProps} />;
+        return <Beaker {...iconProps} />;
       case 'physics':
         return <Atom {...iconProps} />;
       case 'chemistry':
-        return <Flask {...iconProps} />;
+        return <Beaker {...iconProps} />;
       case 'biology':
         return <BookOpenCheck {...iconProps} />;
       case 'english':
