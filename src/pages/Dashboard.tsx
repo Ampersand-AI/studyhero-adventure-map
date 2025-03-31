@@ -152,6 +152,11 @@ const Dashboard = () => {
     navigate('/lesson');
   };
 
+  // Convert number values to strings for ProgressCard components
+  const overallProgressValue = `${Math.round((dashboardData.completedSubjects / dashboardData.totalSubjects) * 100)}`;
+  const subjectsCompletedValue = `${dashboardData.completedSubjects}`;
+  const weeklyStudyTimeValue = "4.5";
+
   return (
     <div className="min-h-screen bg-background">
       <StudyHeroHeader 
@@ -165,22 +170,22 @@ const Dashboard = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <ProgressCard
             title="Overall Progress"
-            value={Math.round((dashboardData.completedSubjects / dashboardData.totalSubjects) * 100)}
-            total={100}
+            value={overallProgressValue}
+            total="100"
             description="Keep pushing forward!"
             icon={<BarChart className="h-4 w-4" />}
           />
           <ProgressCard
             title="Subjects Completed"
-            value={dashboardData.completedSubjects}
-            total={dashboardData.totalSubjects}
+            value={subjectsCompletedValue}
+            total="10"
             description="Your completed subjects this semester"
             icon={<BookOpen className="h-4 w-4" />}
           />
           <ProgressCard
             title="Weekly Study Time"
-            value={4.5}
-            total={10}
+            value={weeklyStudyTimeValue}
+            total="10"
             description="Hours studied this week"
             icon={<Clock className="h-4 w-4" />}
           />
@@ -250,7 +255,8 @@ const Dashboard = () => {
                 <CardDescription>Your subjects and their progress</CardDescription>
               </CardHeader>
               <CardContent>
-                <SubjectCardGrid subjects={dashboardData.subjects} />
+                {/* Extract just the subject names for SubjectCardGrid */}
+                <SubjectCardGrid subjects={dashboardData.subjects.map(subject => subject.name)} />
               </CardContent>
             </Card>
           </TabsContent>
