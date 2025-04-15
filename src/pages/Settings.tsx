@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { Key, Info, Shield } from "lucide-react";
 import StudyAIHeader from "@/components/StudyAIHeader";
 import { fetchOpenRouterModels } from "@/services/openaiService";
@@ -19,6 +19,7 @@ const Settings = () => {
   const [selectedModels, setSelectedModels] = useState<any[]>([]);
   const [feedbackText, setFeedbackText] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const { toast } = useToast();
 
   // Load API key from localStorage
   useEffect(() => {
