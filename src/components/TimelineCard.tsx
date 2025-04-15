@@ -9,7 +9,7 @@ interface TimelineCardProps {
   title: string;
   description: string;
   date: string;
-  type: "lesson" | "quiz" | "milestone";
+  type: "lesson" | "quiz" | "milestone" | "practice";
   status: "completed" | "in-progress" | "upcoming";
   onStart: (id: string) => void;
 }
@@ -33,6 +33,7 @@ const TimelineCard = ({
     lesson: "bg-blue-500 text-white",
     quiz: "bg-purple-500 text-white",
     milestone: "bg-orange-500 text-white",
+    practice: "bg-green-500 text-white",
   };
 
   return (

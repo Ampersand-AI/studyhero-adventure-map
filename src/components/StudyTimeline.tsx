@@ -9,7 +9,7 @@ export interface TimelineItem {
   title: string;
   description: string;
   date: string;
-  type: 'lesson' | 'quiz' | 'milestone';
+  type: 'lesson' | 'quiz' | 'milestone' | 'practice';
   status: 'completed' | 'in-progress' | 'upcoming';
 }
 
