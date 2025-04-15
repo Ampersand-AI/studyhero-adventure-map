@@ -1,11 +1,11 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Menu, Home, BookOpen, BarChart, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Link } from "react-router-dom";
 
 interface StudyAIHeaderProps {
   userName: string;

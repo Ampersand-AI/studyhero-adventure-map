@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Bell, Menu, BookOpen, Home, BarChart, Settings } from "lucide-react";
@@ -60,34 +61,34 @@ const StudyHeroHeader: React.FC<Partial<StudyHeroHeaderProps>> = ({
                 <nav className="flex-1 px-2">
                   <div className="space-y-1">
                     {navigation.map((item) => (
-                      <a
+                      <Link
                         key={item.name}
-                        href={item.href}
+                        to={item.href}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-muted"
                       >
                         {item.icon}
                         {item.name}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </nav>
               </div>
             </SheetContent>
           </Sheet>
-          <a href="/" className="hidden md:flex items-center gap-2">
+          <Link to="/" className="hidden md:flex items-center gap-2">
             <span className="font-display text-2xl text-primary">Study AI</span>
-          </a>
+          </Link>
         </div>
         <div className="hidden md:flex items-center gap-6">
           {navigation.map((item) => (
-            <a
+            <Link
               key={item.name}
-              href={item.href}
+              to={item.href}
               className="flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary"
             >
               {item.icon}
               {item.name}
-            </a>
+            </Link>
           ))}
         </div>
         <div className="flex items-center gap-4">

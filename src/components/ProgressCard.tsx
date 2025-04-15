@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchOpenRouterModels } from "@/services/openaiService";
@@ -72,6 +72,16 @@ const ProgressCard = ({ title, value, description, icon, total }: ProgressCardPr
     loadModels(apiKey);
   };
 
+  // Auto-submit API key when pasted
+  const handleApiKeyPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (pastedText && pastedText.trim()) {
+      setTimeout(() => {
+        loadModels(pastedText.trim());
+      }, 100);
+    }
+  };
+
   const toggleApiInput = () => {
     setShowApiInput(!showApiInput);
   };
@@ -110,6 +120,7 @@ const ProgressCard = ({ title, value, description, icon, total }: ProgressCardPr
               placeholder="Enter OpenRouter API Key"
               value={apiKey}
               onChange={handleApiKeyInput}
+              onPaste={handleApiKeyPaste}
               type="password"
             />
             <Button 

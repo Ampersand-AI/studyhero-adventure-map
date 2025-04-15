@@ -55,6 +55,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       const updatedSelection = [...selectedModels, selectedModel];
       setSelectedModels(updatedSelection);
       onSelectionChange(updatedSelection);
+      
+      // Save to localStorage
+      localStorage.setItem('selected_models', JSON.stringify(updatedSelection.map(m => m.id)));
     }
   };
 
@@ -62,6 +65,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     const updatedSelection = selectedModels.filter((_, i) => i !== index);
     setSelectedModels(updatedSelection);
     onSelectionChange(updatedSelection);
+    
+    // Update localStorage
+    localStorage.setItem('selected_models', JSON.stringify(updatedSelection.map(m => m.id)));
   };
 
   // Filter out already selected models
