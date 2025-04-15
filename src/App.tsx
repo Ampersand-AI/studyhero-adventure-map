@@ -12,6 +12,7 @@ import SubjectDetails from './pages/SubjectDetails';
 import Settings from './pages/Settings';
 import Index from './pages/Index';
 import { StudyPlanProvider } from './contexts/StudyPlanContext';
+import AIStatusIndicator from './components/AIStatusIndicator';
 
 // Initialize QueryClient for React Query
 const queryClient = new QueryClient({
@@ -39,8 +40,9 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <AIStatusIndicator />
+            <Toaster position="top-center" richColors />
           </Router>
-          <Toaster position="top-center" richColors />
         </StudyPlanProvider>
       </QueryClientProvider>
     </ThemeProvider>

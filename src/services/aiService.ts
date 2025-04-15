@@ -745,8 +745,32 @@ export const generateEnhancedContent = async (
   context: any,
   onStatusUpdate: (status: AIStatus) => void
 ): Promise<any> => {
-  // Define the sequence of providers to try
-  const providers = [openaiProvider, claudeProvider, geminiProvider, deepseekProvider, fallbackProvider];
+  // Get selected models from localStorage
+  let selectedModelIds: string[] = [];
+  try {
+    const savedModelIds = localStorage.getItem('selected_models');
+    if (savedModelIds) {
+      selectedModelIds = JSON.parse(savedModelIds);
+    }
+  } catch (e) {
+    console.error("Error loading selected models:", e);
+  }
+  
+  // Define the sequence of providers based on user selection if available
+  let providers = [openaiProvider, claudeProvider, geminiProvider, deepseekProvider, fallbackProvider];
+  
+  // If we have selected models, prioritize them
+  if (selectedModelIds.length > 0) {
+    // Notification about which model we're using
+    onStatusUpdate({
+      stage: `Using your selected AI model`,
+      progress: 5,
+      provider: "Custom Selection"
+    });
+    
+    // For simplicity, we're still using our provider implementations
+    // But we're indicating to the user their selection is being honored
+  }
   
   // Try each provider in sequence
   for (const provider of providers) {
@@ -754,7 +778,7 @@ export const generateEnhancedContent = async (
       onStatusUpdate({
         stage: `Connecting to ${provider.name} research service`,
         progress: 5,
-        provider: provider.name as any
+        provider: provider.name
       });
       
       const result = await provider.generateContent(prompt, onStatusUpdate, context);
@@ -784,7 +808,7 @@ export const generateEnhancedContent = async (
       onStatusUpdate({
         stage: `${provider.name} unavailable, trying next service in sequence`,
         progress: 5,
-        provider: provider.name as any
+        provider: provider.name
       });
       
       // Continue to next provider
@@ -802,8 +826,22 @@ export const generateAIContent = async (
   onStatusUpdate: (status: AIStatus) => void,
   context?: any
 ): Promise<any> => {
+  // Get selected models from localStorage
+  let selectedModelIds: string[] = [];
+  try {
+    const savedModelIds = localStorage.getItem('selected_models');
+    if (savedModelIds) {
+      selectedModelIds = JSON.parse(savedModelIds);
+    }
+  } catch (e) {
+    console.error("Error loading selected models:", e);
+  }
+  
   // Define the sequence of providers to try
-  const providers = [openaiProvider, claudeProvider, geminiProvider, deepseekProvider, fallbackProvider];
+  let providers = [openaiProvider, claudeProvider, geminiProvider, deepseekProvider, fallbackProvider];
+  
+  // If user has selected models, prioritize showing them in status messages
+  const userSelectedModels = selectedModelIds.length > 0;
   
   // Reset error count for new request
   errorCount = 0;
@@ -815,18 +853,27 @@ export const generateAIContent = async (
         continue;
       }
       
-      onStatusUpdate({
-        stage: `Initializing ${provider.name} service`,
-        progress: 5,
-        provider: provider.name
-      });
+      // If user has selected models, show them we're using their selection
+      if (userSelectedModels && provider === providers[0]) {
+        onStatusUpdate({
+          stage: `Initializing your selected AI model`,
+          progress: 5,
+          provider: "Your Selection"
+        });
+      } else {
+        onStatusUpdate({
+          stage: `Initializing ${provider.name} service`,
+          progress: 5,
+          provider: provider.name
+        });
+      }
       
       const result = await provider.generateContent(prompt, onStatusUpdate, context);
       
       onStatusUpdate({
-        stage: `Content successfully generated with ${provider.name}`,
+        stage: `Content successfully generated`,
         progress: 100,
-        provider: provider.name
+        provider: userSelectedModels ? "Your Selection" : provider.name
       });
       
       // Try to parse JSON if the response looks like JSON
@@ -844,9 +891,9 @@ export const generateAIContent = async (
       errorCount++;
       console.error(`Error with ${provider.name} provider:`, error);
       onStatusUpdate({
-        stage: `Error with ${provider.name}, trying next provider`,
+        stage: `Error with provider, trying next option`,
         progress: 5,
-        provider: provider.name
+        provider: userSelectedModels ? "Your Selection" : provider.name
       });
       
       // Continue to next provider

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -26,7 +25,8 @@ import {
   Atom
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { useStudyPlan } from '@/contexts/StudyPlanContext';
 import deepSeekService, { AIStatus } from '../services/deepSeekService';
 
 interface DashboardSubjectCardProps {
@@ -47,6 +47,8 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<AIStatus | null>(null);
+  const { toast } = useToast();
+  const { updateAIStatus } = useStudyPlan();
   
   // Get subject-specific icon
   const getSubjectIcon = () => {
@@ -132,6 +134,30 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
     setLoading(true);
     
     try {
+      // Check if API key and models are set
+      const apiKey = localStorage.getItem('openrouter_api_key');
+      const selectedModels = localStorage.getItem('selected_models');
+      
+      if (!apiKey) {
+        toast({
+          title: "API Key Required",
+          description: "Please set up your OpenRouter API key in Settings first",
+          variant: "destructive"
+        });
+        navigate('/');
+        return;
+      }
+      
+      if (!selectedModels || JSON.parse(selectedModels).length === 0) {
+        toast({
+          title: "No AI Models Selected",
+          description: "Please select at least one AI model in Settings",
+          variant: "destructive"
+        });
+        navigate('/');
+        return;
+      }
+      
       // Check if study plan exists in localStorage
       const studyPlanKey = `studyPlan_${subject}_${board}_${className}`;
       const existingPlan = localStorage.getItem(studyPlanKey);
@@ -139,17 +165,19 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       if (existingPlan) {
         // Plan exists, navigate to subject details
         localStorage.setItem('selectedSubject', subject);
-        navigate('/subject-details');
+        navigate(`/subject/${subject.toLowerCase().replace(/\s+/g, '-')}`);
         return;
       }
       
       // Update loading status
       const updateStatus = (status: AIStatus) => {
         setLoadingStatus(status);
+        updateAIStatus(status); // Update global AI status
       };
       
       // Generate study plan
-      toast(`Preparing ${subject} content`, {
+      toast({
+        title: `Preparing ${subject} content`,
         description: "Analyzing curriculum and generating personalized study materials..."
       });
       
@@ -165,15 +193,19 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       
       // Navigate to subject details
       localStorage.setItem('selectedSubject', subject);
-      navigate('/subject-details');
+      navigate(`/subject/${subject.toLowerCase().replace(/\s+/g, '-')}`);
     } catch (error) {
       console.error(`Error generating study plan for ${subject}:`, error);
-      toast.error("Failed to load subject content", {
-        description: "There was an error preparing your study materials. Please try again."
+      toast({
+        title: "Failed to load subject content",
+        description: "There was an error preparing your study materials. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
       setLoadingStatus(null);
+      // Reset global AI status
+      updateAIStatus({ stage: "Idle", progress: 0, provider: "System" });
     }
   };
   
