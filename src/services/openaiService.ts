@@ -1,19 +1,65 @@
-
 import OpenAI from 'openai';
 import { toast } from "@/hooks/use-toast";
+import { AIModel } from '@/components/ProgressCard';
 
-// Initialize the OpenAI client with the proper API key
-const getOpenAI = () => {
-  // Using the actual API key provided
-  const apiKey = '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';
+// Initialize the OpenAI client with the OpenRouter API key
+const getOpenAI = (apiKey?: string) => {
+  // Using the provided API key or try to get from localStorage
+  const key = apiKey || localStorage.getItem('openrouter_api_key') || '';
   
   return new OpenAI({
-    apiKey,
+    apiKey: key,
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': window.location.href,
+      'X-Title': 'Study AI',
+    },
     dangerouslyAllowBrowser: true // Required for client-side usage
   });
 };
 
-const openai = getOpenAI();
+// Function to fetch available models from OpenRouter
+export const fetchOpenRouterModels = async (apiKey: string): Promise<AIModel[]> => {
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'Study AI',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch models: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.data.map((model: any) => ({
+      id: model.id,
+      name: model.name || model.id,
+      description: model.description,
+      provider: model.context_length
+        ? `${model.provider} (${model.context_length} tokens)`
+        : model.provider
+    }));
+  } catch (error) {
+    console.error("Error fetching OpenRouter models:", error);
+    throw error;
+  }
+};
+
+// Get selected models from localStorage
+const getSelectedModels = (): string[] => {
+  try {
+    const savedModels = localStorage.getItem('selected_models');
+    if (savedModels) {
+      return JSON.parse(savedModels);
+    }
+  } catch (e) {
+    console.error("Error parsing selected models:", e);
+  }
+  return [];
+};
 
 // Function to generate study plan
 export const generateStudyPlan = async (board: string, className: string, subject: string) => {
@@ -39,8 +85,14 @@ export const generateStudyPlan = async (board: string, className: string, subjec
     - textbookReference: a relevant chapter or section reference
     - hasVisualAids: boolean indicating if this topic benefits from visual learning aids`;
 
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    const modelToUse = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o-mini';
+    
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: modelToUse,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Create a comprehensive study plan for ${subject} for class ${className} based on global educational standards.` }
@@ -76,6 +128,7 @@ export const generateStudyPlan = async (board: string, className: string, subjec
   }
 };
 
+// Update the remaining functions to use the selected models
 // Function to generate lesson content with enhanced visual elements
 export const generateLessonContent = async (subject: string, topic: string, className: string = '10') => {
   try {
@@ -110,29 +163,26 @@ export const generateLessonContent = async (subject: string, topic: string, clas
     5. Including interesting facts that spark curiosity
     6. Aligned with standard educational objectives for this age group`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',  // Using a more capable model for better content
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create engaging lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for students. Base the content on global educational standards.` }
-      ],
-      temperature: 0.5  // Lower temperature for more factual responses
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Create engaging lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for students. Base the content on global educational standards.` }
+        ],
+        temperature: 0.5
+      });
+      
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       const jsonResponse = JSON.parse(content);
-      
-      // Verify required fields are present
-      const requiredFields = ['title', 'keyPoints', 'explanation', 'examples', 'visualAids', 'activities', 'summary'];
-      const missingFields = requiredFields.filter(field => !jsonResponse[field]);
-      
-      if (missingFields.length > 0) {
-        console.warn(`Response missing required fields: ${missingFields.join(', ')}. Requesting again.`);
-        // Retry with more specific request instead of using defaults
-        return await generateLessonContent(subject, topic, className);
-      }
       
       toast({
         title: "Lesson Created",
@@ -141,8 +191,42 @@ export const generateLessonContent = async (subject: string, topic: string, clas
       
       return jsonResponse;
     } catch (error) {
-      console.error("Error parsing OpenAI lesson content response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Create engaging lesson content for "${topic}" in ${subject} with multiple visual aids, interesting facts, and interactive elements that will make learning enjoyable for students. Base the content on global educational standards.` }
+              ],
+              temperature: 0.5
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            const fallbackJsonResponse = JSON.parse(fallbackContent);
+            
+            toast({
+              title: "Fallback Successful",
+              description: `Generated content using fallback model ${i}`,
+            });
+            
+            return fallbackJsonResponse;
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
     }
   } catch (error) {
     console.error("Error generating lesson content with OpenAI:", error);
@@ -192,18 +276,25 @@ export const extractTextbookContent = async (subject: string, className: string,
     Include all major sections, examples, key terms, and exercises.
     Be comprehensive but maintain the original structure of the textbook.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Extract and structure the content from the NCERT textbook for ${subject}, Class ${className}, Chapter ${chapter}. Preserve the exact language, structure, and examples from the official textbook.` }
-      ],
-      temperature: 0.3
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o-mini';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Extract and structure the content from the NCERT textbook for ${subject}, Class ${className}, Chapter ${chapter}. Preserve the exact language, structure, and examples from the official textbook.` }
+        ],
+        temperature: 0.3
+      });
+
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       const jsonResponse = JSON.parse(content);
       
       toast({
@@ -213,8 +304,43 @@ export const extractTextbookContent = async (subject: string, className: string,
       
       return jsonResponse;
     } catch (error) {
-      console.error("Error parsing OpenAI textbook extraction response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Extract and structure the content from the NCERT textbook for ${subject}, Class ${className}, Chapter ${chapter}. Preserve the exact language, structure, and examples from the official textbook.` }
+              ],
+              temperature: 0.3
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            const fallbackJsonResponse = JSON.parse(fallbackContent);
+            
+            toast({
+              title: "Fallback Successful",
+              description: `Generated content using fallback model ${i}`,
+            });
+            
+            return fallbackJsonResponse;
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
+
     }
   } catch (error) {
     console.error("Error extracting textbook content with OpenAI:", error);
@@ -247,22 +373,56 @@ export const generateQuizQuestion = async (subject: string, topic: string) => {
       "explanation": "explanation of why the correct answer is right, with reference to NCERT textbook concepts"
     }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create an NCERT-aligned quiz question for "${topic}" in ${subject}.` }
-      ],
-      temperature: 0.7
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o-mini';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Create an NCERT-aligned quiz question for "${topic}" in ${subject}.` }
+        ],
+        temperature: 0.7
+      });
+
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       return JSON.parse(content);
     } catch (error) {
-      console.error("Error parsing OpenAI quiz question response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Create an NCERT-aligned quiz question for "${topic}" in ${subject}.` }
+              ],
+              temperature: 0.7
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            return JSON.parse(fallbackContent);
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
     }
   } catch (error) {
     console.error("Error generating quiz question with OpenAI:", error);
@@ -295,22 +455,56 @@ export const generateLessonTest = async (subject: string, topic: string, questio
     - correctAnswer: the text of the correct answer (must match exactly one of the options)
     - explanation: explanation of why the correct answer is right, with reference to NCERT textbook concepts`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create an NCERT-aligned test with ${questionCount} questions for "${topic}" in ${subject}.` }
-      ],
-      temperature: 0.7
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o-mini';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Create an NCERT-aligned test with ${questionCount} questions for "${topic}" in ${subject}.` }
+        ],
+        temperature: 0.7
+      });
+
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       return JSON.parse(content);
     } catch (error) {
-      console.error("Error parsing OpenAI lesson test response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Create an NCERT-aligned test with ${questionCount} questions for "${topic}" in ${subject}.` }
+              ],
+              temperature: 0.7
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            return JSON.parse(fallbackContent);
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
     }
   } catch (error) {
     console.error("Error generating lesson test with OpenAI:", error);
@@ -374,21 +568,28 @@ export const generateWeeklyPlan = async (subject: string, items: any[]) => {
       textbookReference: item.textbookReference || "NCERT textbook"
     }));
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { 
-          role: 'user', 
-          content: `Create an engaging 12-week NCERT-aligned study plan for ${subject} using these items: ${JSON.stringify(itemsData).substring(0, 3000)}... Include at least one visual learning activity per week and ensure varied, interactive learning experiences.` 
-        }
-      ],
-      temperature: 0.7
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o-mini';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { 
+            role: 'user', 
+            content: `Create an engaging 12-week NCERT-aligned study plan for ${subject} using these items: ${JSON.stringify(itemsData).substring(0, 3000)}... Include at least one visual learning activity per week and ensure varied, interactive learning experiences.` 
+          }
+        ],
+        temperature: 0.7
+      });
+
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       const result = JSON.parse(content);
       
       toast({
@@ -398,8 +599,45 @@ export const generateWeeklyPlan = async (subject: string, items: any[]) => {
       
       return result;
     } catch (error) {
-      console.error("Error parsing OpenAI weekly plan response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { 
+                  role: 'user', 
+                  content: `Create an engaging 12-week NCERT-aligned study plan for ${subject} using these items: ${JSON.stringify(itemsData).substring(0, 3000)}... Include at least one visual learning activity per week and ensure varied, interactive learning experiences.` 
+                }
+              ],
+              temperature: 0.7
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            const fallbackResult = JSON.parse(fallbackContent);
+            
+            toast({
+              title: "Fallback Successful",
+              description: `Generated content using fallback model ${i}`,
+            });
+            
+            return fallbackResult;
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
     }
   } catch (error) {
     console.error("Error generating weekly plan with OpenAI:", error);
@@ -447,18 +685,25 @@ export const researchNCERTCurriculum = async (subject: string, className: string
       ]
     }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Research and provide accurate information about the official NCERT curriculum for ${subject} for Class ${className}, including textbook title, units, chapters, and key topics.` }
-      ],
-      temperature: 0.5
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o-mini';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Research and provide accurate information about the official NCERT curriculum for ${subject} for Class ${className}, including textbook title, units, chapters, and key topics.` }
+        ],
+        temperature: 0.5
+      });
+
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       const jsonResponse = JSON.parse(content);
       
       toast({
@@ -468,8 +713,42 @@ export const researchNCERTCurriculum = async (subject: string, className: string
       
       return jsonResponse;
     } catch (error) {
-      console.error("Error parsing OpenAI curriculum research response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Research and provide accurate information about the official NCERT curriculum for ${subject} for Class ${className}, including textbook title, units, chapters, and key topics.` }
+              ],
+              temperature: 0.5
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            const fallbackJsonResponse = JSON.parse(fallbackContent);
+            
+            toast({
+              title: "Fallback Successful",
+              description: `Generated content using fallback model ${i}`,
+            });
+            
+            return fallbackJsonResponse;
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
     }
   } catch (error) {
     console.error("Error researching NCERT curriculum with OpenAI:", error);
@@ -479,7 +758,7 @@ export const researchNCERTCurriculum = async (subject: string, className: string
       variant: "destructive"
     });
     
-    // Return null to signal error, will use fallback
+    // Return null to signal error
     return null;
   }
 };
@@ -514,18 +793,25 @@ export const generateVisualLearningResources = async (subject: string, topic: st
     3. Support different learning styles as emphasized in NEP 2020
     4. Are age-appropriate for the subject level according to NCERT guidelines`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',  // Using more capable model for better results
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create 3-5 detailed visual learning resources for the topic "${topic}" in ${subject} that EXACTLY follow NCERT curriculum guidelines and help students visualize complex concepts. Only include visualizations that would actually appear in or be suggested by NCERT textbooks.` }
-      ],
-      temperature: 0.4  // Lower temperature for more factual content
-    });
+    // Get selected models from localStorage
+    const selectedModelIds = getSelectedModels();
+    const openai = getOpenAI();
+    
+    // Use the first selected model, or fall back to a default
+    const primaryModel = selectedModelIds.length > 0 ? selectedModelIds[0] : 'openai/gpt-4o';
 
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
     try {
+      const response = await openai.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Create 3-5 detailed visual learning resources for the topic "${topic}" in ${subject} that EXACTLY follow NCERT curriculum guidelines and help students visualize complex concepts. Only include visualizations that would actually appear in or be suggested by NCERT textbooks.` }
+        ],
+        temperature: 0.4
+      });
+
+      // Parse the response and return it
+      const content = response.choices[0]?.message?.content || '';
       const jsonResponse = JSON.parse(content);
       
       toast({
@@ -535,75 +821,35 @@ export const generateVisualLearningResources = async (subject: string, topic: st
       
       return jsonResponse;
     } catch (error) {
-      console.error("Error parsing OpenAI visual resources response:", error);
-      throw new Error("Invalid response format from OpenAI");
-    }
-  } catch (error) {
-    console.error("Error generating visual resources with OpenAI:", error);
-    toast({
-      title: "Error",
-      description: "Failed to generate authentic visual resources. Please try again.",
-      variant: "destructive"
-    });
-    
-    // Instead of returning mock data, throw an error to trigger a retry
-    throw new Error("Failed to generate authentic visual learning resources");
-  }
-};
-
-// New function to research global curriculum standards
-export const researchGlobalCurriculum = async (subject: string, className: string) => {
-  try {
-    toast({
-      title: "Researching Global Standards",
-      description: `Finding best educational approaches for ${subject} Class ${className}...`,
-    });
-
-    const systemPrompt = `You are an expert educational researcher with knowledge of curriculum standards worldwide.
-    Research and provide comprehensive information about effective teaching methods for ${subject} for Class ${className}.
-    Your response should be in JSON format with the following structure:
-    {
-      "subject": "${subject}",
-      "class": "${className}",
-      "recommendedResources": [array of top learning resources including textbooks, websites, and online platforms],
-      "coreTopics": [array of essential topics that should be covered based on global standards],
-      "teachingApproaches": [array of effective teaching methodologies for this subject and age group],
-      "assessmentStrategies": [array of recommended assessment techniques],
-      "digitalResources": [array of helpful digital tools and platforms]
-    }`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Research and provide comprehensive information about effective teaching methods for ${subject} for Class ${className}.` }
-      ],
-      temperature: 0.5
-    });
-
-    // Parse the response and return it
-    const content = response.choices[0]?.message?.content || '';
-    try {
-      const jsonResponse = JSON.parse(content);
-      
-      toast({
-        title: "Curriculum Researched",
-        description: `Successfully retrieved curriculum information for ${subject} Class ${className}`,
-      });
-      
-      return jsonResponse;
-    } catch (error) {
-      console.error("Error parsing OpenAI curriculum research response:", error);
-      throw new Error("Invalid response format from OpenAI");
-    }
-  } catch (error) {
-    console.error("Error researching global curriculum with OpenAI:", error);
-    toast({
-      title: "Error",
-      description: "Failed to retrieve curriculum information. Using standard data instead.",
-      variant: "destructive"
-    });
-    
-    return null;
-  }
-};
+      // If primary model fails, try the fallback models
+      if (selectedModelIds.length > 1) {
+        for (let i = 1; i < selectedModelIds.length; i++) {
+          try {
+            toast({
+              title: "Trying Fallback Model",
+              description: `Attempting with fallback model ${i}...`,
+            });
+            
+            const fallbackResponse = await openai.chat.completions.create({
+              model: selectedModelIds[i],
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Create 3-5 detailed visual learning resources for the topic "${topic}" in ${subject} that EXACTLY follow NCERT curriculum guidelines and help students visualize complex concepts. Only include visualizations that would actually appear in or be suggested by NCERT textbooks.` }
+              ],
+              temperature: 0.4
+            });
+            
+            const fallbackContent = fallbackResponse.choices[0]?.message?.content || '';
+            const fallbackJsonResponse = JSON.parse(fallbackContent);
+            
+            toast({
+              title: "Fallback Successful",
+              description: `Generated content using fallback model ${i}`,
+            });
+            
+            return fallbackJsonResponse;
+          } catch (fallbackError) {
+            console.error(`Error with fallback model ${i}:`, fallbackError);
+            // Continue to next fallback
+          }
+        }
