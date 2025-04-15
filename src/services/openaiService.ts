@@ -1,3 +1,4 @@
+
 import OpenAI from 'openai';
 import { toast } from "@/hooks/use-toast";
 import { AIModel } from '@/components/ProgressCard';
@@ -340,7 +341,6 @@ export const extractTextbookContent = async (subject: string, className: string,
       
       // If all models failed, throw the original error
       throw error;
-
     }
   } catch (error) {
     console.error("Error extracting textbook content with OpenAI:", error);
@@ -853,3 +853,20 @@ export const generateVisualLearningResources = async (subject: string, topic: st
             // Continue to next fallback
           }
         }
+      }
+      
+      // If all models failed, throw the original error
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error generating visual learning resources:", error);
+    toast({
+      title: "Error",
+      description: "Failed to create visual resources. Using standard visuals.",
+      variant: "destructive"
+    });
+    
+    // Return null to signal error
+    return null;
+  }
+};
