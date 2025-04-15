@@ -9,6 +9,7 @@ import Lesson from './pages/Lesson';
 import Quiz from './pages/Quiz';
 import Onboarding from './pages/Onboarding';
 import SubjectDetails from './pages/SubjectDetails';
+import Settings from './pages/Settings';
 import Index from './pages/Index';
 import { StudyPlanProvider } from './contexts/StudyPlanContext';
 
@@ -35,6 +36,7 @@ function App() {
               <Route path="/lesson" element={<Lesson />} />
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/subject/:subjectName" element={<SubjectDetails />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
