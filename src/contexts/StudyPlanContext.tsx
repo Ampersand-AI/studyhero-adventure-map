@@ -33,7 +33,12 @@ export const StudyPlanProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   const updateAIStatus = (status: AIStatus) => {
-    setAIStatus(status);
+    // Ensure provider is always present
+    const updatedStatus = {
+      ...status,
+      provider: status.provider || "System"
+    };
+    setAIStatus(updatedStatus);
   };
 
   return (

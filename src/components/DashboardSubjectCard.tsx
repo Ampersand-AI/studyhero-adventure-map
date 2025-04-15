@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -25,29 +26,27 @@ import {
   Atom
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useStudyPlan } from '@/contexts/StudyPlanContext';
-import deepSeekService, { AIStatus } from '../services/deepSeekService';
+import { studyPlanService } from '../services/studyPlanService';
 
 interface DashboardSubjectCardProps {
   subject: string;
-  board: string;
-  className: string;
+  board?: string;
+  className?: string;
   description?: string;
   progress?: number;
 }
 
 const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
   subject,
-  board,
-  className,
+  board = "NCERT",
+  className = "10",
   description,
   progress = 0
 }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState<AIStatus | null>(null);
-  const { toast } = useToast();
   const { updateAIStatus } = useStudyPlan();
   
   // Get subject-specific icon
@@ -139,21 +138,13 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       const selectedModels = localStorage.getItem('selected_models');
       
       if (!apiKey) {
-        toast({
-          title: "API Key Required",
-          description: "Please set up your OpenRouter API key in Settings first",
-          variant: "destructive"
-        });
+        toast.error("Please set up your OpenRouter API key in Settings first");
         navigate('/');
         return;
       }
       
       if (!selectedModels || JSON.parse(selectedModels).length === 0) {
-        toast({
-          title: "No AI Models Selected",
-          description: "Please select at least one AI model in Settings",
-          variant: "destructive"
-        });
+        toast.error("Please select at least one AI model in Settings");
         navigate('/');
         return;
       }
@@ -169,19 +160,22 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
         return;
       }
       
-      // Update loading status
-      const updateStatus = (status: AIStatus) => {
-        setLoadingStatus(status);
-        updateAIStatus(status); // Update global AI status
+      // Generate study plan with selected models
+      const selectedModelsArray = JSON.parse(selectedModels);
+      const primaryModel = selectedModelsArray[0]?.id || "anthropic/claude-3-haiku";
+      
+      toast.loading(`Preparing ${subject} content using ${primaryModel}`);
+      
+      // Update loading status through the context
+      const updateStatus = (status) => {
+        updateAIStatus({
+          ...status,
+          provider: primaryModel
+        });
       };
       
       // Generate study plan
-      toast({
-        title: `Preparing ${subject} content`,
-        description: "Analyzing curriculum and generating personalized study materials..."
-      });
-      
-      const studyPlan = await deepSeekService.generateStudyPlan(
+      const studyPlan = await studyPlanService.getStudyPlan(
         subject, 
         board, 
         className,
@@ -194,18 +188,17 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
       // Navigate to subject details
       localStorage.setItem('selectedSubject', subject);
       navigate(`/subject/${subject.toLowerCase().replace(/\s+/g, '-')}`);
+      
+      toast.success(`Successfully created study plan for ${subject}`);
     } catch (error) {
       console.error(`Error generating study plan for ${subject}:`, error);
-      toast({
-        title: "Failed to load subject content",
-        description: "There was an error preparing your study materials. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to load subject content. Please try again.");
     } finally {
       setLoading(false);
-      setLoadingStatus(null);
       // Reset global AI status
-      updateAIStatus({ stage: "Idle", progress: 0, provider: "System" });
+      setTimeout(() => {
+        updateAIStatus({ stage: "Idle", progress: 0, provider: "System" });
+      }, 2000);
     }
   };
   
@@ -213,7 +206,7 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className={`p-1 rounded-md ${getSubjectColor()}`}>
+          <span className={`p-1.5 rounded-md ${getSubjectColor()}`}>
             {getSubjectIcon()}
           </span>
           {subject}
@@ -223,41 +216,14 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        {loadingStatus ? (
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span>{loadingStatus.stage}</span>
-                <span>{loadingStatus.progress}%</span>
-              </div>
-              <Progress value={loadingStatus.progress} className="h-1.5" />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Our AI is analyzing {board} curriculum for Class {className} and creating personalized study content with visual aids.
+        <div className="flex items-center h-full justify-center py-4">
+          <div className="text-center">
+            <BookOpenCheck className="h-12 w-12 text-primary/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Start studying {subject} with our AI-powered lesson plans and interactive quizzes
             </p>
           </div>
-        ) : progress > 0 ? (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
-              <span>{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Current Chapter</span>
-              <span>Chapter 3: Compounds and Mixtures</span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center h-full justify-center py-4">
-            <div className="text-center">
-              <BookOpenCheck className="h-12 w-12 text-primary/30 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Start studying {subject} with our AI-powered lesson plans and interactive quizzes
-              </p>
-            </div>
-          </div>
-        )}
+        </div>
       </CardContent>
       <CardFooter>
         <Button 
@@ -266,7 +232,7 @@ const DashboardSubjectCard: React.FC<DashboardSubjectCardProps> = ({
           onClick={handleStudyClick}
           disabled={loading}
         >
-          {loading ? "Preparing Content..." : "Study Now"}
+          {loading ? "Generating Content..." : "Study Now"}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardFooter>

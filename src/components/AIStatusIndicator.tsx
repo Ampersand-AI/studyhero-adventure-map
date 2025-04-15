@@ -28,19 +28,18 @@ const AIStatusIndicator = () => {
               </span>
             </div>
             <span className="text-xs text-muted-foreground">
-              Provider: {aiStatus.provider}
+              Model: {aiStatus.provider}
             </span>
           </div>
           
           <Progress 
             value={aiStatus.progress} 
             className="h-2" 
-            variant={aiStatus.progress === 100 ? "success" : "default"}
           />
           
           <p className="text-xs text-muted-foreground">
             {aiStatus.progress < 100 
-              ? "Processing your request. This might take a moment..." 
+              ? `Processing your request using ${aiStatus.provider}. This might take a moment...` 
               : "Processing complete!"}
           </p>
         </div>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,138 +12,104 @@ import SubjectCardGrid from '@/components/SubjectCardGrid';
 import WeeklyPlanView from '@/components/WeeklyPlanView';
 import StudyHeroHeader from '@/components/StudyHeroHeader';
 import StudyTimeline, { TimelineItem } from '@/components/StudyTimeline';
-
-interface DashboardData {
-  subjects: { name: string; progress: number; }[];
-  weeklyProgress: { day: string; completed: number; total: number; }[];
-  totalSubjects: number;
-  completedSubjects: number;
-}
-
-// Add dummy data for WeeklyPlanView
-const weeklyPlans = [
-  {
-    weekNumber: 1,
-    startDate: "May 1, 2023",
-    endDate: "May 7, 2023",
-    dailyActivities: [
-      {
-        date: "2023-05-01",
-        items: [
-          {
-            id: "item1",
-            title: "Introduction to Algebra",
-            description: "Learn the basics of algebraic expressions",
-            type: "lesson",
-            estimatedTimeInMinutes: 30,
-            subject: "Mathematics",
-            status: "completed"
-          }
-        ]
-      },
-      {
-        date: "2023-05-02",
-        items: [
-          {
-            id: "item2",
-            title: "Chemical Reactions",
-            description: "Understand different types of chemical reactions",
-            type: "lesson",
-            estimatedTimeInMinutes: 45,
-            subject: "Chemistry",
-            status: "in-progress"
-          }
-        ]
-      },
-      {
-        date: "2023-05-03",
-        items: []
-      }
-    ],
-    weeklyTest: {
-      id: "test-week-1",
-      title: "Week 1 Assessment",
-      description: "Test your understanding of this week's topics",
-      type: "quiz",
-      status: "upcoming",
-      dueDate: "2023-05-07",
-      estimatedTimeInMinutes: 60,
-      subject: "All Subjects",
-      isWeeklyTest: true,
-      weekNumber: 1
-    }
-  }
-];
+import { studyPlanService } from '@/services/studyPlanService';
+import { useStudyPlan } from '@/contexts/StudyPlanContext';
 
 const defaultNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: <Home className="h-4 w-4" /> },
   { name: 'Subjects', href: '/subjects', icon: <BookOpen className="h-4 w-4" /> },
-  { name: 'Analytics', href: '/analytics', icon: <BarChart className="h-4 w-4" /> },
   { name: 'Settings', href: '/settings', icon: <Settings className="h-4 w-4" /> }
 ];
 
-const dashboardData: DashboardData = {
-  subjects: [
-    { name: 'Mathematics', progress: 75 },
-    { name: 'Science', progress: 40 },
-    { name: 'History', progress: 90 },
-  ],
-  weeklyProgress: [
-    { day: 'Mon', completed: 3, total: 5 },
-    { day: 'Tue', completed: 4, total: 6 },
-    { day: 'Wed', completed: 2, total: 4 },
-    { day: 'Thu', completed: 5, total: 5 },
-    { day: 'Fri', completed: 3, total: 3 },
-  ],
-  totalSubjects: 10,
-  completedSubjects: 3,
-};
-
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleGeneratePlan = () => {
-    setIsGenerating(true);
-    toast.loading("Generating personalized plan...", { duration: 5000 });
-    setTimeout(() => {
-      setIsGenerating(false);
-      toast.success("Personalized plan generated successfully!");
-    }, 5000);
-  };
-
-  // Sample timeline data
-  const sampleTimelineItems: TimelineItem[] = [
-    {
-      id: '1',
-      title: 'Calculus: Derivatives',
-      description: 'Learn the fundamentals of derivatives and their applications',
-      date: 'Today',
-      type: 'lesson',
-      status: 'in-progress'
-    },
-    {
-      id: '2',
-      title: 'Chemistry: Periodic Table Quiz',
-      description: 'Test your knowledge of the periodic table of elements',
-      date: 'Tomorrow',
-      type: 'quiz',
-      status: 'upcoming'
-    },
-    {
-      id: '3',
-      title: 'Physics: Forces and Motion',
-      description: 'Explore Newton\'s laws of motion and their real-world applications',
-      date: 'May 25',
-      type: 'lesson',
-      status: 'upcoming'
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [subjectNames, setSubjectNames] = useState<string[]>([]);
+  const [weeklyPlans, setWeeklyPlans] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { updateAIStatus } = useStudyPlan();
+  
+  // Check if user profile exists, if not redirect to onboarding
+  useEffect(() => {
+    const profile = localStorage.getItem('studyHeroProfile');
+    if (!profile) {
+      navigate('/onboarding');
     }
-  ];
-
+  }, [navigate]);
+  
+  // Load user data and subjects
+  useEffect(() => {
+    const loadUserData = async () => {
+      setIsLoading(true);
+      updateAIStatus({
+        stage: "Loading profile",
+        progress: 20,
+        provider: "System"
+      });
+      
+      try {
+        // Get profile from localStorage
+        const profileData = localStorage.getItem('studyHeroProfile');
+        if (!profileData) {
+          navigate('/onboarding');
+          return;
+        }
+        
+        const profile = JSON.parse(profileData);
+        const subjects = profile.subjects || ['Mathematics', 'Science'];
+        
+        updateAIStatus({
+          stage: "Loading subject data",
+          progress: 50,
+          provider: "System"
+        });
+        
+        // Load weekly plans
+        const plansResponse = await studyPlanService.getWeeklyPlans();
+        
+        // Generate timeline items from the first week
+        const firstWeekItems = plansResponse.weeklyPlans[0]?.dailyActivities
+          .flatMap(day => day.items)
+          .map(item => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            date: item.dueDate,
+            type: item.type,
+            status: 'upcoming'
+          })) || [];
+        
+        setSubjectNames(subjects);
+        setTimelineItems(firstWeekItems.slice(0, 5)); // Only show the first 5 items
+        setWeeklyPlans(plansResponse.weeklyPlans);
+        
+        updateAIStatus({
+          stage: "Dashboard ready",
+          progress: 100,
+          provider: "System"
+        });
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        toast.error("Failed to load your study data. Please try again.");
+      } finally {
+        setIsLoading(false);
+        // Reset AI status after a delay
+        setTimeout(() => {
+          updateAIStatus({
+            stage: "Idle",
+            progress: 0,
+            provider: "System"
+          });
+        }, 1000);
+      }
+    };
+    
+    loadUserData();
+  }, [navigate, updateAIStatus]);
+  
   // Handle starting a timeline item
   const handleStartTimelineItem = (id: string) => {
     toast.success("Starting study session");
-    // Navigate based on item type (can be expanded)
     navigate('/lesson');
   };
 
@@ -151,11 +117,6 @@ const Dashboard = () => {
     toast.success(`Starting weekly item: ${id}`);
     navigate('/lesson');
   };
-
-  // Convert number values to strings for ProgressCard components
-  const overallProgressValue = `${Math.round((dashboardData.completedSubjects / dashboardData.totalSubjects) * 100)}`;
-  const subjectsCompletedValue = `${dashboardData.completedSubjects}`;
-  const weeklyStudyTimeValue = "4.5";
 
   return (
     <div className="min-h-screen bg-background">
@@ -167,33 +128,32 @@ const Dashboard = () => {
       />
       
       <main className="container mx-auto px-4 py-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           <ProgressCard
             title="Overall Progress"
-            value={overallProgressValue}
-            description="Keep pushing forward!"
+            value="0"
+            description="Start your learning journey!"
             icon={<BarChart className="h-4 w-4" />}
           />
           <ProgressCard
-            title="Subjects Completed"
-            value={subjectsCompletedValue}
-            description="Your completed subjects this semester"
+            title="Subjects"
+            value={String(subjectNames.length)}
+            description="Subjects in your curriculum"
             icon={<BookOpen className="h-4 w-4" />}
           />
           <ProgressCard
             title="Weekly Study Time"
-            value={weeklyStudyTimeValue}
+            value="0"
             description="Hours studied this week"
             icon={<Clock className="h-4 w-4" />}
           />
         </div>
         
         <Tabs defaultValue="today" className="mt-8">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="weekly">Weekly Plan</TabsTrigger>
             <TabsTrigger value="subjects">My Subjects</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
           </TabsList>
           
           <TabsContent value="today" className="mt-6">
@@ -204,10 +164,21 @@ const Dashboard = () => {
                   <CardDescription>Your upcoming study sessions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <StudyTimeline 
-                    items={sampleTimelineItems} 
-                    onStartItem={handleStartTimelineItem} 
-                  />
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : timelineItems.length > 0 ? (
+                    <StudyTimeline 
+                      items={timelineItems} 
+                      onStartItem={handleStartTimelineItem} 
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No upcoming activities yet.</p>
+                      <p className="text-sm mt-2">Select subjects to generate a study plan.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               
@@ -237,10 +208,21 @@ const Dashboard = () => {
                 <CardDescription>Your study plan for the week</CardDescription>
               </CardHeader>
               <CardContent>
-                <WeeklyPlanView 
-                  weeklyPlans={weeklyPlans} 
-                  onStartItem={handleStartWeeklyItem}
-                />
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : weeklyPlans.length > 0 ? (
+                  <WeeklyPlanView 
+                    weeklyPlans={weeklyPlans} 
+                    onStartItem={handleStartWeeklyItem}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No weekly plan generated yet.</p>
+                    <p className="text-sm mt-2">Select subjects to generate a weekly plan.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -252,23 +234,23 @@ const Dashboard = () => {
                 <CardDescription>Your subjects and their progress</CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Extract just the subject names for SubjectCardGrid */}
-                <SubjectCardGrid 
-                  subjects={dashboardData.subjects.map(subject => subject.name)}
-                  onSelectSubject={(subject) => navigate(`/subject/${subject}`)}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="achievements" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Achievements</CardTitle>
-                <CardDescription>Your earned achievements</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Coming soon!</p>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : subjectNames.length > 0 ? (
+                  <SubjectCardGrid 
+                    subjects={subjectNames}
+                    onSelectSubject={(subject) => navigate(`/subject/${subject.toLowerCase().replace(/\s+/g, '-')}`)}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No subjects selected yet.</p>
+                    <Button variant="outline" className="mt-4" onClick={() => navigate('/onboarding')}>
+                      Select Subjects
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
