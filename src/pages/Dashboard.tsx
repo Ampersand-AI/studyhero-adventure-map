@@ -75,8 +75,9 @@ const Dashboard = () => {
             title: item.title,
             description: item.description,
             date: item.dueDate,
-            type: item.type,
-            status: 'upcoming'
+            type: item.type as 'lesson' | 'quiz' | 'practice' | 'milestone',
+            // Map the status string to one of the allowed values
+            status: mapStatusToAllowedValue(item.status)
           })) || [];
         
         setSubjectNames(subjects);
@@ -106,6 +107,13 @@ const Dashboard = () => {
     
     loadUserData();
   }, [navigate, updateAIStatus]);
+  
+  // Helper function to map any status string to one of the allowed values
+  const mapStatusToAllowedValue = (status: string): 'completed' | 'in-progress' | 'upcoming' => {
+    if (status === 'completed') return 'completed';
+    if (status === 'current' || status === 'in-progress') return 'in-progress';
+    return 'upcoming'; // Default to upcoming for any other status
+  };
   
   // Handle starting a timeline item
   const handleStartTimelineItem = (id: string) => {
